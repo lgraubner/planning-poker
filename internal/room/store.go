@@ -13,7 +13,13 @@ import (
 	"unicode/utf8"
 )
 
-const MaxParticipants = 30
+const (
+	MaxParticipants = 30
+	maxRooms        = 1000
+	maxSockets      = 60 // per room, including sockets that have not joined yet
+	maxTabs         = 5  // connections per participant
+)
+
 const alphabet = "23456789abcdefghjkmnpqrstuvwxyz"
 
 var Deck = []string{"0", "1", "2", "3", "5", "8", "13", "21", "?", "☕"}
@@ -95,7 +101,7 @@ func (s *Store) Create(title string) (string, error) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if len(s.rooms) >= 1000 {
+	if len(s.rooms) >= maxRooms {
 		return "", errors.New("Room limit reached. Try again later.")
 	}
 	for {
@@ -125,11 +131,11 @@ func (s *Store) Info(code, secret string) (string, bool, error) {
 	available := len(r.participants) < MaxParticipants
 	for _, p := range r.participants {
 		if p.secret == secret {
-			available = len(p.connections) < 5
+			available = len(p.connections) < maxTabs
 			break
 		}
 	}
-	return r.title, available && r.sockets < 60, nil
+	return r.title, available && r.sockets < maxSockets, nil
 }
 
 // Reserve bounds sockets even before the client has sent its join message.
@@ -140,7 +146,7 @@ func (s *Store) Reserve(code string) error {
 	if r == nil {
 		return ErrNotFound
 	}
-	if r.sockets >= 60 {
+	if r.sockets >= maxSockets {
 		return ErrFull
 	}
 	r.sockets++
@@ -183,7 +189,7 @@ func (s *Store) Join(code, secret, name string) (*Subscription, error) {
 		p = &member{id: rand.Text(), secret: secret, name: name, connections: make(map[*Subscription]bool)}
 		r.participants = append(r.participants, p)
 	}
-	if len(p.connections) >= 5 {
+	if len(p.connections) >= maxTabs {
 		return nil, errors.New("Too many tabs for this participant.")
 	}
 	// Existing tabs share the first joined name as well as the estimate.
