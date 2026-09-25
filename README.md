@@ -66,10 +66,12 @@ The glossary is in [CONTEXT.md](CONTEXT.md). The deployment trade-off is recorde
 ## Todo
 
 - UI
-- AGENTS.md
 - MCP für Results?
 - Loading State with min delay
 - History (accounting revotes on same room title or separate?)
 - optional SQlite
 - nudge other participants
 - Microsoft Teams like reactions
+- confetti on full agreement
+- Improved readme
+- improve copy link feedback
