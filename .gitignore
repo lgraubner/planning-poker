@@ -1,0 +1,9 @@
+/bin/
+/web/node_modules/
+/internal/webui/dist/*
+!/internal/webui/dist/.keep
+/web/src/routeTree.gen.ts
+/web/.tanstack/
+.DS_Store
+/web/test-results/
+/web/playwright-report/

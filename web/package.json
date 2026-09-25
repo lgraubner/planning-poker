@@ -1,0 +1,37 @@
+{
+  "name": "planning-poker-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build && tsc --noEmit",
+    "check": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "lint": "oxlint .",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@tanstack/react-form": "1.33.5",
+    "@tanstack/react-router": "1.170.35",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@tailwindcss/vite": "4.3.3",
+    "@tanstack/router-plugin": "1.168.37",
+    "@types/node": "22.20.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "oxfmt": "0.67.0",
+    "oxlint": "1.82.0",
+    "tailwindcss": "4.3.3",
+    "typescript": "7.0.2",
+    "vite": "8.3.0",
+    "vitest": "5.0.2"
+  }
+}

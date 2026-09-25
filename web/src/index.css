@@ -1,0 +1,35 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-background: color-mix(in oklab, var(--color-zinc-950) 80%, var(--color-indigo-950));
+  --color-surface: color-mix(in oklab, var(--color-zinc-900) 80%, var(--color-indigo-950));
+  --color-surface-raised: color-mix(in oklab, var(--color-zinc-800) 80%, var(--color-indigo-950));
+  --color-border: color-mix(in oklab, var(--color-zinc-700) 80%, var(--color-indigo-950));
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    background: var(--color-background);
+    color: var(--color-zinc-200);
+  }
+
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  a {
+    text-decoration-line: underline;
+    text-underline-offset: 4px;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-indigo-300);
+    outline-offset: 4px;
+  }
+}

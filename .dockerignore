@@ -1,0 +1,8 @@
+.git
+bin
+web/node_modules
+web/.tanstack
+web/src/routeTree.gen.ts
+internal/webui/dist
+web/test-results
+web/playwright-report

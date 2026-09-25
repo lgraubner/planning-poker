@@ -1,0 +1,11 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "singleQuote": true,
+  "ignorePatterns": [
+    "src/routeTree.gen.ts",
+    "package-lock.json",
+    ".tanstack/**",
+    "test-results/**",
+    "playwright-report/**"
+  ]
+}
