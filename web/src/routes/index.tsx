@@ -49,7 +49,7 @@ function CreateRoomForm() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title: value.title }),
         });
-        const result = await response.json();
+        const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(result.error || 'Could not create room.');
         await navigate({ to: '/$code', params: { code: result.code } });
       } catch (cause) {

@@ -155,6 +155,19 @@ test('a missing room says so', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Room not found.' })).toBeVisible();
 });
 
+test('a proxy error page reads as a plain message', async ({ page }) => {
+  await page.route('**/api/rooms**', (route) =>
+    route.fulfill({ status: 502, contentType: 'text/html', body: '<h1>Bad Gateway</h1>' }),
+  );
+  await page.goto('/');
+  await page.getByLabel('Room title').fill('Sprint planning');
+  await page.getByRole('button', { name: 'Create room' }).click();
+  await expect(page.getByRole('alert')).toHaveText('Could not create room.');
+
+  await page.goto('/abcdefgh');
+  await expect(page.getByRole('heading', { name: 'Could not load room.' })).toBeVisible();
+});
+
 test('the room link can be copied', async ({ page, context, browserName }) => {
   test.skip(browserName !== 'chromium', 'Clipboard permissions are Chromium-specific.');
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);

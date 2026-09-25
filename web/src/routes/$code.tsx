@@ -47,7 +47,7 @@ function RoomEntry({ code }: { code: string }) {
           signal: abort.signal,
           headers: { 'X-Participant-ID': id },
         });
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error || 'Could not load room.');
         // A reload can arrive before the old tab's socket has finished closing.
         if (!data.available && id && attempt < 3) {
