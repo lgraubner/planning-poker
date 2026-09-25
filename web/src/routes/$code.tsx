@@ -127,6 +127,7 @@ function JoinRoom({
 
   return (
     <CenteredSection>
+      <title>{`${title} | Planning Poker`}</title>
       <PageIntro
         eyebrow="You're invited"
         title={title}
@@ -190,6 +191,7 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
   const own = snapshot.participants.find((participant) => participant.id === snapshot.self);
   return (
     <section className="flex grow flex-col">
+      <title>{`${snapshot.title} | Planning Poker`}</title>
       <RoomHeader
         title={snapshot.title}
         connected={connected}
@@ -211,15 +213,34 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
         onReveal={() => send('reveal')}
         onInvite={copyLink}
       />
-      {/* Both bars share one cell, so the footer keeps its height and the table stays put. */}
+      {/* Both bars share one cell, so the footer keeps its height and the table stays put.
+          The round controls sit at its bottom, leaving the space above for the results. */}
       <div className={controls}>
         <section
           aria-label="Round controls"
-          className={`${controlsPanel} flex items-center justify-center border-t border-zinc-700 ${snapshot.revealed ? '' : 'invisible'}`}
+          className={`col-start-1 row-start-1 relative flex w-full max-w-xl min-w-0 justify-self-center items-center justify-center self-end border-t py-4 border-zinc-700 ${snapshot.revealed ? '' : 'invisible'}`}
         >
-          <Button compact disabled={!connected} onClick={() => send('reset')}>
-            Vote again
-          </Button>
+          {/* Above the line, outside the footer's height, so the table stays put. */}
+          {snapshot.revealed && (
+            <div className="absolute inset-x-0 bottom-full flex justify-center pb-4">
+              <Results participants={snapshot.participants} />
+            </div>
+          )}
+          <div className="flex-none">
+            <Button compact disabled={!connected} onClick={() => send('reset')}>
+              <span className="inline-flex items-center gap-1.5">
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="size-4 fill-none stroke-current stroke-2 [stroke-linecap:round] [stroke-linejoin:round]"
+                >
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                  <path d="M3 3v5h5" />
+                </svg>
+                Vote again
+              </span>
+            </Button>
+          </div>
         </section>
         <EstimateControls
           connected={connected}
@@ -364,8 +385,9 @@ function PokerTable({
     ? [...bottomOthers.slice(0, bottomMiddle), current, ...bottomOthers.slice(bottomMiddle)]
     : bottomOthers;
 
+  // The bottom padding keeps room for the results that appear above the controls.
   return (
-    <div className="grid min-h-96 w-full max-w-7xl grow grid-cols-[56px_minmax(0,1fr)_56px] grid-rows-[96px_132px_96px] content-center items-center justify-center gap-x-1.5 gap-y-6 self-center py-4 sm:grid-cols-[64px_minmax(200px,420px)_64px] sm:gap-x-3">
+    <div className="grid min-h-96 w-full max-w-7xl grow grid-cols-[56px_minmax(0,1fr)_56px] grid-rows-[96px_132px_96px] content-center items-center justify-center gap-x-1.5 gap-y-6 self-center pt-4 pb-14 sm:grid-cols-[64px_minmax(200px,420px)_64px] sm:gap-x-3">
       {others.length === 0 ? (
         <div className="col-2 row-1 self-end text-center text-sm">
           <p className="mb-2">Feeling lonely?</p>
@@ -493,6 +515,38 @@ function ParticipantCard({
   );
 }
 
+function Results({ participants }: { participants: Participant[] }) {
+  const counts = deck
+    .map((value) => ({
+      value,
+      count: participants.filter((participant) => participant.estimate === value).length,
+    }))
+    .filter(({ count }) => count > 0);
+  const max = Math.max(...counts.map(({ count }) => count));
+
+  return (
+    <ul
+      aria-label="Results"
+      className="flex max-w-full min-w-0 items-end gap-1.5 overflow-x-auto px-1"
+    >
+      {counts.map(({ value, count }) => (
+        <li
+          key={value}
+          aria-label={`${value}: ${count} ${count === 1 ? 'vote' : 'votes'}${count === max ? ', most votes' : ''}`}
+          className="flex w-8 flex-none flex-col items-center"
+        >
+          <span className="text-xs text-zinc-400 tabular-nums">{count}</span>
+          <div
+            className={`mt-1 w-6 rounded-t-md ${count === max ? 'bg-indigo-400' : 'bg-indigo-400/30'}`}
+            style={{ height: `${(count / max) * 40}px` }}
+          />
+          <span className="mt-1.5 text-sm font-semibold text-zinc-100">{value}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function EstimateControls({
   connected,
   estimate,
@@ -532,5 +586,6 @@ const roomTitle = 'text-2xl font-bold tracking-tight wrap-anywhere';
 const small = 'text-sm text-zinc-400';
 const cardFace =
   'absolute inset-0 flex items-center justify-center rounded-lg border-2 text-xl font-semibold text-indigo-400 select-none backface-hidden';
-const controls = 'sticky bottom-0 z-10 grid w-full max-w-7xl self-center bg-background text-center';
+const controls =
+  'sticky bottom-0 z-10 grid w-full grid-cols-1 max-w-7xl self-center bg-background text-center';
 const controlsPanel = 'col-start-1 row-start-1 pt-3.5 pb-2.5';

@@ -194,6 +194,7 @@ test('anyone can rename the room for everyone', async ({ page, newParticipant })
   await rename(page, 'Sprint planning', 'Retro');
   await page.getByRole('textbox', { name: 'Room title' }).press('Enter');
   await expect(bob.getByRole('heading', { name: 'Retro' })).toBeVisible();
+  await expect(bob).toHaveTitle('Retro | Planning Poker');
   expect(titles).toContain('Retro');
 
   await rename(bob, 'Retro', '  ');
@@ -213,4 +214,34 @@ test('anyone can rename the room for everyone', async ({ page, newParticipant })
   await expect(page.getByText(/^v\d+\.\d+\.\d+/)).toBeVisible();
   await page.getByRole('link', { name: 'Planning Poker' }).click();
   await expect(page).toHaveURL('/');
+  await expect(page).toHaveTitle('Planning Poker');
+});
+
+test('revealed cards show how many voted for each value', async ({ page, newParticipant }) => {
+  const url = await createRoom(page);
+  await join(page, url, 'Alice');
+  const bob = await newParticipant();
+  await join(bob, url, 'Bob');
+  const carol = await newParticipant();
+  await join(carol, url, 'Carol');
+
+  await page.getByRole('button', { name: '5', exact: true }).click();
+  await bob.getByRole('button', { name: '8', exact: true }).click();
+  await carol.getByRole('button', { name: '5', exact: true }).click();
+  await expect(card(page, 'Carol')).toHaveAccessibleName('Carol: selected');
+  await expect(page.getByRole('list', { name: 'Results' })).toBeHidden();
+
+  await page.getByRole('button', { name: 'Reveal cards' }).click();
+  for (const viewer of [page, bob, carol]) {
+    // In deck order, with only the values someone chose.
+    const results = viewer.getByRole('list', { name: 'Results' }).getByRole('listitem');
+    await expect(results).toHaveCount(2);
+    await expect(results.nth(0)).toHaveAccessibleName('5: 2 votes, most votes');
+    await expect(results.nth(1)).toHaveAccessibleName('8: 1 vote');
+  }
+
+  await bob.getByRole('button', { name: 'Vote again' }).click();
+  for (const viewer of [page, bob, carol]) {
+    await expect(viewer.getByRole('list', { name: 'Results' })).toBeHidden();
+  }
 });
