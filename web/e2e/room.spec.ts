@@ -238,10 +238,23 @@ test('revealed cards show how many voted for each value', async ({ page, newPart
     await expect(results).toHaveCount(2);
     await expect(results.nth(0)).toHaveAccessibleName('5: 2 votes, most votes');
     await expect(results.nth(1)).toHaveAccessibleName('8: 1 vote');
+    // The median card, with pairs on neighbouring cards counting half.
+    await expect(viewer.getByRole('status').filter({ hasText: 'Proposed estimate' })).toHaveText(
+      'Proposed estimate 5 Agreement 67%',
+    );
   }
 
   await bob.getByRole('button', { name: 'Vote again' }).click();
   for (const viewer of [page, bob, carol]) {
     await expect(viewer.getByRole('list', { name: 'Results' })).toBeHidden();
+  }
+
+  // Estimates more than a card apart need talking through, not a number.
+  await page.getByRole('button', { name: '3', exact: true }).click();
+  await bob.getByRole('button', { name: '13', exact: true }).click();
+  await expect(card(page, 'Bob')).toHaveAccessibleName('Bob: selected');
+  await page.getByRole('button', { name: 'Reveal cards' }).click();
+  for (const viewer of [page, bob, carol]) {
+    await expect(viewer.getByRole('status').filter({ hasText: 'Discuss!' })).toHaveText('Discuss!');
   }
 });

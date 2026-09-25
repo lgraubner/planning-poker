@@ -9,6 +9,7 @@ import { Form } from '../components/Form';
 import { PageIntro } from '../components/PageIntro';
 import { TextField } from '../components/TextField';
 import { version } from '../../package.json';
+import { consensus } from '../consensus';
 import {
   deck,
   identity,
@@ -373,6 +374,9 @@ function PokerTable({
   const allVoted =
     participants.length > 0 && participants.every((participant) => participant.selected);
   const current = participants.find((participant) => participant.id === self);
+  const result = revealed
+    ? consensus(participants.flatMap((participant) => participant.estimate ?? []))
+    : null;
   const others = participants.filter((participant) => participant.id !== self);
   const sideCount = others.length >= 4 ? 2 : 0;
   const sides = others.slice(0, sideCount);
@@ -416,6 +420,23 @@ function PokerTable({
           <Button compact disabled={!connected} onClick={onReveal}>
             Reveal cards
           </Button>
+        ) : result ? (
+          <p role="status" className="text-center">
+            {!result.discuss && <span className="sr-only">Proposed estimate </span>}
+            <span
+              className={`block leading-none font-bold text-white ${result.discuss ? 'text-3xl' : 'text-5xl'}`}
+            >
+              {result.discuss ? 'Discuss!' : result.value}
+            </span>
+            {!result.discuss && result.agreement !== null && (
+              <>
+                {' '}
+                <span className="mt-2 block text-sm text-zinc-400">
+                  Agreement {Math.round(result.agreement * 100)}%
+                </span>
+              </>
+            )}
+          </p>
         ) : (
           <p role="status" className="text-center text-base font-bold text-zinc-200">
             {revealed ? 'Cards revealed' : 'Pick your card'}
