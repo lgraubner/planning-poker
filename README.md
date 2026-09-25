@@ -59,7 +59,6 @@ Rooms disappear on server restart or deployment. Empty rooms expire after one ho
 ## Structure
 
 `cmd/server` starts the process. `internal/room` owns room state; `internal/httpserver` exposes Chi routes and Coder WebSockets; `internal/webui` embeds Vite output; `web` contains the React, TanStack Router, and Tailwind CSS SPA.
-
 HTTP endpoints are `POST /api/rooms`, `GET /api/rooms/{code}`, and `GET /api/rooms/{code}/ws`. The room lookup accepts an optional `X-Participant-ID` header to check availability for a returning participant without placing their identity in a URL. It returns only title and availability. WebSocket messages use `join`, `leave`, `select`, `reveal`, and `reset`; the server returns participant-specific `snapshot` messages and `error` messages. Commands after joining carry the current `round` number, except `leave`.
 
 The glossary is in [CONTEXT.md](CONTEXT.md). The deployment trade-off is recorded in [ADR 0001](docs/adr/0001-single-process-embedded-application.md).
@@ -71,3 +70,4 @@ The glossary is in [CONTEXT.md](CONTEXT.md). The deployment trade-off is recorde
 - MCP für Results?
 - Loading State with min delay
 - History (accounting revotes on same room title or separate?)
+- optional SQlite
