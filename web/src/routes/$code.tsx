@@ -282,7 +282,7 @@ function RoomHeader({
     <header className="mb-2 grid min-h-11 grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-3">
       <Link
         to="/"
-        className="w-fit text-base font-medium whitespace-nowrap text-zinc-400 no-underline"
+        className="w-fit text-base font-semibold whitespace-nowrap text-zinc-400 no-underline tracking-wide"
       >
         Planning Poker
       </Link>
