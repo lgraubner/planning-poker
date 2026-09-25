@@ -5,7 +5,7 @@ pre-commit:
   jobs:
     - name: oxfmt
       root: web/
-      glob: 'web/**/*.{ts,tsx,js,mjs,json,css,html,md,yml,yaml}'
+      glob: '*.{ts,tsx,js,mjs,json,css,html,md,yml,yaml}'
       run: npx oxfmt --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
     - name: gofmt
