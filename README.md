@@ -24,7 +24,7 @@ Open the Vite address printed in the second terminal. Vite proxies HTTP and WebS
 
 ## Verify
 
-Install the Playwright browser once with `npx --prefix web playwright install chromium`.
+Install the Playwright browser once with `npx --prefix web playwright install chromium`. Install the Git hooks once with `npx --prefix web lefthook install`; the pre-commit hook formats staged frontend and Go files. CI still rejects unformatted code, and the project `.editorconfig` keeps formatting independent of personal editor settings.
 
 ```sh
 make check
