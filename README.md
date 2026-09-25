@@ -71,3 +71,5 @@ The glossary is in [CONTEXT.md](CONTEXT.md). The deployment trade-off is recorde
 - Loading State with min delay
 - History (accounting revotes on same room title or separate?)
 - optional SQlite
+- nudge other participants
+- Microsoft Teams like reactions
