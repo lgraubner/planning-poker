@@ -65,13 +65,18 @@ function CreateRoomForm() {
         void form.handleSubmit();
       }}
     >
-      <form.Field name="title">
+      <form.Field
+        name="title"
+        validators={{
+          onSubmit: ({ value }) => (value.trim() ? undefined : 'Enter a room title.'),
+        }}
+      >
         {(field) => (
           <TextField
             id="title"
             label="Room title"
             name={field.name}
-            required
+            error={field.state.meta.errors[0]}
             value={field.state.value}
             onBlur={field.handleBlur}
             onChange={(event) => field.handleChange(event.target.value)}
@@ -80,10 +85,8 @@ function CreateRoomForm() {
           />
         )}
       </form.Field>
-      <form.Subscribe selector={(state) => [state.values.title, state.isSubmitting] as const}>
-        {([title, busy]) => (
-          <Button disabled={busy || !title.trim()}>{busy ? 'Creating…' : 'Create room'}</Button>
-        )}
+      <form.Subscribe selector={(state) => state.isSubmitting}>
+        {(busy) => <Button>{busy ? 'Creating…' : 'Create room'}</Button>}
       </form.Subscribe>
       <ErrorMessage>{error}</ErrorMessage>
     </Form>

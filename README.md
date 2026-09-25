@@ -69,3 +69,5 @@ The glossary is in [CONTEXT.md](CONTEXT.md). The deployment trade-off is recorde
 - UI
 - AGENTS.md
 - MCP für Results?
+- Loading State with min delay
+- History (accounting revotes on same room title or separate?)

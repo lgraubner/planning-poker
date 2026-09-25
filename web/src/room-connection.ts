@@ -150,7 +150,7 @@ export function useRoom(code: string, participant: Identity) {
     };
   }, [code, participant]);
 
-  function send(type: 'select' | 'reveal' | 'reset', value?: string) {
+  function send(type: 'select' | 'reveal' | 'reset' | 'rename', value?: string) {
     if (!connected || !snapshot || socket.current?.readyState !== WebSocket.OPEN) return;
     setError('');
     socket.current.send(JSON.stringify({ type, value, round: snapshot.round }));

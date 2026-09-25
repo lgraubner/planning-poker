@@ -5,6 +5,39 @@
   --color-surface: color-mix(in oklab, var(--color-zinc-900) 80%, var(--color-indigo-950));
   --color-surface-raised: color-mix(in oklab, var(--color-zinc-800) 80%, var(--color-indigo-950));
   --color-border: color-mix(in oklab, var(--color-zinc-700) 80%, var(--color-indigo-950));
+
+  --animate-card-flip: card-flip 600ms both;
+  /* Its own name: changing only the direction would not restart a finished flip. */
+  --animate-card-unflip: card-unflip 600ms both;
+
+  /* Tilts and lifts toward the viewer mid-turn, so the flip reads as a card in hand. */
+  @keyframes card-flip {
+    from {
+      transform: translateZ(0) rotateY(0) rotateX(0);
+      animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45);
+    }
+    50% {
+      transform: translateZ(16px) rotateY(-90deg) rotateX(14deg);
+      animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    to {
+      transform: translateZ(0) rotateY(-180deg) rotateX(0);
+    }
+  }
+
+  @keyframes card-unflip {
+    from {
+      transform: translateZ(0) rotateY(-180deg) rotateX(0);
+      animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45);
+    }
+    50% {
+      transform: translateZ(16px) rotateY(-90deg) rotateX(14deg);
+      animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+    }
+    to {
+      transform: translateZ(0) rotateY(0) rotateX(0);
+    }
+  }
 }
 
 @layer base {

@@ -202,3 +202,26 @@ func TestUnjoinedRoomsExpireEarly(t *testing.T) {
 		t.Fatal("joined room expired before one hour")
 	}
 }
+
+func TestRenameIgnoresRoundAndValidates(t *testing.T) {
+	s := New()
+	code, _ := s.Create("Test")
+	alice, _ := s.Join(code, aliceID, "Alice")
+	bob, _ := s.Join(code, bobID, "Bob")
+	<-alice.Updates
+	<-bob.Updates
+	for _, title := range []string{"", "  ", "a\nb", strings.Repeat("界", 101)} {
+		if err := s.Command(alice, "rename", title, 1); err == nil {
+			t.Errorf("accepted invalid title %q", title)
+		}
+	}
+	if err := s.Command(alice, "rename", "  Retro  ", 7); err != nil {
+		t.Fatal(err)
+	}
+	if snapshot := <-bob.Updates; snapshot.Title != "Retro" {
+		t.Fatalf("other participant saw %q", snapshot.Title)
+	}
+	if title, _, _ := s.Info(code, ""); title != "Retro" {
+		t.Fatalf("room info kept %q", title)
+	}
+}

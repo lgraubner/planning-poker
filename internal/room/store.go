@@ -234,6 +234,16 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 	if r == nil || !sub.member.connections[sub] {
 		return ErrNotFound
 	}
+	// Renaming does not depend on the round, so a reset must not reject it.
+	if command == "rename" {
+		title, err := ValidateLabel(value, 100)
+		if err != nil {
+			return err
+		}
+		r.title = title
+		s.publish(r)
+		return nil
+	}
 	if round != r.round {
 		return errors.New("The round changed. Try again.")
 	}
