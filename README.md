@@ -24,7 +24,7 @@ Open the Vite address printed in the second terminal. Vite proxies HTTP and WebS
 
 ## Verify
 
-Install the Playwright browser once with `npx --prefix web playwright install chromium`. Install the Git hooks once with `npx --prefix web lefthook install`; the pre-commit hook formats staged frontend and Go files. CI still rejects unformatted code, and the project `.editorconfig` keeps formatting independent of personal editor settings.
+Install the Playwright browser once with `npx --prefix web playwright install chromium`. Install the Git hooks once with `npx --prefix web lefthook install`; the pre-commit hook formats staged files with Oxfmt and Go files with gofmt. CI still rejects unformatted code, and the project `.editorconfig` keeps formatting independent of personal editor settings.
 
 ```sh
 make check
@@ -32,7 +32,7 @@ make e2e
 make smoke
 ```
 
-`check` runs Oxlint and Oxfmt checks, builds and type-checks the SPA, runs frontend unit tests (Vitest, `web/src/**/*.test.{ts,tsx}`), runs Go vet, runs race-enabled Go tests, and runs the end-to-end tests. `e2e` builds the SPA, starts the real Go server on port 8182, and drives it with Playwright in desktop and mobile Chromium. It covers the estimate, reveal and reset round (including that unrevealed estimates never reach other browsers), automatic rejoin, shared tabs, name validation, leaving, reconnecting after a dropped socket, missing rooms, and copying the link. Run a single test with `npx --prefix web playwright test -c web/playwright.config.ts -g "<name>"`. Use `npm --prefix web run format` to format frontend source files. Generated routes and build assets are excluded. `smoke` builds the container, starts it on a temporary loopback port, checks health, embedded HTML, and room creation, then stops that test container. It requires Docker and curl. CI runs `check` as parallel web and Go jobs followed by end-to-end tests (`.github/workflows/ci.yml`), and runs the container smoke test on every push to `main` and on pull requests that change the image inputs (`.github/workflows/docker.yml`).
+`check` runs Oxlint and Oxfmt checks, builds and type-checks the SPA, runs frontend unit tests (Vitest, `web/src/**/*.test.{ts,tsx}`), runs Go vet, runs race-enabled Go tests, and runs the end-to-end tests. `e2e` builds the SPA, starts the real Go server on port 8182, and drives it with Playwright in desktop and mobile Chromium. It covers the estimate, reveal and reset round (including that unrevealed estimates never reach other browsers), automatic rejoin, shared tabs, name validation, leaving, reconnecting after a dropped socket, missing rooms, and copying the link. Run a single test with `npx --prefix web playwright test -c web/playwright.config.ts -g "<name>"`. Use `npm --prefix web run format` to format the repository with Oxfmt (configured in the root `.oxfmtrc.json`). Git-ignored files and `web/package-lock.json` are excluded. `smoke` builds the container, starts it on a temporary loopback port, checks health, embedded HTML, and room creation, then stops that test container. It requires Docker and curl. CI runs `check` as parallel web and Go jobs followed by end-to-end tests (`.github/workflows/ci.yml`), and runs the container smoke test on every push to `main` and on pull requests that change the image inputs (`.github/workflows/docker.yml`).
 
 ## Deploy
 
