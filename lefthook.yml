@@ -11,3 +11,8 @@ pre-commit:
       glob: '*.go'
       run: gofmt -w {staged_files}
       stage_fixed: true
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: web/node_modules/.bin/commitlint --cwd web --edit {1}

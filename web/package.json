@@ -20,6 +20,8 @@
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@commitlint/cli": "21.2.3",
+    "@commitlint/config-conventional": "21.2.3",
     "@playwright/test": "1.63.0",
     "@tailwindcss/vite": "4.3.3",
     "@tanstack/router-plugin": "1.168.37",

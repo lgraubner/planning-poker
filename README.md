@@ -24,7 +24,7 @@ Open the Vite address printed in the second terminal. Vite proxies HTTP and WebS
 
 ## Verify
 
-Install the Playwright browser once with `npx --prefix web playwright install chromium`. Install the Git hooks once with `npx --prefix web lefthook install`; the pre-commit hook formats staged files with Oxfmt and Go files with gofmt. CI still rejects unformatted code, and the project `.editorconfig` keeps formatting independent of personal editor settings.
+Install the Playwright browser once with `npx --prefix web playwright install chromium`. Install the Git hooks once with `npx --prefix web lefthook install`; the pre-commit hook formats staged files with Oxfmt and Go files with gofmt. The commit-msg hook requires [Conventional Commits](https://www.conventionalcommits.org/), checked by commitlint; CI also checks every pull request's commits and title (`.github/workflows/commitlint.yml`), since a squash merge uses the title as the commit message. CI still rejects unformatted code, and the project `.editorconfig` keeps formatting independent of personal editor settings.
 
 ```sh
 make check
