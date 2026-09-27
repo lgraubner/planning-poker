@@ -196,6 +196,29 @@ test('a quick load never flashes the loader', async ({ page }) => {
   await expect(page.getByLabel('Your name')).toBeVisible();
 });
 
+test('buttons give way when pressed and centre their content', async ({ page }) => {
+  const url = await createRoom(page);
+  await join(page, url, 'Alice');
+  const scale = (name: string) =>
+    page.getByRole('button', { name, exact: true }).evaluate((b) => getComputedStyle(b).scale);
+  const press = async (name: string) => {
+    await page.getByRole('button', { name, exact: true }).hover();
+    await page.mouse.down();
+    await expect.poll(() => scale(name)).toBe('0.97');
+    await page.mouse.up();
+  };
+  await press('3');
+  await expect.poll(() => scale('3')).toBe('none');
+  // Releasing clicks, so this one reveals the cards.
+  await press('Reveal cards');
+
+  const button = await page.getByRole('button', { name: 'Vote again' }).boundingBox();
+  const icon = await page.getByRole('button', { name: 'Vote again' }).locator('svg').boundingBox();
+  const above = icon!.y - button!.y;
+  const below = button!.y + button!.height - (icon!.y + icon!.height);
+  expect(Math.abs(above - below)).toBeLessThanOrEqual(0.5);
+});
+
 test('a missing room says so', async ({ page }) => {
   await page.goto('/abcdefgh');
   await expect(page.getByRole('heading', { name: 'Room not found.' })).toBeVisible();

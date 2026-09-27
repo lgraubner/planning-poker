@@ -227,17 +227,15 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
           )}
           <div className="flex-none">
             <Button compact disabled={!connected} onClick={() => send('reset')}>
-              <span className="inline-flex items-center gap-1.5">
-                <svg
-                  aria-hidden="true"
-                  viewBox="0 0 24 24"
-                  className="size-4 fill-none stroke-current stroke-2 [stroke-linecap:round] [stroke-linejoin:round]"
-                >
-                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                  <path d="M3 3v5h5" />
-                </svg>
-                Vote again
-              </span>
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                className="size-4 fill-none stroke-current stroke-2 [stroke-linecap:round] [stroke-linejoin:round]"
+              >
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+              </svg>
+              Vote again
             </Button>
           </div>
         </section>
@@ -379,7 +377,7 @@ function CopyLinkButton({
       <button
         type="button"
         onClick={copy}
-        className={`min-h-8 font-semibold text-indigo-400 transition-[scale] duration-150 ease-out active:scale-97 motion-reduce:transition-none ${buttonClassName}`}
+        className={`min-h-8 font-semibold text-indigo-400 ${buttonClassName}`}
       >
         {/* Both labels share one cell, so the button keeps the wider one's width. */}
         <span className="grid justify-items-center">

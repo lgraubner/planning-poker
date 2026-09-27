@@ -51,6 +51,21 @@
     cursor: pointer;
   }
 
+  /* Every button gives way a little when pressed. */
+  button {
+    transition: scale 150ms ease-out;
+  }
+
+  button:not(:disabled):active {
+    scale: 0.97;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    button {
+      transition: none;
+    }
+  }
+
   button:disabled {
     cursor: not-allowed;
     opacity: 0.55;
