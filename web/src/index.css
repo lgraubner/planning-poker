@@ -51,9 +51,12 @@
     cursor: pointer;
   }
 
-  /* Every button gives way a little when pressed. */
+  /* Every button gives way a little when pressed. Its own feedback replaces the
+     tap highlight, and a long press or quick clicks do not select its label. */
   button {
     transition: scale 150ms ease-out;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
   }
 
   button:not(:disabled):active {

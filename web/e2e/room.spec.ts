@@ -209,6 +209,10 @@ test('buttons give way when pressed and centre their content', async ({ page }) 
   };
   await press('3');
   await expect.poll(() => scale('3')).toBe('none');
+  await expect(page.getByRole('button', { name: '3', exact: true })).toHaveCSS(
+    'user-select',
+    'none',
+  );
   // Releasing clicks, so this one reveals the cards.
   await press('Reveal cards');
 
