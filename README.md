@@ -92,12 +92,16 @@ Open the Vite address printed in the second terminal. Vite proxies HTTP and WebS
 
 ### Verify
 
-Install the Playwright browser once with `npx --prefix web playwright install chromium`. Install the Git hooks once with `npx --prefix web lefthook install`; the pre-commit hook formats staged files with Oxfmt and Go files with gofmt. The commit-msg hook requires [Conventional Commits](https://www.conventionalcommits.org/), checked by commitlint; CI also checks every pull request's commits and title (`.github/workflows/commitlint.yml`), since a squash merge uses the title as the commit message. CI still rejects unformatted code, and the project `.editorconfig` keeps formatting independent of personal editor settings.
+Once, install the Playwright browser and the Git hooks (formatting and [Conventional Commits](https://www.conventionalcommits.org/)):
 
 ```sh
-make check
-make e2e
-make smoke
+npx --prefix web playwright install chromium
+npx --prefix web lefthook install
 ```
 
-`check` runs Oxlint and Oxfmt checks, builds and type-checks the SPA, runs frontend unit tests (Vitest, `web/src/**/*.test.{ts,tsx}`), runs Go vet, runs race-enabled Go tests, and runs the end-to-end tests. `e2e` builds the SPA, starts the real Go server on port 8182, and drives it with Playwright in desktop and mobile Chromium. Run a single test with `npx --prefix web playwright test -c web/playwright.config.ts -g "<name>"`. Use `npm --prefix web run format` to format the repository with Oxfmt (configured in the root `.oxfmtrc.json`). Git-ignored files and `web/package-lock.json` are excluded. `smoke` builds the container, starts it on a temporary loopback port, checks health, embedded HTML, room creation, and that the room survives a restart on a SQLite volume, then removes that test container. It requires Docker and curl. CI runs `check` as parallel web and Go jobs followed by end-to-end tests (`.github/workflows/ci.yml`), and runs the container smoke test on every push to `main` and on pull requests that change the image inputs (`.github/workflows/docker.yml`).
+```sh
+make check   # lint, format check, build, unit and end-to-end tests
+make smoke   # build and test the Docker image (needs Docker and curl)
+```
+
+Run a single end-to-end test with `npx --prefix web playwright test -c web/playwright.config.ts -g "<name>"`, and format everything with `npm --prefix web run format`.
