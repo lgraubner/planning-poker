@@ -185,23 +185,7 @@ function JoinRoom({
 
 function Room({ code, participant }: { code: string; participant: Identity }) {
   const { snapshot, connected, error, fatal, send } = useRoom(code, participant);
-  const [copyMessage, setCopyMessage] = useState('');
   const reconnecting = useDelayed(!connected);
-
-  useEffect(() => {
-    if (!copyMessage) return;
-    const timer = setTimeout(() => setCopyMessage(''), 3000);
-    return () => clearTimeout(timer);
-  }, [copyMessage]);
-
-  async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(location.href);
-      setCopyMessage('Link copied');
-    } catch {
-      setCopyMessage('Copy the link from your address bar.');
-    }
-  }
 
   if (fatal) return <UnableToJoin error={error} />;
   if (!snapshot) return <RoomLoading>Connecting to room…{error}</RoomLoading>;
@@ -213,8 +197,6 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
       <RoomHeader
         title={snapshot.title}
         connected={connected}
-        copyMessage={copyMessage}
-        onCopy={copyLink}
         onRename={(title) => send('rename', title)}
       />
       {reconnecting && (
@@ -229,7 +211,6 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
         connected={connected}
         revealed={snapshot.revealed}
         onReveal={() => send('reveal')}
-        onInvite={copyLink}
       />
       {/* Both bars share one cell, so the footer keeps its height and the table stays put.
           The round controls sit at its bottom, leaving the space above for the results. */}
@@ -298,14 +279,10 @@ function UnableToJoin({ error }: { error: string }) {
 function RoomHeader({
   title,
   connected,
-  copyMessage,
-  onCopy,
   onRename,
 }: {
   title: string;
   connected: boolean;
-  copyMessage: string;
-  onCopy: () => void;
   onRename: (title: string) => void;
 }) {
   // Only an open editor holds a draft, so renames by others show until you click.
@@ -353,22 +330,83 @@ function RoomHeader({
           />
         )}
       </h1>
-      <div className="relative justify-self-end whitespace-nowrap">
-        <button
-          type="button"
-          onClick={onCopy}
-          className="min-h-8 rounded-md border border-indigo-400 px-2.5 text-sm font-semibold text-indigo-400"
-        >
-          Copy room link
-        </button>
-        <span
-          role="status"
-          className={`${small} absolute top-full right-0 mt-1 w-max max-w-60 text-right`}
-        >
-          {copyMessage}
-        </span>
-      </div>
+      <CopyLinkButton
+        className="justify-self-end"
+        buttonClassName="rounded-md border border-indigo-400 px-2.5 text-sm"
+        statusClassName="right-0 text-right"
+      />
     </header>
+  );
+}
+
+function CopyLinkButton({
+  className = '',
+  buttonClassName = '',
+  statusClassName,
+}: {
+  className?: string;
+  buttonClassName?: string;
+  statusClassName: string;
+}) {
+  const [result, setResult] = useState<'copied' | 'failed' | null>(null);
+  const copied = result === 'copied';
+
+  useEffect(() => {
+    if (!result) return;
+    const timer = setTimeout(() => setResult(null), 3000);
+    return () => clearTimeout(timer);
+  }, [result]);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(location.href);
+      setResult('copied');
+    } catch {
+      setResult('failed');
+    }
+  }
+
+  return (
+    <div className={`relative whitespace-nowrap ${className}`}>
+      <button
+        type="button"
+        onClick={copy}
+        className={`min-h-8 font-semibold text-indigo-400 transition-[scale] duration-150 ease-out active:scale-97 motion-reduce:transition-none ${buttonClassName}`}
+      >
+        {/* Both labels share one cell, so the button keeps the wider one's width. */}
+        <span className="grid justify-items-center">
+          <span className={`${swap} ${copied ? swapOut : ''}`}>Copy room link</span>
+          <span className={`${swap} inline-flex items-center gap-1 ${copied ? '' : swapOut}`}>
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="size-4 fill-none stroke-current stroke-[2.5] [stroke-linecap:round] [stroke-linejoin:round]"
+            >
+              {/* Draws itself in once the label has faded in. */}
+              <path
+                d="M4 12.5l5 5L20 6.5"
+                pathLength={1}
+                className={`[stroke-dasharray:1] transition-[stroke-dashoffset] motion-reduce:transition-none ${
+                  copied
+                    ? 'delay-75 duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] [stroke-dashoffset:0]'
+                    : '[stroke-dashoffset:1]'
+                }`}
+              />
+            </svg>
+            Link copied
+          </span>
+        </span>
+      </button>
+      <span
+        role="status"
+        className={`${small} absolute top-full mt-1 w-max max-w-60 ${statusClassName} ${
+          copied ? 'sr-only' : ''
+        }`}
+      >
+        {copied && 'Link copied'}
+        {result === 'failed' && 'Copy the link from your address bar.'}
+      </span>
+    </div>
   );
 }
 
@@ -378,14 +416,12 @@ function PokerTable({
   connected,
   revealed,
   onReveal,
-  onInvite,
 }: {
   participants: Participant[];
   self: string;
   connected: boolean;
   revealed: boolean;
   onReveal: () => void;
-  onInvite: () => void;
 }) {
   const hasVotes = participants.some((participant) => participant.selected);
   const allVoted =
@@ -414,14 +450,8 @@ function PokerTable({
     <div className="grid min-h-96 w-full max-w-7xl grow grid-cols-[56px_minmax(0,1fr)_56px] grid-rows-[96px_132px_96px] content-center items-center justify-center gap-x-1.5 gap-y-6 self-center pt-4 pb-14 sm:grid-cols-[64px_minmax(200px,420px)_64px] sm:gap-x-3">
       {others.length === 0 ? (
         <div className="col-2 row-1 self-end text-center text-sm">
-          <p className="mb-2">Feeling lonely?</p>
-          <button
-            type="button"
-            onClick={onInvite}
-            className="min-h-8 font-semibold text-indigo-400"
-          >
-            Copy room link
-          </button>
+          <p className="mb-0.5">Feeling lonely?</p>
+          <CopyLinkButton statusClassName="left-1/2 -translate-x-1/2" />
         </div>
       ) : (
         <ParticipantRow participants={top} revealed={revealed} top />
@@ -656,6 +686,10 @@ function EstimateControls({
 
 const roomTitle = 'text-2xl font-bold tracking-tight wrap-anywhere';
 const small = 'text-sm text-zinc-400';
+// Swaps a button label in place: the leaving one blurs out as the arriving one sharpens.
+const swap =
+  'col-start-1 row-start-1 transition-[opacity,filter,scale,visibility] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]';
+const swapOut = 'invisible opacity-0 blur-xs motion-safe:scale-95';
 const cardFace =
   'absolute inset-0 flex items-center justify-center rounded-lg border-2 text-xl font-semibold text-indigo-400 select-none backface-hidden';
 const controls =

@@ -193,9 +193,24 @@ test('the room link can be copied', async ({ page, context, browserName }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   const url = await createRoom(page);
   await join(page, url, 'Alice');
-  await page.getByRole('button', { name: 'Copy room link' }).first().click();
-  await expect(page.getByText('Link copied')).toBeVisible();
+  const header = page.locator('header');
+  const invite = page.getByText('Feeling lonely?').locator('..');
+
+  await header.getByRole('button', { name: 'Copy room link' }).click();
+  await expect(header.getByRole('button', { name: 'Link copied' })).toBeVisible();
+  await expect(header.getByRole('status')).toHaveText('Link copied');
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(url);
+  // Only the clicked button confirms.
+  await expect(invite.getByRole('button', { name: 'Copy room link' })).toBeVisible();
+  await expect(invite.getByRole('status')).toBeEmpty();
+
+  await page.evaluate(() => navigator.clipboard.writeText(''));
+  await invite.getByRole('button', { name: 'Copy room link' }).click();
+  await expect(invite.getByRole('button', { name: 'Link copied' })).toBeVisible();
+  await expect(invite.getByRole('status')).toHaveText('Link copied');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(url);
+  // The labels return, so the buttons can be used again.
+  await expect(page.getByRole('button', { name: 'Copy room link' })).toHaveCount(2);
 });
 
 test('a room needs a title before it is created', async ({ page }) => {
