@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import confetti from 'canvas-confetti';
 import { Button } from '../components/Button';
 import { CenteredSection } from '../components/CenteredSection';
 import { ErrorMessage } from '../components/ErrorMessage';
@@ -377,6 +378,9 @@ function PokerTable({
   const result = revealed
     ? consensus(participants.flatMap((participant) => participant.estimate ?? []))
     : null;
+  // A reveal that happened before you arrived is already over: no confetti for it.
+  const [arrivedRevealed, setArrivedRevealed] = useState(revealed);
+  if (arrivedRevealed && !revealed) setArrivedRevealed(false);
   const others = participants.filter((participant) => participant.id !== self);
   const sideCount = others.length >= 4 ? 2 : 0;
   const sides = others.slice(0, sideCount);
@@ -424,9 +428,10 @@ function PokerTable({
           <p role="status" className="text-center">
             {!result.discuss && <span className="sr-only">Proposed estimate </span>}
             <span
-              className={`block leading-none font-bold text-white ${result.discuss ? 'text-3xl' : 'text-5xl'}`}
+              className={`relative block leading-none font-bold text-white ${result.discuss ? 'text-3xl' : 'text-5xl'}`}
             >
-              {result.discuss ? 'Discuss!' : result.value}
+              {result.agreement === 1 && !arrivedRevealed && <Confetti />}
+              <span className="relative">{result.discuss ? 'Discuss!' : result.value}</span>
             </span>
             {!result.discuss && result.agreement !== null && (
               <>
@@ -450,6 +455,35 @@ function PokerTable({
       )}
       <ParticipantRow participants={bottom} revealed={revealed} />
     </div>
+  );
+}
+
+// A fixed canvas painted before the number, so the burst starts behind it.
+function Confetti() {
+  const canvas = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const burst = confetti.create(canvas.current!, { resize: true, disableForReducedMotion: true });
+    const number = canvas.current!.parentElement!.getBoundingClientRect();
+    void burst({
+      particleCount: 60,
+      spread: 360,
+      startVelocity: 25,
+      origin: {
+        x: (number.left + number.width / 2) / innerWidth,
+        y: (number.top + number.height / 2) / innerHeight,
+      },
+    });
+    return () => burst.reset();
+  }, []);
+
+  return (
+    <canvas
+      ref={canvas}
+      aria-hidden="true"
+      data-testid="confetti"
+      className="pointer-events-none fixed inset-0 size-full"
+    />
   );
 }
 

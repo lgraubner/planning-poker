@@ -255,6 +255,7 @@ test('revealed cards show how many voted for each value', async ({ page, newPart
     await expect(viewer.getByRole('status').filter({ hasText: 'Proposed estimate' })).toHaveText(
       'Proposed estimate 5 Agreement 67%',
     );
+    await expect(viewer.getByTestId('confetti')).toHaveCount(0);
   }
 
   await bob.getByRole('button', { name: 'Vote again' }).click();
@@ -270,4 +271,30 @@ test('revealed cards show how many voted for each value', async ({ page, newPart
   for (const viewer of [page, bob, carol]) {
     await expect(viewer.getByRole('status').filter({ hasText: 'Discuss!' })).toHaveText('Discuss!');
   }
+});
+
+test('full agreement throws confetti for everyone', async ({ page, newParticipant }) => {
+  const url = await createRoom(page);
+  await join(page, url, 'Alice');
+  const bob = await newParticipant();
+  await join(bob, url, 'Bob');
+
+  await page.getByRole('button', { name: '5', exact: true }).click();
+  await bob.getByRole('button', { name: '5', exact: true }).click();
+  await expect(card(page, 'Bob')).toHaveAccessibleName('Bob: selected');
+  await page.getByRole('button', { name: 'Reveal cards' }).click();
+  for (const viewer of [page, bob]) {
+    await expect(viewer.getByRole('status').filter({ hasText: 'Proposed estimate' })).toHaveText(
+      'Proposed estimate 5 Agreement 100%',
+    );
+    await expect(viewer.getByTestId('confetti')).toBeAttached();
+  }
+
+  // Someone arriving after the reveal missed the moment.
+  const carol = await newParticipant();
+  await carol.goto(url);
+  await carol.getByLabel('Your name').fill('Carol');
+  await carol.getByRole('button', { name: 'Join room' }).click();
+  await expect(card(carol, 'Alice')).toHaveAccessibleName('Alice: 5');
+  await expect(carol.getByTestId('confetti')).toHaveCount(0);
 });

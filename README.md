@@ -72,6 +72,5 @@ The glossary is in [CONTEXT.md](CONTEXT.md). The deployment trade-off is recorde
 - optional SQlite
 - nudge other participants
 - Microsoft Teams like reactions
-- confetti on full agreement
 - Improved readme
 - improve copy link feedback
