@@ -65,12 +65,10 @@ The glossary is in [CONTEXT.md](CONTEXT.md). The deployment trade-off is recorde
 
 ## Todo
 
-- UI
-- MCP für Results?
-- Loading State with min delay
-- History (accounting revotes on same room title or separate?)
+- improve 404 and error page designs
+- Improved readme
 - optional SQlite
+- mobile/responsive improvements
+- History (accounting revotes on same room title or separate?)
 - nudge other participants
 - Microsoft Teams like reactions
-- Improved readme
-- improve copy link feedback
