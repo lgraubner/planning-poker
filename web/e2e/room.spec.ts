@@ -132,8 +132,15 @@ test('a closed tab leaves the room', async ({ page, newParticipant }) => {
 test('a dropped connection reconnects and keeps the estimate', async ({ page }) => {
   const url = await createRoom(page);
   const sockets: { close: () => Promise<void> }[] = [];
+  // The reconnect's snapshot waits, or it lands before the banner's delay runs out.
+  let release = () => {};
+  const held = new Promise<void>((resolve) => (release = resolve));
   await page.routeWebSocket(/\/ws$/, (socket) => {
     const server = socket.connectToServer();
+    const reconnect = sockets.length > 0;
+    server.onMessage((message) =>
+      reconnect ? void held.then(() => socket.send(message)) : socket.send(message),
+    );
     sockets.push({ close: () => Promise.all([socket.close(), server.close()]).then(() => {}) });
   });
   await join(page, url, 'Alice');
@@ -142,6 +149,7 @@ test('a dropped connection reconnects and keeps the estimate', async ({ page }) 
 
   await sockets[0].close();
   await expect(page.getByText('Reconnecting…')).toBeVisible();
+  release();
   await expect(page.getByText('Reconnecting…')).toBeHidden();
   expect(sockets).toHaveLength(2);
   await expect(page.getByRole('button', { name: '3', exact: true })).toHaveAttribute(
