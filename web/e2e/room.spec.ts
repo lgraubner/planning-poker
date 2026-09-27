@@ -150,6 +150,24 @@ test('a dropped connection reconnects and keeps the estimate', async ({ page }) 
   );
 });
 
+test('a rename shows at once, before the server confirms it', async ({ page }) => {
+  const url = await createRoom(page, 'Sprint planning');
+  let hold = false;
+  const held: string[] = [];
+  await page.routeWebSocket(/\/ws$/, (socket) => {
+    const server = socket.connectToServer();
+    server.onMessage((message) => (hold ? held.push(String(message)) : socket.send(message)));
+  });
+  await join(page, url, 'Alice');
+
+  hold = true;
+  await page.getByRole('button', { name: 'Sprint planning', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Room title' }).fill('Retro');
+  await page.getByRole('textbox', { name: 'Room title' }).press('Enter');
+  await expect.poll(() => held.map((frame) => JSON.parse(frame).title)).toContain('Retro');
+  await expect(page.getByRole('button', { name: 'Retro', exact: true })).toBeVisible();
+});
+
 test('a quick load never flashes the loader', async ({ page }) => {
   const url = await createRoom(page);
   await page.clock.install();

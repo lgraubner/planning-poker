@@ -287,10 +287,17 @@ function RoomHeader({
 }) {
   // Only an open editor holds a draft, so renames by others show until you click.
   const [draft, setDraft] = useState<string | null>(null);
+  // Shows a sent rename until the server's title moves off the one it replaced.
+  // ponytail: a rename lost to a dropped socket shows until the title next changes.
+  const [pending, setPending] = useState<{ from: string; to: string } | null>(null);
+  const shown = pending?.from === title ? pending.to : title;
 
   function commit() {
     const next = draft?.trim();
-    if (next && next !== title && !/\p{Cc}/u.test(next)) onRename(next);
+    if (next && next !== shown && !/\p{Cc}/u.test(next)) {
+      onRename(next);
+      setPending({ from: title, to: next });
+    }
     setDraft(null);
   }
 
@@ -308,15 +315,16 @@ function RoomHeader({
             type="button"
             title="Rename room"
             disabled={!connected}
-            onClick={() => setDraft(title)}
+            onClick={() => setDraft(shown)}
             className="max-w-full truncate border border-transparent px-[7px]"
           >
-            {title}
+            {shown}
           </button>
         ) : (
           <input
             aria-label="Room title"
             autoFocus
+            enterKeyHint="done"
             value={draft}
             maxLength={100}
             onFocus={(event) => event.currentTarget.select()}
