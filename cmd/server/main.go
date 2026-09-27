@@ -30,6 +30,12 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	store := room.New()
+	if path := os.Getenv("DATABASE_PATH"); path != "" {
+		if store, err = room.Open(path); err != nil {
+			slog.Error("could not open database", "error", err)
+			os.Exit(1)
+		}
+	}
 	server := &http.Server{Addr: ":" + port, Handler: httpserver.New(ctx, store, webui.Files(), os.Getenv("CLIENT_IP_HEADER")), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 8192}
 	go func() {
 		tick := time.NewTicker(time.Second)

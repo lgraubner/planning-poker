@@ -13,8 +13,11 @@ COPY cmd/ cmd/
 COPY internal/ internal/
 COPY --from=frontend /app/internal/webui/dist/ internal/webui/dist/
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /server ./cmd/server
+# Distroless has no shell; a volume mounted here inherits the nonroot owner.
+RUN mkdir /data
 
 FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=backend /server /server
+COPY --from=backend --chown=nonroot:nonroot /data /data
 EXPOSE 8080
 ENTRYPOINT ["/server"]

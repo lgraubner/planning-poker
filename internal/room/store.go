@@ -2,8 +2,10 @@ package room
 
 import (
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
 	"errors"
+	"log/slog"
 	"math/big"
 	"slices"
 	"strings"
@@ -11,11 +13,12 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
+
+	_ "modernc.org/sqlite"
 )
 
 const (
 	MaxParticipants = 30
-	maxRooms        = 1000
 	maxSockets      = 60 // per room, including sockets that have not joined yet
 	maxTabs         = 5  // connections per participant
 )
@@ -67,13 +70,92 @@ type Subscription struct {
 }
 
 type Store struct {
-	// ponytail: one lock for up to 1,000 rooms; use per-room locks if contention becomes measurable.
+	// ponytail: one lock for up to 100,000 rooms; use per-room locks if contention becomes measurable.
 	mu    sync.Mutex
 	rooms map[string]*session
 	now   func() time.Time
+	db    *sql.DB       // nil keeps rooms in memory only
+	ttl   time.Duration // how long a joined room survives without connections
+	// Bounds memory, since every room stays loaded, and the chance of guessing a code.
+	maxRooms int
 }
 
-func New() *Store { return &Store{rooms: make(map[string]*session), now: time.Now} }
+func New() *Store {
+	return &Store{rooms: make(map[string]*session), now: time.Now, ttl: time.Hour, maxRooms: 1000}
+}
+
+// Open keeps rooms in the SQLite database at path, creating it if needed, so
+// they survive restarts. Participants and estimates stay in memory.
+func Open(path string) (*Store, error) {
+	db, err := sql.Open("sqlite", "file:"+path+"?_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)&_pragma=busy_timeout(5000)")
+	if err != nil {
+		return nil, err
+	}
+	db.SetMaxOpenConns(1)
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS rooms (
+		code TEXT PRIMARY KEY,
+		title TEXT NOT NULL,
+		round INTEGER NOT NULL,
+		revealed INTEGER NOT NULL,
+		joined INTEGER NOT NULL,
+		empty_since INTEGER NOT NULL -- Unix seconds; 0 while participants are connected
+	)`); err != nil {
+		db.Close()
+		return nil, err
+	}
+	s := New()
+	// Rooms held for 30 days need more room slots, or a flood could lock out creation for a month.
+	s.db, s.ttl, s.maxRooms = db, 30*24*time.Hour, 100_000
+	rows, err := db.Query(`SELECT code, title, round, revealed, joined, empty_since FROM rooms`)
+	if err != nil {
+		db.Close()
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var code string
+		var emptySince int64
+		r := &session{}
+		if err := rows.Scan(&code, &r.title, &r.round, &r.revealed, &r.joined, &emptySince); err != nil {
+			db.Close()
+			return nil, err
+		}
+		// Rooms occupied at shutdown start their idle clock now.
+		r.emptySince = s.now()
+		if emptySince != 0 {
+			r.emptySince = time.Unix(emptySince, 0)
+		}
+		s.rooms[code] = r
+	}
+	if err := rows.Err(); err != nil {
+		db.Close()
+		return nil, err
+	}
+	return s, nil
+}
+
+// save writes the persisted fields of a room; nil deletes it.
+// ponytail: synchronous write under the store lock, fine for a handful of writes per round; batch if it shows in latency.
+func (s *Store) save(code string, r *session) error {
+	if s.db == nil {
+		return nil
+	}
+	var err error
+	if r == nil {
+		_, err = s.db.Exec(`DELETE FROM rooms WHERE code = ?`, code)
+	} else {
+		var emptySince int64
+		if !r.emptySince.IsZero() {
+			emptySince = r.emptySince.Unix()
+		}
+		_, err = s.db.Exec(`INSERT OR REPLACE INTO rooms (code, title, round, revealed, joined, empty_since) VALUES (?, ?, ?, ?, ?, ?)`,
+			code, r.title, r.round, r.revealed, r.joined, emptySince)
+	}
+	if err != nil {
+		slog.Error("saving room failed", "error", err)
+	}
+	return err
+}
 
 func ValidateLabel(value string, max int) (string, error) {
 	if !utf8.ValidString(value) || strings.ContainsFunc(value, unicode.IsControl) {
@@ -101,7 +183,7 @@ func (s *Store) Create(title string) (string, error) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if len(s.rooms) >= maxRooms {
+	if len(s.rooms) >= s.maxRooms {
 		return "", errors.New("Room limit reached. Try again later.")
 	}
 	for {
@@ -116,7 +198,11 @@ func (s *Store) Create(title string) (string, error) {
 		if _, exists := s.rooms[string(code)]; exists {
 			continue
 		}
-		s.rooms[string(code)] = &session{title: title, round: 1, emptySince: s.now()}
+		r := &session{title: title, round: 1, emptySince: s.now()}
+		if s.save(string(code), r) != nil {
+			return "", errors.New("Could not create room.")
+		}
+		s.rooms[string(code)] = r
 		return string(code), nil
 	}
 }
@@ -197,8 +283,11 @@ func (s *Store) Join(code, secret, name string) (*Subscription, error) {
 	p.connections[sub] = true
 	p.disconnected = time.Time{}
 	p.departed = false
-	r.emptySince = time.Time{}
-	r.joined = true
+	if !r.joined || !r.emptySince.IsZero() {
+		r.emptySince = time.Time{}
+		r.joined = true
+		s.save(code, r)
+	}
 	s.publish(r)
 	return sub, nil
 }
@@ -220,6 +309,7 @@ func (s *Store) disconnect(sub *Subscription, departed bool) {
 	}
 	if !hasConnections(r) {
 		r.emptySince = s.now()
+		s.save(sub.code, r)
 	}
 	s.publish(r)
 }
@@ -247,6 +337,7 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 			return err
 		}
 		r.title = title
+		s.save(sub.code, r)
 		s.publish(r)
 		return nil
 	}
@@ -279,6 +370,9 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 		}
 	default:
 		return errors.New("Unknown command.")
+	}
+	if command != "select" {
+		s.save(sub.code, r)
 	}
 	s.publish(r)
 	return nil
@@ -320,12 +414,13 @@ func (s *Store) Sweep(expireRooms bool) {
 	defer s.mu.Unlock()
 	now := s.now()
 	for code, r := range s.rooms {
-		ttl := time.Hour
+		ttl := s.ttl
 		if !r.joined {
 			ttl = 10 * time.Minute
 		}
 		if expireRooms && !r.emptySince.IsZero() && now.Sub(r.emptySince) >= ttl {
 			delete(s.rooms, code)
+			s.save(code, nil)
 			continue
 		}
 		before := len(r.participants)

@@ -225,3 +225,92 @@ func TestRenameIgnoresRoundAndValidates(t *testing.T) {
 		t.Fatalf("room info kept %q", title)
 	}
 }
+
+func TestSQLitePersistsRoomsAcrossRestarts(t *testing.T) {
+	path := t.TempDir() + "/rooms.db"
+	s, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A past clock tells a persisted idle clock apart from one reset at startup.
+	now := time.Now().Add(-365 * 24 * time.Hour)
+	start := now
+	s.now = func() time.Time { return now }
+	code, _ := s.Create("Sprint")
+	unused, _ := s.Create("Unused")
+	idle, _ := s.Create("Idle")
+	alice, _ := s.Join(code, aliceID, "Alice")
+	for _, c := range []struct {
+		command, value string
+		round          uint64
+	}{{"reveal", "", 1}, {"reset", "", 1}, {"reveal", "", 2}, {"rename", "Retro", 2}} {
+		if err := s.Command(alice, c.command, c.value, c.round); err != nil {
+			t.Fatal(c.command, err)
+		}
+	}
+	// Alice stays connected: the restart finds the room occupied.
+	bob, _ := s.Join(idle, bobID, "Bob")
+	s.Leave(bob)
+	now = now.Add(10 * time.Minute)
+	s.Sweep(true)
+
+	s, err = Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.now = func() time.Time { return now }
+	if _, _, err := s.Info(unused, ""); err != ErrNotFound {
+		t.Fatal("expired room came back after restart")
+	}
+	bob, err = s.Join(code, bobID, "Bob")
+	if err != nil {
+		t.Fatal("room lost on restart:", err)
+	}
+	if snapshot := <-bob.Updates; snapshot.Title != "Retro" || snapshot.Round != 2 || !snapshot.Revealed {
+		t.Fatalf("room state lost on restart: %+v", snapshot)
+	}
+	s.Leave(bob)
+
+	s, _ = Open(path)
+	s.now = func() time.Time { return now }
+	now = start.Add(30 * 24 * time.Hour)
+	s.Sweep(true)
+	if _, _, err := s.Info(idle, ""); err != ErrNotFound {
+		t.Fatal("idle clock reset on restart")
+	}
+	if _, _, err := s.Info(code, ""); err != nil {
+		t.Fatal("joined room expired before 30 idle days")
+	}
+}
+
+func TestRoomLimitDependsOnPersistence(t *testing.T) {
+	memory := New()
+	for range 1000 {
+		if _, err := memory.Create("Room"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := memory.Create("Room"); err == nil {
+		t.Fatal("in-memory store exceeded 1,000 rooms")
+	}
+	s, err := Open(t.TempDir() + "/rooms.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for range 1001 {
+		if _, err := s.Create("Room"); err != nil {
+			t.Fatal("database store stopped at the in-memory room limit:", err)
+		}
+	}
+}
+
+// Sweep runs every second under the store lock, so it must stay cheap at the room limit.
+func BenchmarkSweepAtDatabaseRoomLimit(b *testing.B) {
+	s := New()
+	for i := range 100_000 {
+		s.rooms[fmt.Sprint(i)] = &session{title: "Room", round: 1, emptySince: time.Now()}
+	}
+	for b.Loop() {
+		s.Sweep(false)
+	}
+}
