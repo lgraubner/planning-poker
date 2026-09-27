@@ -106,11 +106,26 @@ function UnavailableRoom({ message }: { message: string }) {
 }
 
 function RoomLoading({ children }: { children: ReactNode }) {
+  const shown = useDelayed(true);
   return (
     <p role="status" className="leading-relaxed text-zinc-400">
-      {children}
+      {shown && children}
     </p>
   );
+}
+
+/** True once `active` has held for `ms`, so a state that clears quickly never flashes. */
+function useDelayed(active: boolean, ms = 300) {
+  const [elapsed, setElapsed] = useState(false);
+  useEffect(() => {
+    if (!active) return;
+    const timer = setTimeout(() => setElapsed(true), ms);
+    return () => {
+      clearTimeout(timer);
+      setElapsed(false);
+    };
+  }, [active, ms]);
+  return active && elapsed;
 }
 
 function JoinRoom({
@@ -171,6 +186,7 @@ function JoinRoom({
 function Room({ code, participant }: { code: string; participant: Identity }) {
   const { snapshot, connected, error, fatal, send } = useRoom(code, participant);
   const [copyMessage, setCopyMessage] = useState('');
+  const reconnecting = useDelayed(!connected);
 
   useEffect(() => {
     if (!copyMessage) return;
@@ -201,7 +217,7 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
         onCopy={copyLink}
         onRename={(title) => send('rename', title)}
       />
-      {!connected && (
+      {reconnecting && (
         <p role="status" className="my-4 rounded-lg border px-4 py-3">
           Reconnecting… Controls will return when you're connected.
         </p>
@@ -522,6 +538,7 @@ function ParticipantCard({
   // A reveal that happened before you arrived is already over: show the face without turning it.
   const [arrivedRevealed, setArrivedRevealed] = useState(!!face);
   if (arrivedRevealed && !face) setArrivedRevealed(false);
+  const reconnecting = useDelayed(!participant.connected);
 
   return (
     <article
@@ -565,7 +582,7 @@ function ParticipantCard({
         </div>
       </div>
       <p className="mt-2 mb-0.5 text-sm font-semibold wrap-anywhere">{participant.name}</p>
-      {!participant.connected && <span className={small}>Reconnecting</span>}
+      {reconnecting && <span className={small}>Reconnecting</span>}
     </article>
   );
 }

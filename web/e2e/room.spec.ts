@@ -150,6 +150,26 @@ test('a dropped connection reconnects and keeps the estimate', async ({ page }) 
   );
 });
 
+test('a quick load never flashes the loader', async ({ page }) => {
+  const url = await createRoom(page);
+  await page.clock.install();
+  let release = () => {};
+  const held = new Promise<void>((resolve) => (release = resolve));
+  await page.route('**/api/rooms/*', async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.goto(url);
+  const status = page.getByRole('status');
+  await expect(status).toBeAttached();
+  await expect(status).toBeEmpty();
+
+  await page.clock.runFor(300);
+  await expect(status).toHaveText('Loading room…');
+  release();
+  await expect(page.getByLabel('Your name')).toBeVisible();
+});
+
 test('a missing room says so', async ({ page }) => {
   await page.goto('/abcdefgh');
   await expect(page.getByRole('heading', { name: 'Room not found.' })).toBeVisible();
