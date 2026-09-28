@@ -105,3 +105,7 @@ make smoke   # build and test the Docker image (needs Docker and curl)
 ```
 
 Run a single end-to-end test with `npx --prefix web playwright test -c web/playwright.config.ts -g "<name>"`, and format everything with `npm --prefix web run format`.
+
+## License
+
+[MIT](LICENSE)
