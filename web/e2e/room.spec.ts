@@ -215,6 +215,14 @@ test('buttons give way when pressed and centre their content', async ({ page }) 
   );
   // Releasing clicks, so this one reveals the cards.
   await press('Reveal cards');
+  // Measure once the results have faded in, not mid-scale.
+  await expect
+    .poll(() =>
+      page
+        .getByRole('region', { name: 'Round controls' })
+        .evaluate((element) => element.getAnimations().length),
+    )
+    .toBe(0);
 
   const button = await page.getByRole('button', { name: 'Vote again' }).boundingBox();
   const icon = await page.getByRole('button', { name: 'Vote again' }).locator('svg').boundingBox();
@@ -456,4 +464,42 @@ test('your own name stands out from the others', async ({ page, newParticipant }
     expect(mine.color).not.toBe(theirs.color);
     expect(Number(mine.fontWeight)).toBeGreaterThan(Number(theirs.fontWeight));
   }
+});
+
+test('the deck and the results fade into each other', async ({ page }) => {
+  const url = await createRoom(page);
+  await join(page, url, 'Alice');
+  await page.getByRole('button', { name: '5', exact: true }).click();
+
+  // Samples each frame while the click lands: a fade passes between 0 and 1.
+  const fade = async (button: string) => {
+    const frames = page.evaluate(async () => {
+      const region = (name: string) =>
+        document.querySelector<HTMLElement>(`section[aria-label="${name}"]`)!;
+      const frames: { deck: number; round: number; bars: number }[] = [];
+      const end = performance.now() + 1000;
+      while (performance.now() < end) {
+        await new Promise(requestAnimationFrame);
+        frames.push({
+          deck: +getComputedStyle(region('Estimate controls')).opacity,
+          round: +getComputedStyle(region('Round controls')).opacity,
+          bars: region('Round controls').querySelectorAll('li').length,
+        });
+      }
+      return frames;
+    });
+    await page.getByRole('button', { name: button }).click();
+    return frames;
+  };
+  const between = (value: number) => value > 0 && value < 1;
+
+  const reveal = await fade('Reveal cards');
+  expect(reveal.some(({ deck }) => between(deck))).toBe(true);
+  expect(reveal.some(({ round }) => between(round))).toBe(true);
+
+  const again = await fade('Vote again');
+  expect(again.some(({ deck }) => between(deck))).toBe(true);
+  // The results fade out with their bars, not an empty bar.
+  expect(again.filter(({ round }) => between(round)).every(({ bars }) => bars === 1)).toBe(true);
+  expect(again.some(({ round }) => between(round))).toBe(true);
 });

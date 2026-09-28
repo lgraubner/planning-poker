@@ -227,3 +227,14 @@ test('the longest room title stays on one line', async ({ page }, info) => {
   expect(width).toBeLessThanOrEqual(page.viewportSize()!.width);
   await info.attach('room', { body: await page.screenshot(), contentType: 'image/png' });
 });
+
+test('the card deck sits at the bottom of the window', async ({ page }) => {
+  const url = await createRoom(page);
+  await join(page, url, you);
+  // The deck shares its cell with the taller round controls, so it must hug the cell's bottom.
+  const gap = await page.getByRole('group', { name: 'Choose your card' }).evaluate((element) => {
+    const cell = element.closest('section')!.parentElement!.getBoundingClientRect();
+    return cell.bottom - element.getBoundingClientRect().bottom;
+  });
+  expect(gap).toBeLessThan(16);
+});

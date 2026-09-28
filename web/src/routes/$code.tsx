@@ -189,11 +189,14 @@ function JoinRoom({
 function Room({ code, participant }: { code: string; participant: Identity }) {
   const { snapshot, connected, error, fatal, send } = useRoom(code, participant);
   const reconnecting = useDelayed(!connected);
+  // The last revealed round, so the results can fade out after the votes are cleared.
+  const results = useRef<Participant[]>([]);
 
   if (fatal) return <UnableToJoin error={error} />;
   if (!snapshot) return <RoomLoading>Connecting to room…{error}</RoomLoading>;
 
   const own = snapshot.participants.find((participant) => participant.id === snapshot.self);
+  if (snapshot.revealed) results.current = snapshot.participants;
   return (
     <section className="flex grow flex-col">
       <title>{`${snapshot.title} | Planning Poker`}</title>
@@ -220,11 +223,11 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
       <div className={controls}>
         <section
           aria-label="Round controls"
-          className={`col-start-1 row-start-1 flex w-full max-w-xl min-w-0 flex-col items-center justify-self-center self-end ${snapshot.revealed ? '' : 'invisible'}`}
+          className={`${swap} flex w-full max-w-xl min-w-0 flex-col items-center justify-self-center self-end ${snapshot.revealed ? '' : swapOut}`}
         >
           {/* Holds the results' height before the reveal, so the table stays put. */}
           <div className="flex min-h-26 max-w-full items-end pb-4">
-            {snapshot.revealed && <Results participants={snapshot.participants} />}
+            {results.current.length > 0 && <Results participants={results.current} />}
           </div>
           <div className="w-full border-t border-zinc-700 py-4">
             <Button compact disabled={!connected} onClick={() => send('reset')}>
@@ -715,7 +718,7 @@ function EstimateControls({
   return (
     <section
       aria-label="Estimate controls"
-      className={`${controlsPanel} ${hidden ? 'invisible' : ''}`}
+      className={`${swap} ${controlsPanel} ${hidden ? swapOut : ''}`}
     >
       <div
         role="group"
@@ -746,4 +749,4 @@ const cardFace =
   'absolute inset-0 flex items-center justify-center rounded-lg border-2 text-xl font-semibold text-indigo-400 select-none backface-hidden';
 const controls =
   'sticky bottom-0 z-10 grid w-full grid-cols-1 max-w-7xl self-center bg-background text-center';
-const controlsPanel = 'col-start-1 row-start-1 pt-3.5 pb-2.5';
+const controlsPanel = 'self-end pt-3.5 pb-2.5';
