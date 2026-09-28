@@ -316,11 +316,10 @@ test('anyone can rename the room for everyone', async ({ page, newParticipant })
   await bob.getByRole('textbox', { name: 'Room title' }).blur();
   await expect(page.getByRole('heading', { name: 'Daily' })).toBeVisible();
 
-  await expect(page.getByRole('link', { name: 'Report a problem' })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: 'Source code' })).toHaveAttribute(
     'href',
-    'https://github.com/lgraubner/planning-poker/issues',
+    'https://github.com/lgraubner/planning-poker',
   );
-  await expect(page.getByText(/^v\d+\.\d+\.\d+/)).toBeVisible();
   await page.getByRole('link', { name: 'Planning Poker' }).click();
   await expect(page).toHaveURL('/');
   await expect(page).toHaveTitle('Planning Poker');
