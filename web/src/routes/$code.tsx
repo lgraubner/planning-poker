@@ -319,7 +319,7 @@ function RoomHeader({
             title="Rename room"
             disabled={!connected}
             onClick={() => setDraft(shown)}
-            className="max-w-full truncate border border-transparent px-[7px]"
+            className="max-w-full truncate border border-transparent px-[7px] active:scale-none"
           >
             {shown}
           </button>
