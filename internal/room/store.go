@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	MaxParticipants = 30
+	MaxParticipants = 12
 	maxSockets      = 60 // per room, including sockets that have not joined yet
 	maxTabs         = 5  // connections per participant
 )
@@ -28,6 +28,8 @@ const alphabet = "23456789abcdefghjkmnpqrstuvwxyz"
 var Deck = []string{"0", "1", "2", "3", "5", "8", "13", "21", "?", "☕"}
 var ErrNotFound = errors.New("Room not found.")
 var ErrFull = errors.New("This room is full.")
+var ErrTooManyTabs = errors.New("You have this room open in too many tabs. Close one and try again.")
+var ErrBusy = errors.New("This room has too many connections right now. Try again shortly.")
 
 type Participant struct {
 	ID        string `json:"id"`
@@ -207,21 +209,29 @@ func (s *Store) Create(title string) (string, error) {
 	}
 }
 
-func (s *Store) Info(code, secret string) (string, bool, error) {
+// Info returns the room's title, and the error a join would meet right now.
+func (s *Store) Info(code, secret string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	r := s.rooms[code]
 	if r == nil {
-		return "", false, ErrNotFound
+		return "", ErrNotFound
 	}
-	available := len(r.participants) < MaxParticipants
+	if r.sockets >= maxSockets {
+		return r.title, ErrBusy
+	}
 	for _, p := range r.participants {
 		if p.secret == secret {
-			available = len(p.connections) < maxTabs
-			break
+			if len(p.connections) >= maxTabs {
+				return r.title, ErrTooManyTabs
+			}
+			return r.title, nil
 		}
 	}
-	return r.title, available && r.sockets < maxSockets, nil
+	if len(r.participants) >= MaxParticipants {
+		return r.title, ErrFull
+	}
+	return r.title, nil
 }
 
 // Reserve bounds sockets even before the client has sent its join message.
@@ -233,7 +243,7 @@ func (s *Store) Reserve(code string) error {
 		return ErrNotFound
 	}
 	if r.sockets >= maxSockets {
-		return ErrFull
+		return ErrBusy
 	}
 	r.sockets++
 	return nil
@@ -276,7 +286,7 @@ func (s *Store) Join(code, secret, name string) (*Subscription, error) {
 		r.participants = append(r.participants, p)
 	}
 	if len(p.connections) >= maxTabs {
-		return nil, errors.New("Too many tabs for this participant.")
+		return nil, ErrTooManyTabs
 	}
 	// Existing tabs share the first joined name as well as the estimate.
 	sub := &Subscription{Updates: make(chan Snapshot, 1), code: code, member: p}

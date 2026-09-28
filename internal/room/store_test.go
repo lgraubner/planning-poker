@@ -97,7 +97,7 @@ func TestRoundPrivacyAndReconnect(t *testing.T) {
 	s.Leave(late)
 	now = now.Add(time.Hour)
 	s.Sweep(true)
-	if _, _, err := s.Info(code, ""); err != ErrNotFound {
+	if _, err := s.Info(code, ""); err != ErrNotFound {
 		t.Fatal("empty room did not expire")
 	}
 }
@@ -121,11 +121,11 @@ func TestValidationAndLimits(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if _, available, _ := s.Info(code, ""); available {
-		t.Fatal("full room advertised a new participant slot")
+	if _, err := s.Info(code, ""); err != ErrFull {
+		t.Fatalf("full room advertised a new participant slot: %v", err)
 	}
-	if _, available, _ := s.Info(code, aliceID); !available {
-		t.Fatal("full room blocked a returning participant")
+	if _, err := s.Info(code, aliceID); err != nil {
+		t.Fatalf("full room blocked a returning participant: %v", err)
 	}
 	if _, err := s.Join(code, "00000000-0000-4000-8000-999999999999", "Extra"); err != ErrFull {
 		t.Fatal("participant cap missing")
@@ -135,19 +135,22 @@ func TestValidationAndLimits(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if _, err := s.Join(code, aliceID, "Alex"); err == nil {
-		t.Fatal("tab cap missing")
+	if _, err := s.Join(code, aliceID, "Alex"); err != ErrTooManyTabs {
+		t.Fatalf("tab cap missing: %v", err)
 	}
-	if _, available, _ := s.Info(code, aliceID); available {
-		t.Fatal("tab limit missing from availability")
+	if _, err := s.Info(code, aliceID); err != ErrTooManyTabs {
+		t.Fatalf("tab limit missing from availability: %v", err)
 	}
 	for i := 0; i < 60; i++ {
 		if err := s.Reserve(code); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if err := s.Reserve(code); err != ErrFull {
-		t.Fatal("socket cap missing")
+	if err := s.Reserve(code); err != ErrBusy {
+		t.Fatalf("socket cap missing: %v", err)
+	}
+	if _, err := s.Info(code, ""); err != ErrBusy {
+		t.Fatalf("socket cap missing from availability: %v", err)
 	}
 	s.Release(code)
 	if err := s.Reserve(code); err != nil {
@@ -195,10 +198,10 @@ func TestUnjoinedRoomsExpireEarly(t *testing.T) {
 	s.Leave(sub)
 	now = now.Add(10 * time.Minute)
 	s.Sweep(true)
-	if _, _, err := s.Info(unused, ""); err != ErrNotFound {
+	if _, err := s.Info(unused, ""); err != ErrNotFound {
 		t.Fatal("unjoined room did not expire after 10 minutes")
 	}
-	if _, _, err := s.Info(used, ""); err != nil {
+	if _, err := s.Info(used, ""); err != nil {
 		t.Fatal("joined room expired before one hour")
 	}
 }
@@ -221,7 +224,7 @@ func TestRenameIgnoresRoundAndValidates(t *testing.T) {
 	if snapshot := <-bob.Updates; snapshot.Title != "Retro" {
 		t.Fatalf("other participant saw %q", snapshot.Title)
 	}
-	if title, _, _ := s.Info(code, ""); title != "Retro" {
+	if title, _ := s.Info(code, ""); title != "Retro" {
 		t.Fatalf("room info kept %q", title)
 	}
 }
@@ -259,7 +262,7 @@ func TestSQLitePersistsRoomsAcrossRestarts(t *testing.T) {
 		t.Fatal(err)
 	}
 	s.now = func() time.Time { return now }
-	if _, _, err := s.Info(unused, ""); err != ErrNotFound {
+	if _, err := s.Info(unused, ""); err != ErrNotFound {
 		t.Fatal("expired room came back after restart")
 	}
 	bob, err = s.Join(code, bobID, "Bob")
@@ -275,10 +278,10 @@ func TestSQLitePersistsRoomsAcrossRestarts(t *testing.T) {
 	s.now = func() time.Time { return now }
 	now = start.Add(30 * 24 * time.Hour)
 	s.Sweep(true)
-	if _, _, err := s.Info(idle, ""); err != ErrNotFound {
+	if _, err := s.Info(idle, ""); err != ErrNotFound {
 		t.Fatal("idle clock reset on restart")
 	}
-	if _, _, err := s.Info(code, ""); err != nil {
+	if _, err := s.Info(code, ""); err != nil {
 		t.Fatal("joined room expired before 30 idle days")
 	}
 }

@@ -205,15 +205,21 @@ func (s *Server) info(w http.ResponseWriter, r *http.Request) {
 	if !s.visit(w, r) {
 		return
 	}
-	title, available, err := s.store.Info(chi.URLParam(r, "code"), r.Header.Get("X-Participant-ID"))
-	if err != nil {
+	title, err := s.store.Info(chi.URLParam(r, "code"), r.Header.Get("X-Participant-ID"))
+	if errors.Is(err, room.ErrNotFound) {
 		fail(w, 404, err.Error())
 		return
+	}
+	// A room nobody can join right now still says why.
+	var reason string
+	if err != nil {
+		reason = err.Error()
 	}
 	reply(w, 200, struct {
 		Title     string `json:"title"`
 		Available bool   `json:"available"`
-	}{title, available})
+		Reason    string `json:"reason,omitempty"`
+	}{title, err == nil, reason})
 }
 
 type command struct {

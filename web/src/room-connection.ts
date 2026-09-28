@@ -81,8 +81,9 @@ export function useRoom(code: string, participant: Identity) {
           setError('Room not found. It may have expired or the server restarted.');
           return;
         }
-        if (response.ok && !(await response.json()).available) {
-          setError('Waiting for space in this room or your open-tab allowance. Retrying…');
+        const data = response.ok ? await response.json() : null;
+        if (data && !data.available) {
+          setError(`${data.reason} Retrying…`);
           scheduleReconnect();
           return;
         }
