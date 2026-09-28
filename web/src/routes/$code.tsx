@@ -32,6 +32,7 @@ function RoomEntry({ code }: { code: string }) {
   const [info, setInfo] = useState<{
     title: string;
     available: boolean;
+    reason?: string;
   } | null>(null);
   const [error, setError] = useState('');
   const [joinError, setJoinError] = useState('');
@@ -86,7 +87,9 @@ function RoomEntry({ code }: { code: string }) {
 
   if (participant) return <Room code={code} participant={participant} />;
   if (error || info?.available === false)
-    return <UnavailableRoom message={error || 'This room or your open-tab allowance is full.'} />;
+    return (
+      <UnavailableRoom message={error || info?.reason || 'You cannot join this room right now.'} />
+    );
   if (!info) return <RoomLoading>Loading room…</RoomLoading>;
   return <JoinRoom title={info.title} error={joinError} onJoin={join} />;
 }
@@ -213,19 +216,17 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
         onReveal={() => send('reveal')}
       />
       {/* Both bars share one cell, so the footer keeps its height and the table stays put.
-          The round controls sit at its bottom, leaving the space above for the results. */}
+          The results sit inside the sticky footer, so a scrolled table passes under them. */}
       <div className={controls}>
         <section
           aria-label="Round controls"
-          className={`col-start-1 row-start-1 relative flex w-full max-w-xl min-w-0 justify-self-center items-center justify-center self-end border-t py-4 border-zinc-700 ${snapshot.revealed ? '' : 'invisible'}`}
+          className={`col-start-1 row-start-1 flex w-full max-w-xl min-w-0 flex-col items-center justify-self-center self-end ${snapshot.revealed ? '' : 'invisible'}`}
         >
-          {/* Above the line, outside the footer's height, so the table stays put. */}
-          {snapshot.revealed && (
-            <div className="absolute inset-x-0 bottom-full flex justify-center pb-4">
-              <Results participants={snapshot.participants} />
-            </div>
-          )}
-          <div className="flex-none">
+          {/* Holds the results' height before the reveal, so the table stays put. */}
+          <div className="flex min-h-26 max-w-full items-end pb-4">
+            {snapshot.revealed && <Results participants={snapshot.participants} />}
+          </div>
+          <div className="w-full border-t border-zinc-700 py-4">
             <Button compact disabled={!connected} onClick={() => send('reset')}>
               <svg
                 aria-hidden="true"
@@ -440,10 +441,12 @@ function PokerTable({
   const [arrivedRevealed, setArrivedRevealed] = useState(revealed);
   if (arrivedRevealed && !revealed) setArrivedRevealed(false);
   const others = participants.filter((participant) => participant.id !== self);
-  const sideCount = others.length >= 4 ? 2 : 0;
+  // One seat a side from four others, two from nine: a full room of 12 sits 4, 2, 4, 2.
+  const sideCount = others.length >= 9 ? 4 : others.length >= 4 ? 2 : 0;
   const sides = others.slice(0, sideCount);
   const remaining = others.slice(sideCount);
-  const bottomCount = Math.floor(Math.floor(remaining.length / 2) / 2) * 2;
+  // The rows split evenly with you below, and the spare seat goes on top.
+  const bottomCount = Math.max(Math.floor((remaining.length + 1) / 2) - 1, 0);
   const top = remaining.slice(0, remaining.length - bottomCount);
   const bottomOthers = remaining.slice(top.length);
   const bottomMiddle = bottomOthers.length / 2;
@@ -451,22 +454,21 @@ function PokerTable({
     ? [...bottomOthers.slice(0, bottomMiddle), current, ...bottomOthers.slice(bottomMiddle)]
     : bottomOthers;
 
-  // The bottom padding keeps room for the results that appear above the controls.
   return (
-    <div className="grid min-h-96 w-full max-w-7xl grow grid-cols-[56px_minmax(0,1fr)_56px] grid-rows-[96px_132px_96px] content-center items-center justify-center gap-x-1.5 gap-y-6 self-center pt-4 pb-14 sm:grid-cols-[64px_minmax(200px,420px)_64px] sm:gap-x-3">
+    <div className="grid min-h-96 w-full max-w-7xl grow grid-cols-[56px_minmax(0,1fr)_56px] grid-rows-[96px_132px_96px] content-center items-center justify-center gap-x-1.5 gap-y-6 self-center pt-4 sm:grid-cols-[84px_minmax(200px,320px)_84px] sm:grid-rows-[96px_140px_96px] sm:gap-x-4">
       {others.length === 0 ? (
         <div className="col-2 row-1 self-end text-center text-sm">
           <p className="mb-0.5">Feeling lonely?</p>
           <CopyLinkButton statusClassName="left-1/2 -translate-x-1/2" />
         </div>
       ) : (
-        <ParticipantRow participants={top} revealed={revealed} top />
+        <ParticipantRow participants={top} self={self} revealed={revealed} top />
       )}
-      {sides[0] && (
-        <div className="col-1 row-2">
-          <ParticipantCard participant={sides[0]} revealed={revealed} />
-        </div>
-      )}
+      <SideSeats
+        participants={sides.filter((_, i) => i % 2 === 0)}
+        self={self}
+        revealed={revealed}
+      />
       <div
         className={`col-2 row-2 flex w-full flex-col items-center justify-center gap-3 self-stretch rounded-3xl bg-surface p-3 inset-ring transition-shadow duration-200 motion-reduce:transition-none sm:p-5 ${
           !revealed && allVoted ? 'inset-ring-indigo-400/50' : 'inset-ring-surface-raised'
@@ -500,12 +502,13 @@ function PokerTable({
           </p>
         )}
       </div>
-      {sides[1] && (
-        <div className="col-3 row-2">
-          <ParticipantCard participant={sides[1]} revealed={revealed} />
-        </div>
-      )}
-      <ParticipantRow participants={bottom} revealed={revealed} />
+      <SideSeats
+        participants={sides.filter((_, i) => i % 2 === 1)}
+        self={self}
+        revealed={revealed}
+        right
+      />
+      <ParticipantRow participants={bottom} self={self} revealed={revealed} />
     </div>
   );
 }
@@ -539,21 +542,55 @@ function Confetti() {
   );
 }
 
+// Two stacked seats outgrow the table's height, so a side spans all three rows.
+function SideSeats({
+  participants,
+  self,
+  revealed,
+  right = false,
+}: {
+  participants: Participant[];
+  self: string;
+  revealed: boolean;
+  right?: boolean;
+}) {
+  if (participants.length === 0) return null;
+  return (
+    <div className={`row-span-3 row-start-1 flex flex-col gap-6 ${right ? 'col-3' : 'col-1'}`}>
+      {participants.map((participant) => (
+        <ParticipantCard
+          key={participant.id}
+          participant={participant}
+          own={participant.id === self}
+          revealed={revealed}
+        />
+      ))}
+    </div>
+  );
+}
+
 function ParticipantRow({
   participants,
+  self,
   revealed,
   top = false,
 }: {
   participants: Participant[];
+  self: string;
   revealed: boolean;
   top?: boolean;
 }) {
   return (
     <div
-      className={`col-span-full flex w-full items-start justify-center-safe gap-2.5 overflow-x-auto px-2 py-1 ${top ? 'row-1' : 'row-3'}`}
+      className={`col-span-full flex w-full items-start justify-center-safe gap-1.5 overflow-x-auto px-2 py-1 ${top ? 'row-1' : 'row-3'}`}
     >
       {participants.map((participant) => (
-        <ParticipantCard key={participant.id} participant={participant} revealed={revealed} />
+        <ParticipantCard
+          key={participant.id}
+          participant={participant}
+          own={participant.id === self}
+          revealed={revealed}
+        />
       ))}
     </div>
   );
@@ -561,9 +598,11 @@ function ParticipantRow({
 
 function ParticipantCard({
   participant,
+  own,
   revealed,
 }: {
   participant: Participant;
+  own: boolean;
   revealed: boolean;
 }) {
   // "Vote again" clears the estimate at once, so keep the face until the card has turned back.
@@ -579,7 +618,7 @@ function ParticipantCard({
   return (
     <article
       aria-label={`${participant.name}: ${revealed ? participant.estimate || 'no estimate' : participant.selected ? 'selected' : 'not selected'}`}
-      className="w-14 flex-none text-center sm:w-16"
+      className="w-14 flex-none text-center sm:w-21"
     >
       <div aria-hidden="true" className="mx-auto h-18 w-12 perspective-midrange">
         <div
@@ -617,7 +656,12 @@ function ParticipantCard({
           )}
         </div>
       </div>
-      <p className="mt-2 mb-0.5 text-sm font-semibold wrap-anywhere">{participant.name}</p>
+      <p
+        title={participant.name}
+        className={`mt-2 mb-0.5 truncate text-sm ${own ? 'font-bold text-indigo-300' : 'font-semibold'}`}
+      >
+        {participant.name}
+      </p>
       {reconnecting && <span className={small}>Reconnecting</span>}
     </article>
   );
@@ -631,6 +675,8 @@ function Results({ participants }: { participants: Participant[] }) {
     }))
     .filter(({ count }) => count > 0);
   const max = Math.max(...counts.map(({ count }) => count));
+  // A tie has no leader to point out.
+  const lead = counts.filter(({ count }) => count === max).length === 1 ? max : null;
 
   return (
     <ul
@@ -640,12 +686,12 @@ function Results({ participants }: { participants: Participant[] }) {
       {counts.map(({ value, count }) => (
         <li
           key={value}
-          aria-label={`${value}: ${count} ${count === 1 ? 'vote' : 'votes'}${count === max ? ', most votes' : ''}`}
+          aria-label={`${value}: ${count} ${count === 1 ? 'vote' : 'votes'}${count === lead ? ', most votes' : ''}`}
           className="flex w-8 flex-none flex-col items-center"
         >
           <span className="text-xs text-zinc-400 tabular-nums">{count}</span>
           <div
-            className={`mt-1 w-6 rounded-t-md ${count === max ? 'bg-indigo-400' : 'bg-indigo-400/30'}`}
+            className={`mt-1 w-6 rounded-t-md ${count === lead ? 'bg-indigo-400' : 'bg-indigo-400/30'}`}
             style={{ height: `${(count / max) * 40}px` }}
           />
           <span className="mt-1.5 text-sm font-semibold text-zinc-100">{value}</span>

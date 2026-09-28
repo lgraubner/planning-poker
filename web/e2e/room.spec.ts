@@ -358,6 +358,10 @@ test('revealed cards show how many voted for each value', async ({ page, newPart
   await page.getByRole('button', { name: 'Reveal cards' }).click();
   for (const viewer of [page, bob, carol]) {
     await expect(viewer.getByRole('status').filter({ hasText: 'Discuss!' })).toHaveText('Discuss!');
+    // A tie has no leader.
+    const results = viewer.getByRole('list', { name: 'Results' }).getByRole('listitem');
+    await expect(results.nth(0)).toHaveAccessibleName('3: 1 vote');
+    await expect(results.nth(1)).toHaveAccessibleName('13: 1 vote');
   }
 });
 
@@ -385,4 +389,71 @@ test('full agreement throws confetti for everyone', async ({ page, newParticipan
   await carol.getByRole('button', { name: 'Join room' }).click();
   await expect(card(carol, 'Alice')).toHaveAccessibleName('Alice: 5');
   await expect(carol.getByTestId('confetti')).toHaveCount(0);
+});
+
+test('results stay clear of the table on a short screen', async ({ page, newParticipant }) => {
+  await page.setViewportSize({ width: 390, height: 560 });
+  const url = await createRoom(page);
+  await join(page, url, 'Alice');
+  const bob = await newParticipant();
+  await join(bob, url, 'Bob');
+  await page.getByRole('button', { name: '5', exact: true }).click();
+  await bob.getByRole('button', { name: '8', exact: true }).click();
+  await expect(card(page, 'Bob')).toHaveAccessibleName('Bob: selected');
+  const before = await card(page, 'Alice').boundingBox();
+
+  await page.getByRole('button', { name: 'Reveal cards' }).click();
+  const results = page.getByRole('list', { name: 'Results' });
+  await expect(results).toBeVisible();
+  // The table stays put on reveal.
+  expect(await card(page, 'Alice').boundingBox()).toEqual(before);
+  // Inside the sticky footer, whose background hides the table scrolling under it.
+  const list = (await results.boundingBox())!;
+  const footer = (await page.getByRole('region', { name: 'Round controls' }).boundingBox())!;
+  expect(list.y).toBeGreaterThanOrEqual(footer.y);
+  expect(list.y + list.height).toBeLessThanOrEqual(footer.y + footer.height);
+});
+
+test('a long name stays on one line and shows in full on hover', async ({
+  page,
+  newParticipant,
+}) => {
+  const url = await createRoom(page);
+  await join(page, url, 'Alice');
+  const name = 'Maximiliane Oberhuber-Schwarzenegger';
+  const max = await newParticipant();
+  await join(max, url, name);
+
+  const label = card(page, name).getByText(name);
+  await expect(label).toHaveAttribute('title', name);
+  // One line, so every seat keeps the same height around the table.
+  const lineHeight = await card(page, 'Alice')
+    .getByText('Alice')
+    .evaluate((e) => e.clientHeight);
+  expect(await label.evaluate((e) => e.clientHeight)).toBe(lineHeight);
+});
+
+test('your own name stands out from the others', async ({ page, newParticipant }) => {
+  const url = await createRoom(page);
+  await join(page, url, 'Alice');
+  const bob = await newParticipant();
+  await join(bob, url, 'Bob');
+
+  const look = (viewer: typeof page, name: string) =>
+    card(viewer, name)
+      .getByText(name, { exact: true })
+      .evaluate((element) => {
+        const { color, fontWeight } = getComputedStyle(element);
+        return { color, fontWeight };
+      });
+  // Each viewer sees their own name differently, and the same for everyone else.
+  for (const [viewer, own, other] of [
+    [page, 'Alice', 'Bob'],
+    [bob, 'Bob', 'Alice'],
+  ] as const) {
+    const mine = await look(viewer, own);
+    const theirs = await look(viewer, other);
+    expect(mine.color).not.toBe(theirs.color);
+    expect(Number(mine.fontWeight)).toBeGreaterThan(Number(theirs.fontWeight));
+  }
 });
