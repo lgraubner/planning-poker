@@ -1,10 +1,9 @@
 name: Docker
 
 # The image build is the slowest check and only breaks when its inputs change,
-# so PRs run it only then. Every push to main still verifies the deploy artifact.
+# so PRs run it only then. CI calls it on every push to main before deploying.
 on:
-  push:
-    branches: [main]
+  workflow_call:
   pull_request:
     paths:
       - Dockerfile
@@ -19,8 +18,9 @@ on:
 permissions:
   contents: read
 
+# A called workflow sees the caller's github.workflow, and sharing CI's group would deadlock.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: docker-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

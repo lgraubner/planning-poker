@@ -92,3 +92,30 @@ jobs:
           name: playwright-report
           path: web/playwright-report/
           retention-days: 14
+
+  smoke:
+    name: Docker
+    if: github.event_name == 'push'
+    uses: ./.github/workflows/docker.yml
+
+  # Coolify's auto-deploy is off so only a fully tested main deploys. Coolify
+  # deploys the head of main, so a run whose commit is no longer the head
+  # leaves the deploy to the newer run.
+  deploy:
+    name: Deploy to Coolify
+    needs: [e2e, smoke]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger deploy webhook
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+        run: |
+          if [ "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)" != "$GITHUB_SHA" ]; then
+            echo "::notice::main has moved past $GITHUB_SHA; the newer commit deploys itself."
+            exit 0
+          fi
+          curl --fail-with-body --silent --show-error -H "Authorization: Bearer $COOLIFY_TOKEN" "$COOLIFY_WEBHOOK"
