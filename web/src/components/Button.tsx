@@ -1,3 +1,4 @@
+import clsx from 'clsx';
 import type { ButtonHTMLAttributes } from 'react';
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -8,9 +9,10 @@ export function Button({ compact, ...props }: ButtonProps) {
   return (
     <button
       {...props}
-      className={`inline-flex items-center justify-center gap-1.5 border border-indigo-400 font-semibold ${
-        compact ? 'min-h-10 rounded-lg px-3.5 py-2 text-sm' : 'min-h-12 rounded-lg px-6 py-3'
-      } bg-indigo-400 text-zinc-950`}
+      className={clsx(
+        'inline-flex items-center justify-center gap-1.5 border border-indigo-400 bg-indigo-400 font-semibold text-zinc-950',
+        compact ? 'min-h-10 rounded-lg px-3.5 py-2 text-sm' : 'min-h-12 rounded-lg px-6 py-3',
+      )}
     />
   );
 }

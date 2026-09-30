@@ -1,4 +1,5 @@
 import { createRootRoute, Link, Outlet, useRouterState } from '@tanstack/react-router';
+import clsx from 'clsx';
 
 export const Route = createRootRoute({
   component: AppLayout,
@@ -12,7 +13,10 @@ function AppLayout() {
   });
   return (
     <main
-      className={`mx-auto flex min-h-dvh flex-col px-4 pt-4 sm:px-6 ${isRoom ? 'max-w-none' : 'max-w-7xl'}`}
+      className={clsx(
+        'mx-auto flex min-h-dvh flex-col px-4 pt-4 sm:px-6',
+        isRoom ? 'max-w-none' : 'max-w-7xl',
+      )}
     >
       {!isRoom && <p className="text-base font-bold tracking-wide">Planning Poker</p>}
       <Outlet />

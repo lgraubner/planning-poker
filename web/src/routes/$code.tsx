@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import confetti from 'canvas-confetti';
+import clsx from 'clsx';
 import { Button } from '../components/Button';
 import { CenteredSection } from '../components/CenteredSection';
 import { ErrorMessage } from '../components/ErrorMessage';
@@ -96,7 +97,7 @@ function RoomEntry({ code }: { code: string }) {
 function UnavailableRoom({ message }: { message: string }) {
   return (
     <CenteredSection>
-      <h1 className={roomTitle}>{message}</h1>
+      <h1 className="text-2xl font-bold tracking-tight wrap-anywhere">{message}</h1>
       <p>
         <a href={location.pathname}>Check again</a>
       </p>
@@ -219,10 +220,13 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
       />
       {/* Both bars share one cell, so the footer keeps its height and the table stays put.
           The results sit inside the sticky footer, so a scrolled table passes under them. */}
-      <div className={controls}>
+      <div className="sticky bottom-0 z-10 grid w-full max-w-7xl grid-cols-1 self-center bg-background text-center">
         <section
           aria-label="Round controls"
-          className={`${swap} flex w-full max-w-xl min-w-0 flex-col items-center justify-self-center self-end ${snapshot.revealed ? '' : swapOut}`}
+          className={clsx(
+            'col-start-1 row-start-1 transition-[opacity,filter,scale,visibility] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] flex w-full max-w-xl min-w-0 flex-col items-center justify-self-center self-end',
+            !snapshot.revealed && 'invisible opacity-0 blur-xs motion-safe:scale-95',
+          )}
         >
           {/* Holds the results' height before the reveal, so the table stays put. */}
           <div className="flex min-h-26 max-w-full items-end pb-4">
@@ -269,7 +273,7 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
 function UnableToJoin({ error }: { error: string }) {
   return (
     <CenteredSection>
-      <h1 className={roomTitle}>Unable to join</h1>
+      <h1 className="text-2xl font-bold tracking-tight wrap-anywhere">Unable to join</h1>
       <ErrorMessage>{error}</ErrorMessage>
       <Link to="/">Back home</Link>
       <p>
@@ -378,16 +382,28 @@ function CopyLinkButton({
   }
 
   return (
-    <div className={`relative whitespace-nowrap ${className}`}>
+    <div className={clsx('relative whitespace-nowrap', className)}>
       <button
         type="button"
         onClick={copy}
-        className={`min-h-8 font-semibold text-indigo-400 ${buttonClassName}`}
+        className={clsx('min-h-8 font-semibold text-indigo-400', buttonClassName)}
       >
         {/* Both labels share one cell, so the button keeps the wider one's width. */}
         <span className="grid justify-items-center">
-          <span className={`${swap} ${copied ? swapOut : ''}`}>Copy room link</span>
-          <span className={`${swap} inline-flex items-center gap-1 ${copied ? '' : swapOut}`}>
+          <span
+            className={clsx(
+              'col-start-1 row-start-1 transition-[opacity,filter,scale,visibility] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]',
+              copied && 'invisible opacity-0 blur-xs motion-safe:scale-95',
+            )}
+          >
+            Copy room link
+          </span>
+          <span
+            className={clsx(
+              'col-start-1 row-start-1 transition-[opacity,filter,scale,visibility] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] inline-flex items-center gap-1',
+              !copied && 'invisible opacity-0 blur-xs motion-safe:scale-95',
+            )}
+          >
             <svg
               aria-hidden="true"
               viewBox="0 0 24 24"
@@ -397,11 +413,12 @@ function CopyLinkButton({
               <path
                 d="M4 12.5l5 5L20 6.5"
                 pathLength={1}
-                className={`[stroke-dasharray:1] transition-[stroke-dashoffset] motion-reduce:transition-none ${
+                className={clsx(
+                  '[stroke-dasharray:1] transition-[stroke-dashoffset] motion-reduce:transition-none',
                   copied
                     ? 'delay-75 duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] [stroke-dashoffset:0]'
-                    : '[stroke-dashoffset:1]'
-                }`}
+                    : '[stroke-dashoffset:1]',
+                )}
               />
             </svg>
             Link copied
@@ -410,9 +427,11 @@ function CopyLinkButton({
       </button>
       <span
         role="status"
-        className={`${small} absolute top-full mt-1 w-max max-w-60 ${statusClassName} ${
-          copied ? 'sr-only' : ''
-        }`}
+        className={clsx(
+          'absolute top-full mt-1 w-max max-w-60 text-sm text-zinc-400',
+          statusClassName,
+          copied && 'sr-only',
+        )}
       >
         {copied && 'Link copied'}
         {result === 'failed' && 'Copy the link from your address bar.'}
@@ -474,9 +493,10 @@ function PokerTable({
         revealed={revealed}
       />
       <div
-        className={`col-2 row-2 flex w-full flex-col items-center justify-center gap-3 self-stretch rounded-3xl bg-surface p-3 inset-ring transition-shadow duration-200 motion-reduce:transition-none sm:p-5 ${
-          !revealed && allVoted ? 'inset-ring-indigo-400/50' : 'inset-ring-surface-raised'
-        }`}
+        className={clsx(
+          'col-2 row-2 flex w-full flex-col items-center justify-center gap-3 self-stretch rounded-3xl bg-surface p-3 inset-ring transition-shadow duration-200 motion-reduce:transition-none sm:p-5',
+          !revealed && allVoted ? 'inset-ring-indigo-400/50' : 'inset-ring-surface-raised',
+        )}
       >
         {!revealed && hasVotes ? (
           <Button compact disabled={!connected} onClick={onReveal}>
@@ -486,7 +506,10 @@ function PokerTable({
           <p role="status" className="text-center">
             {!result.discuss && <span className="sr-only">Proposed estimate </span>}
             <span
-              className={`relative block leading-none font-bold text-white ${result.discuss ? 'text-3xl' : 'text-5xl'}`}
+              className={clsx(
+                'relative block leading-none font-bold text-white',
+                result.discuss ? 'text-3xl' : 'text-5xl',
+              )}
             >
               {result.agreement === 1 && !arrivedRevealed && <Confetti />}
               <span className="relative">{result.discuss ? 'Discuss!' : result.value}</span>
@@ -560,7 +583,7 @@ function SideSeats({
 }) {
   if (participants.length === 0) return null;
   return (
-    <div className={`row-span-3 row-start-1 flex flex-col gap-6 ${right ? 'col-3' : 'col-1'}`}>
+    <div className={clsx('row-span-3 row-start-1 flex flex-col gap-6', right ? 'col-3' : 'col-1')}>
       {participants.map((participant) => (
         <ParticipantCard
           key={participant.id}
@@ -586,7 +609,10 @@ function ParticipantRow({
 }) {
   return (
     <div
-      className={`col-span-full flex w-full items-start justify-center-safe gap-1.5 overflow-x-auto px-2 py-1 ${top ? 'row-1' : 'row-3'}`}
+      className={clsx(
+        'col-span-full flex w-full items-start justify-center-safe gap-1.5 overflow-x-auto px-2 py-1',
+        top ? 'row-1' : 'row-3',
+      )}
     >
       {participants.map((participant) => (
         <ParticipantCard
@@ -627,34 +653,34 @@ function ParticipantCard({
       <div aria-hidden="true" className="mx-auto h-18 w-12 perspective-midrange">
         <div
           onAnimationEnd={() => !face && setShown('')}
-          className={`relative size-full transform-3d motion-reduce:[animation-duration:1ms] ${
-            face
-              ? `${arrivedRevealed ? '' : 'animate-card-flip'} -rotate-y-180`
-              : unflipping
-                ? 'animate-card-unflip'
-                : ''
-          }`}
+          className={clsx(
+            'relative size-full transform-3d motion-reduce:[animation-duration:1ms]',
+            face && '-rotate-y-180',
+            face && !arrivedRevealed && 'animate-card-flip',
+            !face && unflipping && 'animate-card-unflip',
+          )}
         >
           <div
-            className={`${cardFace} transition-colors duration-150 motion-reduce:transition-none ${
+            className={clsx(
+              'absolute inset-0 flex items-center justify-center rounded-lg border-2 text-xl font-semibold text-indigo-400 select-none backface-hidden transition-colors duration-150 motion-reduce:transition-none',
               participant.selected
                 ? 'border-indigo-400 bg-indigo-400'
-                : 'border-surface-raised bg-surface-raised text-zinc-500'
-            }`}
+                : 'border-surface-raised bg-surface-raised text-zinc-500',
+            )}
           >
             {/* Stays mounted so it fades out on "Vote again"; visibility flips once the fade ends. */}
             <span
-              className={`transition-[opacity,filter,scale,visibility] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] ${
-                revealed && !participant.selected
-                  ? ''
-                  : 'invisible opacity-0 blur-xs motion-safe:scale-90'
-              }`}
+              className={clsx(
+                'transition-[opacity,filter,scale,visibility] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]',
+                !(revealed && !participant.selected) &&
+                  'invisible opacity-0 blur-xs motion-safe:scale-90',
+              )}
             >
               ×
             </span>
           </div>
           {(face || shown) && (
-            <div className={`${cardFace} rotate-y-180 border-indigo-400 bg-surface`}>
+            <div className="absolute inset-0 flex items-center justify-center rounded-lg border-2 text-xl font-semibold text-indigo-400 select-none backface-hidden rotate-y-180 border-indigo-400 bg-surface">
               {face || shown}
             </div>
           )}
@@ -662,11 +688,14 @@ function ParticipantCard({
       </div>
       <p
         title={participant.name}
-        className={`mt-2 mb-0.5 truncate text-sm ${own ? 'font-bold text-indigo-300' : 'font-semibold'}`}
+        className={clsx(
+          'mt-2 mb-0.5 truncate text-sm',
+          own ? 'font-bold text-indigo-300' : 'font-semibold',
+        )}
       >
         {participant.name}
       </p>
-      {reconnecting && <span className={small}>Reconnecting</span>}
+      {reconnecting && <span className="text-sm text-zinc-400">Reconnecting</span>}
     </article>
   );
 }
@@ -695,7 +724,10 @@ function Results({ participants }: { participants: Participant[] }) {
         >
           <span className="text-xs text-zinc-400 tabular-nums">{count}</span>
           <div
-            className={`mt-1 w-6 rounded-t-md ${count === lead ? 'bg-indigo-400' : 'bg-indigo-400/30'}`}
+            className={clsx(
+              'mt-1 w-6 rounded-t-md',
+              count === lead ? 'bg-indigo-400' : 'bg-indigo-400/30',
+            )}
             style={{ height: `${(count / max) * 40}px` }}
           />
           <span className="mt-1.5 text-sm font-semibold text-zinc-100">{value}</span>
@@ -719,7 +751,10 @@ function EstimateControls({
   return (
     <section
       aria-label="Estimate controls"
-      className={`${swap} ${controlsPanel} ${hidden ? swapOut : ''}`}
+      className={clsx(
+        'col-start-1 row-start-1 transition-[opacity,filter,scale,visibility] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] self-end pt-3.5 pb-2.5',
+        hidden && 'invisible opacity-0 blur-xs motion-safe:scale-95',
+      )}
     >
       <div
         role="group"
@@ -739,15 +774,3 @@ function EstimateControls({
     </section>
   );
 }
-
-const roomTitle = 'text-2xl font-bold tracking-tight wrap-anywhere';
-const small = 'text-sm text-zinc-400';
-// Swaps a button label in place: the leaving one blurs out as the arriving one sharpens.
-const swap =
-  'col-start-1 row-start-1 transition-[opacity,filter,scale,visibility] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]';
-const swapOut = 'invisible opacity-0 blur-xs motion-safe:scale-95';
-const cardFace =
-  'absolute inset-0 flex items-center justify-center rounded-lg border-2 text-xl font-semibold text-indigo-400 select-none backface-hidden';
-const controls =
-  'sticky bottom-0 z-10 grid w-full grid-cols-1 max-w-7xl self-center bg-background text-center';
-const controlsPanel = 'self-end pt-3.5 pb-2.5';

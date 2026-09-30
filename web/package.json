@@ -17,6 +17,7 @@
     "@tanstack/react-form": "1.33.5",
     "@tanstack/react-router": "1.170.35",
     "canvas-confetti": "1.9.4",
+    "clsx": "2.1.1",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
