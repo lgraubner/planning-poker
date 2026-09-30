@@ -118,4 +118,4 @@ jobs:
             echo "::notice::main has moved past $GITHUB_SHA; the newer commit deploys itself."
             exit 0
           fi
-          curl --fail-with-body --silent --show-error -H "Authorization: Bearer $COOLIFY_TOKEN" "$COOLIFY_WEBHOOK"
+          curl --fail-with-body --silent --show-error --request POST -H "Authorization: Bearer $COOLIFY_TOKEN" "$COOLIFY_WEBHOOK"
