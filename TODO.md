@@ -1,13 +1,12 @@
 # Todo
 
-- improve 404 and error page designs
-- improve room is full error page
+- average
 - improve pick name page
 - improve home page
 - different measuring scales
-- more than 12 users?
 - improve mobile
 - check code
+- Show Name at top and logout?
 
 ## Ideas
 
