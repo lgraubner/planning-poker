@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import confetti from 'canvas-confetti';
@@ -6,6 +6,8 @@ import clsx from 'clsx';
 import { Button } from '../components/Button';
 import { CenteredSection } from '../components/CenteredSection';
 import { ErrorMessage } from '../components/ErrorMessage';
+import { ErrorPage } from '../components/ErrorPage';
+import { HomeLink } from '../components/HomeLink';
 import { EstimateCard } from '../components/EstimateCard';
 import { Form } from '../components/Form';
 import { PageIntro } from '../components/PageIntro';
@@ -35,6 +37,8 @@ function RoomEntry({ code }: { code: string }) {
     reason?: string;
   } | null>(null);
   const [error, setError] = useState('');
+  // Only a room that does not exist makes a new one the way on.
+  const [missing, setMissing] = useState(false);
   const [joinError, setJoinError] = useState('');
   const [participant, setParticipant] = useState<Identity | null>(null);
 
@@ -50,7 +54,10 @@ function RoomEntry({ code }: { code: string }) {
           headers: { 'X-Participant-ID': id },
         });
         const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || 'Could not load room.');
+        if (!response.ok) {
+          setMissing(response.status === 404);
+          throw new Error(data.error || 'Could not load room.');
+        }
         // A reload can arrive before the old tab's socket has finished closing.
         if (!data.available && id && attempt < 3) {
           retry = setTimeout(() => void lookup(attempt + 1), 500);
@@ -88,23 +95,25 @@ function RoomEntry({ code }: { code: string }) {
   if (participant) return <Room code={code} participant={participant} />;
   if (error || info?.available === false)
     return (
-      <UnavailableRoom message={error || info?.reason || 'You cannot join this room right now.'} />
+      <UnavailableRoom
+        message={error || info?.reason || 'You cannot join this room right now.'}
+        missing={missing}
+      />
     );
   if (!info) return <RoomLoading>Loading room…</RoomLoading>;
   return <JoinRoom title={info.title} error={joinError} onJoin={join} />;
 }
 
-function UnavailableRoom({ message }: { message: string }) {
+function UnavailableRoom({ message, missing }: { message: string; missing: boolean }) {
+  // The server's messages are sentences: the first heads the page, the rest explain it.
+  const [headline, ...rest] = message.split(/(?<=\.)\s+/);
   return (
-    <CenteredSection>
-      <h1 className="text-2xl font-bold tracking-tight wrap-anywhere">{message}</h1>
-      <p>
-        <a href={location.pathname}>Check again</a>
-      </p>
-      <p>
-        <Link to="/">Back home</Link>
-      </p>
-    </CenteredSection>
+    <ErrorPage
+      title={headline}
+      description={rest.join(' ')}
+      home={missing ? 'Start a new room' : undefined}
+      failed={!missing}
+    />
   );
 }
 
@@ -192,7 +201,7 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
   // The last revealed round, so the results can fade out after the votes are cleared.
   const results = useRef<Participant[]>([]);
 
-  if (fatal) return <UnableToJoin error={error} />;
+  if (fatal) return <ErrorPage title="Unable to join" description={error} failed />;
   if (!snapshot) return <RoomLoading>Connecting to room…{error}</RoomLoading>;
 
   const own = snapshot.participants.find((participant) => participant.id === snapshot.self);
@@ -288,19 +297,6 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
   );
 }
 
-function UnableToJoin({ error }: { error: string }) {
-  return (
-    <CenteredSection>
-      <h1 className="text-2xl font-bold tracking-tight wrap-anywhere">Unable to join</h1>
-      <ErrorMessage>{error}</ErrorMessage>
-      <Link to="/">Back home</Link>
-      <p>
-        <a href={location.pathname}>Try joining again</a>
-      </p>
-    </CenteredSection>
-  );
-}
-
 function RoomHeader({
   title,
   connected,
@@ -328,12 +324,7 @@ function RoomHeader({
 
   return (
     <header className="mb-2 grid min-h-11 grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-3">
-      <Link
-        to="/"
-        className="w-fit text-base font-semibold whitespace-nowrap text-zinc-400 no-underline tracking-wide"
-      >
-        Planning Poker
-      </Link>
+      <HomeLink />
       <h1 className="min-w-0 text-center text-lg leading-tight font-semibold tracking-tight">
         {draft === null ? (
           <button

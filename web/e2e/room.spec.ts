@@ -233,7 +233,16 @@ test('buttons give way when pressed and centre their content', async ({ page }) 
 
 test('a missing room says so', async ({ page }) => {
   await page.goto('/abcdefgh');
-  await expect(page.getByRole('heading', { name: 'Room not found.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Room not found', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Start a new room' }).click();
+  await expect(page.getByLabel('Room title')).toBeVisible();
+});
+
+test('an unknown page leads back home', async ({ page }) => {
+  await page.goto('/no/such/page');
+  await expect(page.getByRole('heading', { name: 'Page not found', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Back to home' }).click();
+  await expect(page.getByLabel('Room title')).toBeVisible();
 });
 
 test('a proxy error page reads as a plain message', async ({ page }) => {
@@ -246,7 +255,9 @@ test('a proxy error page reads as a plain message', async ({ page }) => {
   await expect(page.getByRole('alert')).toHaveText('Could not create room.');
 
   await page.goto('/abcdefgh');
-  await expect(page.getByRole('heading', { name: 'Could not load room.' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Could not load room', exact: true }),
+  ).toBeVisible();
 });
 
 test('the room link can be copied', async ({ page, context, browserName }) => {

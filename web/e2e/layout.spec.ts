@@ -126,8 +126,12 @@ test('a full room turns the thirteenth person away', async ({ page, newParticipa
     // In the browser, they learn why before they get to the name form.
     const latecomer = await newParticipant();
     await latecomer.goto(url);
-    await expect(latecomer.getByRole('heading', { name: 'This room is full.' })).toBeVisible();
+    await expect(
+      latecomer.getByRole('heading', { name: 'This room is full', exact: true }),
+    ).toBeVisible();
     await expect(latecomer.getByLabel('Your name')).toBeHidden();
+    // A new room is no answer to a full one.
+    await expect(latecomer.getByRole('link', { name: 'Start a new room' })).toBeHidden();
     await info.attach('full room', {
       body: await latecomer.screenshot(),
       contentType: 'image/png',
