@@ -662,7 +662,7 @@ function ParticipantCard({
         >
           <div
             className={clsx(
-              'absolute inset-0 flex items-center justify-center rounded-lg border-2 text-xl font-semibold text-indigo-400 select-none backface-hidden transition-colors duration-150 motion-reduce:transition-none',
+              'absolute inset-0 flex items-center justify-center rounded-lg border-2 text-xl font-semibold text-indigo-400 backface-hidden transition-colors duration-150 motion-reduce:transition-none',
               participant.selected
                 ? 'border-indigo-400 bg-indigo-400'
                 : 'border-surface-raised bg-surface-raised text-zinc-500',
@@ -680,7 +680,7 @@ function ParticipantCard({
             </span>
           </div>
           {(face || shown) && (
-            <div className="absolute inset-0 flex items-center justify-center rounded-lg border-2 text-xl font-semibold text-indigo-400 select-none backface-hidden rotate-y-180 border-indigo-400 bg-surface">
+            <div className="absolute inset-0 flex items-center justify-center rounded-lg border-2 text-xl font-semibold text-indigo-400 backface-hidden rotate-y-180 border-indigo-400 bg-surface">
               {face || shown}
             </div>
           )}

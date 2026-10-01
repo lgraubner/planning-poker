@@ -285,6 +285,14 @@ test('a room needs a title before it is created', async ({ page }) => {
   await expect(page.getByRole('alert')).toBeHidden();
 });
 
+test('only what someone types and errors can be selected', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Create room' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveCSS('user-select', 'none');
+  await expect(page.getByLabel('Room title')).toHaveCSS('user-select', 'text');
+  await expect(page.getByRole('alert')).toHaveCSS('user-select', 'text');
+});
+
 test('anyone can rename the room for everyone', async ({ page, newParticipant }) => {
   const url = await createRoom(page, 'Sprint planning');
   await join(page, url, 'Alice');

@@ -45,6 +45,17 @@
     color-scheme: dark;
     background: var(--color-background);
     color: var(--color-zinc-200);
+    /* An app, not a document: taps and quick clicks never select its labels. */
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* What someone types, and errors they may paste into a report. */
+  input,
+  textarea,
+  [role='alert'] {
+    -webkit-user-select: text;
+    user-select: text;
   }
 
   button:not(:disabled) {
@@ -52,10 +63,9 @@
   }
 
   /* Every button gives way a little when pressed. Its own feedback replaces the
-     tap highlight, and a long press or quick clicks do not select its label. */
+     tap highlight. */
   button {
     transition: scale 150ms ease-out;
-    user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
 
