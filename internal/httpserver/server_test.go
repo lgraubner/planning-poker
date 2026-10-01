@@ -127,7 +127,8 @@ func TestInvalidHTTPAndPreJoinCommands(t *testing.T) {
 	defer cancel()
 	store := room.New()
 	code, _ := store.Create("Test")
-	server := httptest.NewServer(New(ctx, store, fstest.MapFS{}, ""))
+	files := fstest.MapFS{"index.html": {Data: []byte("<!doctype html>")}}
+	server := httptest.NewServer(New(ctx, store, files, ""))
 	defer server.Close()
 	for _, body := range []string{`{"title":""}`, `{"title":"x","extra":1}`, `{"title":"x"} {}`, `{"title":"` + strings.Repeat("x", 4096) + `"}`} {
 		resp, err := http.Post(server.URL+"/api/rooms", "application/json", strings.NewReader(body))

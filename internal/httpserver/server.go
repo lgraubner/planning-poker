@@ -340,9 +340,10 @@ func (s *Server) spa(w http.ResponseWriter, r *http.Request) {
 		http.FileServerFS(s.files).ServeHTTP(w, r)
 		return
 	}
+	status := http.StatusOK
+	// Any other page still gets the app, which says it is not found, under a 404.
 	if path != "" && (len(path) != 8 || strings.Contains(path, "/")) {
-		http.NotFound(w, r)
-		return
+		status = http.StatusNotFound
 	}
 	index, err := fs.ReadFile(s.files, "index.html")
 	if err != nil {
@@ -350,5 +351,6 @@ func (s *Server) spa(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(status)
 	_, _ = w.Write(index)
 }
