@@ -13,9 +13,10 @@ Cards stay hidden until someone reveals them. If the estimates span more than ne
 ## Run with Docker
 
 ```sh
-docker build -t planning-poker https://github.com/lgraubner/planning-poker.git
-docker run --rm -p 8080:8080 planning-poker
+docker run --rm -p 8080:8080 ghcr.io/lgraubner/planning-poker
 ```
+
+The image is built for `amd64` and `arm64` from every `main` commit that passes CI. `latest` follows `main`; pin a build with its `sha-<commit>` tag.
 
 Open <http://localhost:8080>. Rooms live in memory and disappear on restart unless you set `DATABASE_PATH`.
 
@@ -26,7 +27,7 @@ This keeps rooms in SQLite on a volume. The image provides `/data`, owned by its
 ```yaml
 services:
   planning-poker:
-    build: https://github.com/lgraubner/planning-poker.git
+    image: ghcr.io/lgraubner/planning-poker
     ports: ['8080:8080']
     environment:
       DATABASE_PATH: /data/rooms.db
@@ -40,7 +41,7 @@ volumes:
 docker compose up -d
 ```
 
-To update, run `docker compose up -d --build`; it fetches the latest `main`.
+To update, run `docker compose pull && docker compose up -d`.
 
 ## Configuration
 
