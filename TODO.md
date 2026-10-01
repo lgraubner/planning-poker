@@ -4,10 +4,9 @@
 - improve room is full error page
 - improve pick name page
 - improve home page
-- improve reconnecting message
 - different measuring scales
+- more than 12 users?
 - improve mobile
-- check installation/deployment for 3rd parties
 - check code
 
 ## Ideas
