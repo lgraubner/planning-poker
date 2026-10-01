@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import confetti from 'canvas-confetti';
 import clsx from 'clsx';
 import { Button } from '../components/Button';
@@ -473,8 +473,9 @@ function PokerTable({
   const [arrivedRevealed, setArrivedRevealed] = useState(revealed);
   if (arrivedRevealed && !revealed) setArrivedRevealed(false);
   const others = participants.filter((participant) => participant.id !== self);
-  // One seat a side from four others, two from nine: a full room of 12 sits 4, 2, 4, 2.
-  const sideCount = others.length >= 9 ? 4 : others.length >= 4 ? 2 : 0;
+  // One seat a side from four others, two from nine: a full table of 12 sits 4, 2, 4, 2.
+  // Past 12, long rows would reach the side seats, so everyone sits above or below.
+  const sideCount = others.length >= 12 ? 0 : others.length >= 9 ? 4 : others.length >= 4 ? 2 : 0;
   const sides = others.slice(0, sideCount);
   const remaining = others.slice(sideCount);
   // The rows split evenly with you below, and the spare seat goes on top.
@@ -487,7 +488,15 @@ function PokerTable({
     : bottomOthers;
 
   return (
-    <div className="grid min-h-96 w-full max-w-7xl grow grid-cols-[56px_minmax(0,1fr)_56px] grid-rows-[96px_132px_96px] content-center items-center justify-center gap-x-1.5 gap-y-6 self-center pt-4 sm:grid-cols-[84px_minmax(200px,320px)_84px] sm:grid-rows-[96px_140px_96px] sm:gap-x-4">
+    <div
+      // A crowded room stretches the table under its longest row: 90px a seat, less the sides.
+      style={
+        {
+          '--table': `${Math.max(320, Math.max(top.length, bottom.length) * 90 - 180)}px`,
+        } as CSSProperties
+      }
+      className="grid min-h-96 w-full max-w-7xl grow grid-cols-[56px_minmax(0,1fr)_56px] grid-rows-[minmax(96px,auto)_132px_minmax(96px,auto)] content-center items-center justify-center gap-x-1.5 gap-y-6 self-center pt-4 sm:grid-cols-[84px_minmax(200px,var(--table))_84px] sm:grid-rows-[minmax(96px,auto)_140px_minmax(96px,auto)] sm:gap-x-4"
+    >
       {others.length === 0 ? (
         <div className="col-2 row-1 self-end text-center text-sm">
           <p className="mb-0.5">Feeling lonely?</p>
@@ -619,8 +628,9 @@ function ParticipantRow({
   return (
     <div
       className={clsx(
-        'col-span-full flex w-full items-start justify-center-safe gap-1.5 overflow-x-auto px-2 py-1',
-        top ? 'row-1' : 'row-3',
+        // Seats flow as inline blocks so a crowded row wraps into lines of even length.
+        'col-span-full w-full px-2 py-1 text-center text-balance *:mx-[3px] *:my-1.5 *:inline-block *:align-top',
+        top ? 'row-1 self-end' : 'row-3 self-start',
       )}
     >
       {participants.map((participant) => (

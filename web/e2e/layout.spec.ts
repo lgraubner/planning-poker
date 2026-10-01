@@ -15,6 +15,24 @@ const [you, ...names] = [
   'Li',
   'Alexandra Konstantinopoulou-Richardson',
   'Eve',
+  'Priya',
+  'Tomasz',
+  'Ngozi',
+  'Sven',
+  'Yuki',
+  'Mateo',
+  'Fatima',
+  'Oskar',
+  'Leilani',
+  'Dmitri',
+  'Ines',
+  'Kwame',
+  'Hana',
+  'Rafael',
+  'Zoë',
+  'Aleksandra',
+  'Finn',
+  'Mei',
 ];
 
 // Everyone but you joins over a bare WebSocket: a browser context each would be slow.
@@ -61,7 +79,7 @@ async function lines(locator: Locator) {
 }
 
 async function expectSound(page: Page) {
-  // Crowded rows scroll inside themselves, never the page.
+  // Crowded rows wrap, never widening the page.
   // Against the device width: a phone zooms out to fit, which would widen innerWidth too.
   const width = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(width).toBeLessThanOrEqual(page.viewportSize()!.width);
@@ -116,12 +134,22 @@ async function expectSound(page: Page) {
   });
 }
 
-test('a full room turns the thirteenth person away', async ({ page, newParticipant }, info) => {
+// A full-page shot leaves the sticky deck over a tall room: grow the window to the page instead.
+async function wholePage(page: Page) {
+  const size = page.viewportSize()!;
+  const height = await page.evaluate(() => document.documentElement.scrollHeight);
+  await page.setViewportSize({ ...size, height });
+  const shot = await page.screenshot();
+  await page.setViewportSize(size);
+  return shot;
+}
+
+test('a full room turns the thirty-first person away', async ({ page, newParticipant }, info) => {
   const url = await createRoom(page);
   await join(page, url, you);
-  const others = await joinOthers(page, 11);
+  const others = await joinOthers(page, 29);
   try {
-    // Over the socket, the server refuses a thirteenth seat.
+    // Over the socket, the server refuses a thirty-first seat.
     await expect(joinOthers(page, 1)).rejects.toThrow('This room is full.');
     // In the browser, they learn why before they get to the name form.
     const latecomer = await newParticipant();
@@ -162,7 +190,8 @@ function seating(page: Page) {
   }, you);
 }
 
-// The seats for rooms of 1 to 12: rows split evenly, the spare seat going on top.
+// The seats for rooms of 1 to 30: rows split evenly, the spare seat going on top.
+// From 13, long rows would reach the side seats, so everyone sits above or below.
 const expectedSeating = [
   [0, 0, 0, 1],
   [1, 0, 0, 1],
@@ -176,6 +205,12 @@ const expectedSeating = [
   [3, 2, 2, 3],
   [4, 2, 2, 3],
   [4, 2, 2, 4],
+  ...Array.from({ length: 18 }, (_, i) => [
+    Math.ceil((i + 13) / 2),
+    0,
+    0,
+    Math.floor((i + 13) / 2),
+  ]),
 ];
 
 for (const [index, expected] of expectedSeating.entries()) {
@@ -191,7 +226,7 @@ for (const [index, expected] of expectedSeating.entries()) {
       await expect(card(page, you)).toHaveAccessibleName(/selected$/);
       await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
       await info.attach('voting', {
-        body: await page.screenshot({ fullPage: true }),
+        body: await wholePage(page),
         contentType: 'image/png',
       });
       await expectSound(page);
@@ -200,7 +235,7 @@ for (const [index, expected] of expectedSeating.entries()) {
       await expect(page.getByRole('list', { name: 'Results' })).toBeVisible();
       await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
       await info.attach('revealed', {
-        body: await page.screenshot({ fullPage: true }),
+        body: await wholePage(page),
         contentType: 'image/png',
       });
       await expectSound(page);

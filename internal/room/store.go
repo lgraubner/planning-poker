@@ -18,9 +18,9 @@ import (
 )
 
 const (
-	MaxParticipants = 12
-	maxSockets      = 60 // per room, including sockets that have not joined yet
-	maxTabs         = 5  // connections per participant
+	MaxParticipants = 30
+	maxSockets      = 4 * MaxParticipants // per room, including sockets that have not joined yet
+	maxTabs         = 5                   // connections per participant
 )
 
 const alphabet = "23456789abcdefghjkmnpqrstuvwxyz"

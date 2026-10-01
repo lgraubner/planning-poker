@@ -1,6 +1,6 @@
 # Planning Poker
 
-Self-hosted planning poker without accounts: create a room, share the link, and start estimating. It ships as one small container, a single binary with no external services and no analytics. Rooms can optionally be kept in SQLite.
+Self-hosted planning poker without accounts: create a room, share the link, and start estimating with up to 30 people. It ships as one small container, a single binary with no external services and no analytics. Rooms can optionally be kept in SQLite.
 
 | Voting                                                                      | Revealed                                                                               | Consensus                                                            |
 | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |

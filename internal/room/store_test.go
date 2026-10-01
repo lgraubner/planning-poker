@@ -141,7 +141,7 @@ func TestValidationAndLimits(t *testing.T) {
 	if _, err := s.Info(code, aliceID); err != ErrTooManyTabs {
 		t.Fatalf("tab limit missing from availability: %v", err)
 	}
-	for i := 0; i < 60; i++ {
+	for i := 0; i < maxSockets; i++ {
 		if err := s.Reserve(code); err != nil {
 			t.Fatal(err)
 		}
