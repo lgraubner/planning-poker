@@ -332,6 +332,17 @@ test('only what someone types and errors can be selected', async ({ page }) => {
   await expect(page.getByRole('alert')).toHaveCSS('user-select', 'text');
 });
 
+test('the title field opens exactly over the title', async ({ page }) => {
+  const url = await createRoom(page, 'Sprint planning');
+  await join(page, url, 'Alice');
+  const title = page.getByRole('button', { name: 'Sprint planning', exact: true });
+  const before = (await title.boundingBox())!;
+  await title.click();
+  const after = (await page.getByRole('textbox', { name: 'Room title' }).boundingBox())!;
+  for (const side of ['x', 'y', 'width', 'height'] as const)
+    expect(after[side], side).toBeCloseTo(before[side], 0);
+});
+
 test('anyone can rename the room for everyone', async ({ page, newParticipant }) => {
   const url = await createRoom(page, 'Sprint planning');
   await join(page, url, 'Alice');
@@ -510,6 +521,34 @@ test('your own name stands out from the others', async ({ page, newParticipant }
     expect(mine.color).not.toBe(theirs.color);
     expect(Number(mine.fontWeight)).toBeGreaterThan(Number(theirs.fontWeight));
   }
+});
+
+test('you can change your name for everyone and keep it', async ({ page, newParticipant }) => {
+  const url = await createRoom(page);
+  await join(page, url, 'Alice');
+  const bob = await newParticipant();
+  const names: string[][] = [];
+  bob.on('websocket', (socket) =>
+    socket.on('framereceived', ({ payload }) =>
+      names.push(JSON.parse(String(payload)).participants?.map((p: { name: string }) => p.name)),
+    ),
+  );
+  await join(bob, url, 'Bob');
+
+  await page.getByRole('button', { name: 'Alice', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Your name' }).fill('  ');
+  await page.getByRole('textbox', { name: 'Your name' }).press('Enter');
+  await page.getByRole('button', { name: 'Alice', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Your name' }).fill('Alicia');
+  await page.getByRole('textbox', { name: 'Your name' }).press('Enter');
+  await expect(card(bob, 'Alicia')).toBeVisible();
+  expect(names).toContainEqual(['Alicia', 'Bob']);
+  // Only your own name is yours to change.
+  await expect(bob.getByRole('button', { name: 'Alicia', exact: true })).toHaveCount(0);
+
+  // The next room greets you by the new name.
+  await createRoom(page, 'Retro');
+  await expect(card(page, 'Alicia')).toBeVisible();
 });
 
 test('the deck and the results fade into each other', async ({ page }) => {

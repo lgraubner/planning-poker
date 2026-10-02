@@ -27,6 +27,14 @@ export function rememberedName() {
   }
 }
 
+export function rememberName(name: string) {
+  try {
+    localStorage.setItem('poker.name', name);
+  } catch {
+    /* The room has the new name; only the next visit misses it. */
+  }
+}
+
 export function rememberedID() {
   try {
     return localStorage.getItem('poker.id') || '';
@@ -151,7 +159,7 @@ export function useRoom(code: string, participant: Identity) {
     };
   }, [code, participant]);
 
-  function send(type: 'select' | 'reveal' | 'reset' | 'rename', value?: string) {
+  function send(type: 'select' | 'reveal' | 'reset' | 'rename' | 'name', value?: string) {
     if (!connected || !snapshot || socket.current?.readyState !== WebSocket.OPEN) return;
     setError('');
     socket.current.send(JSON.stringify({ type, value, round: snapshot.round }));

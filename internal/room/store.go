@@ -359,7 +359,7 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 	if r == nil || !sub.member.connections[sub] {
 		return ErrNotFound
 	}
-	// Renaming does not depend on the round, so a reset must not reject it.
+	// Renaming the room or yourself does not depend on the round, so a reset must not reject it.
 	if command == "rename" {
 		title, err := ValidateLabel(value, 100)
 		if err != nil {
@@ -367,6 +367,16 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 		}
 		r.title = title
 		s.save(sub.code, r)
+		s.publish(r)
+		return nil
+	}
+	// Names live only in memory, so there is nothing to save.
+	if command == "name" {
+		name, err := ValidateLabel(value, 40)
+		if err != nil {
+			return err
+		}
+		sub.member.name = name
 		s.publish(r)
 		return nil
 	}

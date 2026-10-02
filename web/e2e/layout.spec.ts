@@ -92,7 +92,8 @@ async function expectSound(page: Page) {
     await Promise.all(
       seats.map((seat) =>
         seat.evaluate((element) => {
-          const label = element.querySelector('p')!;
+          // Your own name is a button, so you can change it.
+          const label = element.querySelector('p, button')!;
           const range = document.createRange();
           range.selectNodeContents(label);
           // A cut-off name's text runs past its label, so clip it to what shows.
@@ -121,8 +122,10 @@ async function expectSound(page: Page) {
     }
   }
   for (const seat of seats) {
-    await expect(seat.getByRole('paragraph')).toHaveAttribute('title', /.+/);
-    expect(await lines(seat.getByRole('paragraph'))).toBe(1);
+    // Others' names show in full on hover; your own is yours to know.
+    for (const name of await seat.getByRole('paragraph').all())
+      await expect(name).toHaveAttribute('title', /.+/);
+    expect(await lines(seat.locator('p, button'))).toBe(1);
     // Every seat can be scrolled into view, however full its row.
     await seat.scrollIntoViewIfNeeded();
     await expect(seat).toBeInViewport();

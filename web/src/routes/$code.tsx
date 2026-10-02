@@ -17,6 +17,7 @@ import {
   identity,
   rememberedID,
   rememberedName,
+  rememberName,
   useRoom,
   type Identity,
   type Participant,
@@ -244,6 +245,10 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
         connected={connected}
         revealed={snapshot.revealed}
         onReveal={() => send('reveal')}
+        onRenameSelf={(name) => {
+          send('name', name);
+          rememberName(name);
+        }}
       />
       {/* Both bars share one cell, so the footer keeps its height and the table stays put.
           The results sit inside the sticky footer, so a scrolled table passes under them. */}
@@ -309,53 +314,20 @@ function RoomHeader({
   connected: boolean;
   onRename: (title: string) => void;
 }) {
-  // Only an open editor holds a draft, so renames by others show until you click.
-  const [draft, setDraft] = useState<string | null>(null);
-  // Shows a sent rename until the server's title moves off the one it replaced.
-  // ponytail: a rename lost to a dropped socket shows until the title next changes.
-  const [pending, setPending] = useState<{ from: string; to: string } | null>(null);
-  const shown = pending?.from === title ? pending.to : title;
-
-  function commit() {
-    const next = draft?.trim();
-    if (next && next !== shown && !/\p{Cc}/u.test(next)) {
-      onRename(next);
-      setPending({ from: title, to: next });
-    }
-    setDraft(null);
-  }
-
   return (
     <header className="mb-2 grid min-h-11 grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-3">
       <HomeLink />
       <h1 className="min-w-0 text-center text-lg leading-tight font-semibold tracking-tight">
-        {draft === null ? (
-          <button
-            type="button"
-            title="Rename room"
-            disabled={!connected}
-            onClick={() => setDraft(shown)}
-            className="max-w-full truncate border border-transparent px-[7px] active:scale-none"
-          >
-            {shown}
-          </button>
-        ) : (
-          <input
-            aria-label="Room title"
-            autoFocus
-            enterKeyHint="done"
-            value={draft}
-            maxLength={100}
-            onFocus={(event) => event.currentTarget.select()}
-            onChange={(event) => setDraft(event.target.value)}
-            onBlur={commit}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') event.currentTarget.blur();
-              if (event.key === 'Escape') setDraft(null);
-            }}
-            className="field-sizing-content max-w-full min-w-16 rounded-md text-center border border-zinc-700 bg-zinc-900 px-3 py-1 outline-none focus:border-indigo-400"
-          />
-        )}
+        {/* Button and field share one box, so the text stays put when editing starts. */}
+        <InlineEdit
+          value={title}
+          label="Room title"
+          maxLength={100}
+          disabled={!connected}
+          onCommit={onRename}
+          className="inline-block max-w-full border border-transparent px-[7px] py-1 active:scale-none"
+          inputClassName="field-sizing-content max-w-full min-w-16 px-[7px] py-1"
+        />
       </h1>
       <CopyLinkButton
         className="justify-self-end"
@@ -363,6 +335,91 @@ function RoomHeader({
         statusClassName="right-0 text-right"
       />
     </header>
+  );
+}
+
+/** Text that turns into a field when clicked, for a value anyone may change at any time. */
+function InlineEdit({
+  value,
+  label,
+  maxLength,
+  disabled,
+  onCommit,
+  className,
+  inputClassName,
+}: {
+  value: string;
+  label: string;
+  maxLength: number;
+  disabled: boolean;
+  onCommit: (value: string) => void;
+  className: string;
+  inputClassName: string;
+}) {
+  // Only an open editor holds a draft, so changes by others show until you click.
+  const [draft, setDraft] = useState<string | null>(null);
+  // Shows a sent change until the server's value moves off the one it replaced.
+  // ponytail: a change lost to a dropped socket shows until the value next changes.
+  const [pending, setPending] = useState<{ from: string; to: string } | null>(null);
+  const shown = pending?.from === value ? pending.to : value;
+
+  function commit() {
+    const next = draft?.trim();
+    if (next && next !== shown && !/\p{Cc}/u.test(next)) {
+      onCommit(next);
+      setPending({ from: value, to: next });
+    }
+    setDraft(null);
+  }
+
+  return draft === null ? (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => setDraft(shown)}
+      className={clsx('group', className)}
+    >
+      {/* Hugs the text, so the pencil sits the same distance from it whatever the button's padding. */}
+      <span className="relative block">
+        <span className="block truncate">{shown}</span>
+        {/* Muted, so it reads as a hint beside the text rather than part of it. It shares the
+            text's line, so it sits on the same baseline at any line height; sized in em to match
+            each font, and centred on the capitals (about 0.7em tall). */}
+        <span
+          aria-hidden="true"
+          className="absolute top-0 left-full ml-[0.3em] text-zinc-400 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="inline size-[0.85em] align-[-0.075em] fill-none stroke-current stroke-2 [stroke-linecap:round] [stroke-linejoin:round]"
+          >
+            <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
+            <path d="m15 5 4 4" />
+          </svg>
+        </span>
+      </span>
+    </button>
+  ) : (
+    <input
+      aria-label={label}
+      // A label to change in place, not a form to fill.
+      autoComplete="off"
+      autoFocus
+      enterKeyHint="done"
+      value={draft}
+      maxLength={maxLength}
+      onFocus={(event) => event.currentTarget.select()}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') event.currentTarget.blur();
+        if (event.key === 'Escape') setDraft(null);
+      }}
+      className={clsx(
+        'rounded-md border border-zinc-700 bg-zinc-900 text-center outline-none focus:border-indigo-400',
+        inputClassName,
+      )}
+    />
   );
 }
 
@@ -459,6 +516,7 @@ function PokerTable({
   connected,
   revealed,
   onReveal,
+  onRenameSelf,
 }: {
   participants: Participant[];
   deck: string[];
@@ -466,6 +524,7 @@ function PokerTable({
   connected: boolean;
   revealed: boolean;
   onReveal: () => void;
+  onRenameSelf: (name: string) => void;
 }) {
   const hasVotes = participants.some((participant) => participant.selected);
   const allVoted =
@@ -561,7 +620,14 @@ function PokerTable({
         revealed={revealed}
         right
       />
-      <ParticipantRow participants={bottom} self={self} revealed={revealed} />
+      {/* You always sit in the bottom row, so only it offers your name for editing. */}
+      <ParticipantRow
+        participants={bottom}
+        self={self}
+        revealed={revealed}
+        connected={connected}
+        onRenameSelf={onRenameSelf}
+      />
     </div>
   );
 }
@@ -627,11 +693,15 @@ function ParticipantRow({
   self,
   revealed,
   top = false,
+  connected = false,
+  onRenameSelf,
 }: {
   participants: Participant[];
   self: string;
   revealed: boolean;
   top?: boolean;
+  connected?: boolean;
+  onRenameSelf?: (name: string) => void;
 }) {
   return (
     <div
@@ -647,6 +717,8 @@ function ParticipantRow({
           participant={participant}
           own={participant.id === self}
           revealed={revealed}
+          connected={connected}
+          onRename={onRenameSelf}
         />
       ))}
     </div>
@@ -657,10 +729,14 @@ function ParticipantCard({
   participant,
   own,
   revealed,
+  connected = false,
+  onRename,
 }: {
   participant: Participant;
   own: boolean;
   revealed: boolean;
+  connected?: boolean;
+  onRename?: (name: string) => void;
 }) {
   // "Vote again" clears the estimate at once, so keep the face until the card has turned back.
   const face = revealed && participant.selected ? participant.estimate || '' : '';
@@ -719,15 +795,31 @@ function ParticipantCard({
           )}
         </div>
       </div>
-      <p
-        title={participant.name}
-        className={clsx(
-          'mt-2 mb-0.5 truncate text-sm',
-          own ? 'font-bold text-indigo-300' : 'font-semibold',
-        )}
-      >
-        {participant.name}
-      </p>
+      {own && onRename ? (
+        // Holds the name's line while the field floats over it, so the seats stay put.
+        <div className="relative mt-2 mb-0.5 h-5 text-sm">
+          <InlineEdit
+            value={participant.name}
+            label="Your name"
+            maxLength={40}
+            disabled={!connected}
+            onCommit={onRename}
+            className="mx-auto block max-w-full font-bold text-indigo-300"
+            // Grows with the name past the seat's width, and 16px so phones do not zoom in on focus.
+            inputClassName="absolute top-1/2 left-1/2 z-10 field-sizing-content max-w-72 min-w-16 -translate-1/2 px-2 py-0.5 text-base"
+          />
+        </div>
+      ) : (
+        <p
+          title={participant.name}
+          className={clsx(
+            'mt-2 mb-0.5 truncate text-sm',
+            own ? 'font-bold text-indigo-300' : 'font-semibold',
+          )}
+        >
+          {participant.name}
+        </p>
+      )}
       {reconnecting && <span className="text-sm text-zinc-400">Reconnecting</span>}
     </article>
   );

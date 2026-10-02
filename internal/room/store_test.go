@@ -231,6 +231,26 @@ func TestRenameIgnoresRoundAndValidates(t *testing.T) {
 	}
 }
 
+func TestNameIgnoresRoundAndValidates(t *testing.T) {
+	s := New()
+	code, _ := s.Create("Test", "fibonacci")
+	alice, _ := s.Join(code, aliceID, "Alice")
+	bob, _ := s.Join(code, bobID, "Bob")
+	<-alice.Updates
+	<-bob.Updates
+	for _, name := range []string{"", "  ", "a\nb", strings.Repeat("界", 41)} {
+		if err := s.Command(alice, "name", name, 1); err == nil {
+			t.Errorf("accepted invalid name %q", name)
+		}
+	}
+	if err := s.Command(alice, "name", "  Alicia  ", 7); err != nil {
+		t.Fatal(err)
+	}
+	if snapshot := <-bob.Updates; snapshot.Participants[0].Name != "Alicia" || snapshot.Participants[1].Name != "Bob" {
+		t.Fatalf("other participant saw %+v", snapshot.Participants)
+	}
+}
+
 func TestSQLitePersistsRoomsAcrossRestarts(t *testing.T) {
 	path := t.TempDir() + "/rooms.db"
 	s, err := Open(path)
