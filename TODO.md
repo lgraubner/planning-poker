@@ -1,16 +1,15 @@
 # Todo
 
-- average
 - improve pick name page
 - improve home page
-- different measuring scales
 - improve mobile
 - check code
-- Show Name at top and logout?
+- White label options (Logo, Impressum, Privacy)
 
 ## Ideas
 
 - spectators?
+- Voting History
 - light mode
 - Microsoft Teams like reactions
 - History (accounting revotes on same room title or separate?)
