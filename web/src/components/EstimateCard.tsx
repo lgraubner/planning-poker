@@ -19,8 +19,8 @@ export function EstimateCard({ value, selected, disabled, onClick }: EstimateCar
         'h-18 w-12 shrink-0 rounded-lg border-2 px-1.5 py-1 font-semibold transition duration-200 ease-out motion-reduce:transition-none',
         value.length > 2 ? 'text-base' : 'text-lg',
         selected
-          ? '-translate-y-2 border-indigo-400 bg-indigo-400 text-zinc-950'
-          : 'border-border bg-surface text-zinc-200',
+          ? '-translate-y-2 border-indigo-400 bg-indigo-400 text-zinc-950 enabled:hover:border-indigo-300 enabled:hover:bg-indigo-300'
+          : 'border-border bg-surface text-zinc-200 enabled:hover:-translate-y-1 enabled:hover:border-indigo-400/60',
       )}
     >
       {value}

@@ -15,7 +15,7 @@ export function SelectField({ label, items, value, onValueChange }: SelectFieldP
       onValueChange={(next) => next !== null && onValueChange(next)}
     >
       <Select.Label className="text-sm font-semibold">{label}</Select.Label>
-      <Select.Trigger className="flex min-h-13 w-full items-center justify-between gap-3 rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-left active:scale-none">
+      <Select.Trigger className="flex min-h-13 w-full items-center justify-between gap-3 rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-left hover:border-zinc-500 active:scale-none">
         <Select.Value />
         <Select.Icon className="text-zinc-400">
           <svg

@@ -294,7 +294,7 @@ test('the room link can be copied', async ({ page, context, browserName }) => {
   const url = await createRoom(page);
   await join(page, url, 'Alice');
   const header = page.locator('header');
-  const invite = page.getByText('Feeling lonely?').locator('..');
+  const invite = page.getByText('Invite your team').locator('..');
 
   await header.getByRole('button', { name: 'Copy room link' }).click();
   await expect(header.getByRole('button', { name: 'Link copied' })).toBeVisible();
@@ -374,10 +374,6 @@ test('anyone can rename the room for everyone', async ({ page, newParticipant })
   await bob.getByRole('textbox', { name: 'Room title' }).blur();
   await expect(page.getByRole('heading', { name: 'Daily' })).toBeVisible();
 
-  await expect(page.getByRole('link', { name: 'Source code' })).toHaveAttribute(
-    'href',
-    'https://github.com/lgraubner/planning-poker',
-  );
   await page.getByRole('link', { name: 'Planning Poker' }).click();
   await expect(page).toHaveURL('/');
   await expect(page).toHaveTitle('Planning Poker');

@@ -89,8 +89,10 @@
     text-underline-offset: 4px;
   }
 
+  /* The radius only rounds the ring of elements without one; utilities override it. */
   :focus-visible {
-    outline: 3px solid var(--color-indigo-300);
-    outline-offset: 4px;
+    outline: 2px solid var(--color-indigo-300);
+    outline-offset: 3px;
+    border-radius: var(--radius-md);
   }
 }

@@ -172,6 +172,14 @@ test('a full room turns the thirty-first person away', async ({ page, newPartici
   }
 });
 
+// Waits out every running animation. One cut short, like a hover lift the click retargets,
+// has nothing left to wait for.
+function settled(page: Page) {
+  return page.evaluate(() =>
+    Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))),
+  );
+}
+
 // Top, left, right and bottom seats: your row is the bottom one, the other wide row the top.
 function seating(page: Page) {
   return page.getByRole('article').evaluateAll((articles, you) => {
@@ -227,7 +235,7 @@ for (const [index, expected] of expectedSeating.entries()) {
       expect(await seating(page)).toEqual(expected);
       await page.getByRole('button', { name: '5', exact: true }).click();
       await expect(card(page, you)).toHaveAccessibleName(/selected$/);
-      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
+      await settled(page);
       await info.attach('voting', {
         body: await wholePage(page),
         contentType: 'image/png',
@@ -236,7 +244,7 @@ for (const [index, expected] of expectedSeating.entries()) {
 
       await page.getByRole('button', { name: 'Reveal cards' }).click();
       await expect(page.getByRole('list', { name: 'Results' })).toBeVisible();
-      await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
+      await settled(page);
       await info.attach('revealed', {
         body: await wholePage(page),
         contentType: 'image/png',
