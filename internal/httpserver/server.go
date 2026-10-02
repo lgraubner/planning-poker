@@ -1,9 +1,12 @@
 package httpserver
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"html"
 	"io"
 	"io/fs"
 	"log/slog"
@@ -82,12 +85,25 @@ type Server struct {
 	creation bucket
 	creators *limiter
 	visitors *limiter
+	meta     []byte
 }
+
+// Links are the operator's legal pages, shown in the app's footer when set.
+type Links struct{ LegalNotice, PrivacyPolicy string }
 
 // New serves the API and SPA. ipHeader names a header set by a trusted proxy
 // (e.g. X-Forwarded-For); when empty, the TCP peer address identifies clients.
-func New(ctx context.Context, store *room.Store, files fs.FS, ipHeader string) http.Handler {
+func New(ctx context.Context, store *room.Store, files fs.FS, ipHeader string, links Links) http.Handler {
 	s := &Server{store: store, files: files, ctx: ctx, ipHeader: ipHeader, creators: newLimiter(1.0/60, 5), visitors: newLimiter(5, 60)}
+	// The page reads them from its head, so they show from the first paint.
+	for _, link := range [][2]string{{"legal-notice", links.LegalNotice}, {"privacy-policy", links.PrivacyPolicy}} {
+		if link[1] != "" {
+			s.meta = fmt.Appendf(s.meta, `<meta name="%s" content="%s">`, link[0], html.EscapeString(link[1]))
+		}
+	}
+	if s.meta != nil {
+		s.meta = append(s.meta, "</head>"...)
+	}
 	r := chi.NewRouter()
 	r.Use(headers)
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) { reply(w, 200, map[string]string{"status": "ok"}) })
@@ -354,6 +370,9 @@ func (s *Server) spa(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fail(w, 503, "Frontend build is missing.")
 		return
+	}
+	if s.meta != nil {
+		index = bytes.Replace(index, []byte("</head>"), s.meta, 1)
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)

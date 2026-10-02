@@ -584,3 +584,24 @@ test('the deck and the results fade into each other', async ({ page }) => {
   expect(again.filter(({ round }) => between(round)).every(({ bars }) => bars === 1)).toBe(true);
   expect(again.some(({ round }) => between(round))).toBe(true);
 });
+
+test('the legal pages the server names are linked from every page', async ({ page }) => {
+  const linked = async () => {
+    await expect(page.getByRole('link', { name: 'Legal notice' })).toHaveAttribute(
+      'href',
+      'https://example.com/legal-notice',
+    );
+    // The query survives the trip through the page's head.
+    await expect(page.getByRole('link', { name: 'Privacy policy' })).toHaveAttribute(
+      'href',
+      'https://example.com/privacy?lang=en&v=2',
+    );
+  };
+  await page.goto('/');
+  await linked();
+  const url = await createRoom(page);
+  await join(page, url, 'Alice');
+  await linked();
+  await page.goto('/missing/page');
+  await linked();
+});

@@ -20,7 +20,7 @@ func TestHTTPAndWebSocketFlow(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	store := room.New()
-	server := httptest.NewServer(New(ctx, store, fstest.MapFS{"index.html": {Data: []byte("<html>poker</html>")}, "assets/main-a1.js": {Data: []byte("export {}")}}, ""))
+	server := httptest.NewServer(New(ctx, store, fstest.MapFS{"index.html": {Data: []byte("<html>poker</html>")}, "assets/main-a1.js": {Data: []byte("export {}")}}, "", Links{}))
 	defer server.Close()
 	response, err := http.Post(server.URL+"/api/rooms", "application/json", strings.NewReader(`{"title":"Sprint"}`))
 	if err != nil {
@@ -128,7 +128,7 @@ func TestInvalidHTTPAndPreJoinCommands(t *testing.T) {
 	store := room.New()
 	code, _ := store.Create("Test", "fibonacci")
 	files := fstest.MapFS{"index.html": {Data: []byte("<!doctype html>")}}
-	server := httptest.NewServer(New(ctx, store, files, ""))
+	server := httptest.NewServer(New(ctx, store, files, "", Links{}))
 	defer server.Close()
 	for _, body := range []string{`{"title":""}`, `{"title":"x","extra":1}`, `{"title":"x"} {}`, `{"title":"x","deck":"nope"}`, `{"title":"` + strings.Repeat("x", 4096) + `"}`} {
 		resp, err := http.Post(server.URL+"/api/rooms", "application/json", strings.NewReader(body))
@@ -170,7 +170,7 @@ func TestInvalidHTTPAndPreJoinCommands(t *testing.T) {
 
 func TestPerClientRateLimits(t *testing.T) {
 	store := room.New()
-	handler := New(context.Background(), store, fstest.MapFS{}, "X-Forwarded-For")
+	handler := New(context.Background(), store, fstest.MapFS{}, "X-Forwarded-For", Links{})
 	request := func(method, path, forwarded string) int {
 		r := httptest.NewRequest(method, path, strings.NewReader(`{"title":"Sprint"}`))
 		r.Header.Set("Content-Type", "application/json")
@@ -203,5 +203,25 @@ func TestPerClientRateLimits(t *testing.T) {
 	}
 	if request("GET", "/api/rooms/missing1", "2001:db8:0:1::1") != 404 {
 		t.Fatal("another IPv6 prefix was limited")
+	}
+}
+
+func TestLegalLinksReachThePage(t *testing.T) {
+	files := fstest.MapFS{"index.html": {Data: []byte("<html><head><title>Poker</title></head><body></body></html>")}}
+	page := func(links Links) string {
+		recorder := httptest.NewRecorder()
+		New(context.Background(), room.New(), files, "", links).ServeHTTP(recorder, httptest.NewRequest("GET", "/", nil))
+		return recorder.Body.String()
+	}
+	if got := page(Links{}); got != string(files["index.html"].Data) {
+		t.Fatalf("page without links changed: %s", got)
+	}
+	got := page(Links{PrivacyPolicy: "https://example.com/privacy"})
+	if !strings.Contains(got, `<meta name="privacy-policy" content="https://example.com/privacy"></head>`) || strings.Contains(got, "legal-notice") {
+		t.Fatalf("only the privacy policy belongs in the head: %s", got)
+	}
+	got = page(Links{LegalNotice: `https://example.com/"><script>x</script>`, PrivacyPolicy: "https://example.com/privacy"})
+	if strings.Contains(got, "<script>") || !strings.Contains(got, `content="https://example.com/&#34;&gt;&lt;script&gt;x&lt;/script&gt;"`) {
+		t.Fatalf("link not escaped: %s", got)
 	}
 }

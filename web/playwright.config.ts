@@ -20,6 +20,11 @@ export default defineConfig({
     url: `http://127.0.0.1:${port}/healthz`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    env: { PORT: String(port), CLIENT_IP_HEADER: 'X-Forwarded-For' },
+    env: {
+      PORT: String(port),
+      CLIENT_IP_HEADER: 'X-Forwarded-For',
+      LEGAL_NOTICE_URL: 'https://example.com/legal-notice',
+      PRIVACY_POLICY_URL: 'https://example.com/privacy?lang=en&v=2',
+    },
   },
 });

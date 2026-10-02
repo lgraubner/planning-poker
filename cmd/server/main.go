@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"strconv"
@@ -27,6 +28,13 @@ func main() {
 		slog.Error("PORT must be between 1 and 65535")
 		os.Exit(1)
 	}
+	links := httpserver.Links{LegalNotice: os.Getenv("LEGAL_NOTICE_URL"), PrivacyPolicy: os.Getenv("PRIVACY_POLICY_URL")}
+	for name, value := range map[string]string{"LEGAL_NOTICE_URL": links.LegalNotice, "PRIVACY_POLICY_URL": links.PrivacyPolicy} {
+		if u, err := url.Parse(value); value != "" && (err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "") {
+			slog.Error(name + " must be an http or https URL")
+			os.Exit(1)
+		}
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	store := room.New()
@@ -36,7 +44,7 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	server := &http.Server{Addr: ":" + port, Handler: httpserver.New(ctx, store, webui.Files(), os.Getenv("CLIENT_IP_HEADER")), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 8192}
+	server := &http.Server{Addr: ":" + port, Handler: httpserver.New(ctx, store, webui.Files(), os.Getenv("CLIENT_IP_HEADER"), links), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 8192}
 	go func() {
 		tick := time.NewTicker(time.Second)
 		defer tick.Stop()

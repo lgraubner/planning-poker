@@ -20,6 +20,15 @@ function AppLayout() {
   );
 }
 
+// The server puts the operator's legal pages in the head. None are set by default.
+const legalLinks = [
+  ['legal-notice', 'Legal notice'],
+  ['privacy-policy', 'Privacy policy'],
+].flatMap(([name, label]) => {
+  const href = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`)?.content;
+  return href ? [{ href, label }] : [];
+});
+
 /** A bare page draws its own header and uses the full width. */
 function Shell({ bare = false, children }: PropsWithChildren<{ bare?: boolean }>) {
   return (
@@ -31,6 +40,22 @@ function Shell({ bare = false, children }: PropsWithChildren<{ bare?: boolean }>
     >
       {!bare && <p className="text-base font-bold tracking-wide">Planning Poker</p>}
       {children}
+      {/* Pinned only where the widest deck, centred, leaves it room. */}
+      {legalLinks.length > 0 && (
+        <footer className="mt-auto flex gap-4 pt-6 pb-2 text-xs text-zinc-500 lg:fixed lg:bottom-2 lg:left-4 lg:z-20">
+          {legalLinks.map(({ href, label }) => (
+            <a
+              key={label}
+              href={href}
+              target="_blank"
+              rel="noreferrer"
+              className="no-underline hover:text-zinc-200"
+            >
+              {label}
+            </a>
+          ))}
+        </footer>
+      )}
     </main>
   );
 }
