@@ -14,7 +14,6 @@ import { PageIntro } from '../components/PageIntro';
 import { TextField } from '../components/TextField';
 import { consensus } from '../consensus';
 import {
-  deck,
   identity,
   rememberedID,
   rememberedName,
@@ -240,6 +239,7 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
       <ErrorMessage>{error}</ErrorMessage>
       <PokerTable
         participants={snapshot.participants}
+        deck={snapshot.deck}
         self={snapshot.self}
         connected={connected}
         revealed={snapshot.revealed}
@@ -257,7 +257,9 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
         >
           {/* Holds the results' height before the reveal, so the table stays put. */}
           <div className="flex min-h-26 max-w-full items-end pb-4">
-            {results.current.length > 0 && <Results participants={results.current} />}
+            {results.current.length > 0 && (
+              <Results participants={results.current} deck={snapshot.deck} />
+            )}
           </div>
           <div className="w-full border-t border-zinc-700 py-4">
             <Button compact disabled={!connected} onClick={() => send('reset')}>
@@ -274,6 +276,7 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
           </div>
         </section>
         <EstimateControls
+          deck={snapshot.deck}
           connected={connected}
           estimate={own?.estimate}
           hidden={snapshot.revealed}
@@ -451,12 +454,14 @@ function CopyLinkButton({
 
 function PokerTable({
   participants,
+  deck,
   self,
   connected,
   revealed,
   onReveal,
 }: {
   participants: Participant[];
+  deck: string[];
   self: string;
   connected: boolean;
   revealed: boolean;
@@ -467,7 +472,10 @@ function PokerTable({
     participants.length > 0 && participants.every((participant) => participant.selected);
   const current = participants.find((participant) => participant.id === self);
   const result = revealed
-    ? consensus(participants.flatMap((participant) => participant.estimate ?? []))
+    ? consensus(
+        participants.flatMap((participant) => participant.estimate ?? []),
+        deck,
+      )
     : null;
   // A reveal that happened before you arrived is already over: no confetti for it.
   const [arrivedRevealed, setArrivedRevealed] = useState(revealed);
@@ -699,7 +707,13 @@ function ParticipantCard({
             </span>
           </div>
           {(face || shown) && (
-            <div className="absolute inset-0 flex items-center justify-center rounded-lg border-2 text-xl font-semibold text-indigo-400 backface-hidden rotate-y-180 border-indigo-400 bg-surface">
+            <div
+              className={clsx(
+                'absolute inset-0 flex items-center justify-center rounded-lg border-2 font-semibold text-indigo-400 backface-hidden rotate-y-180 border-indigo-400 bg-surface',
+                // "XXL" fills the card edge to edge at full size.
+                (face || shown).length > 2 ? 'text-base' : 'text-xl',
+              )}
+            >
               {face || shown}
             </div>
           )}
@@ -719,7 +733,7 @@ function ParticipantCard({
   );
 }
 
-function Results({ participants }: { participants: Participant[] }) {
+function Results({ participants, deck }: { participants: Participant[]; deck: string[] }) {
   const counts = deck
     .map((value) => ({
       value,
@@ -757,11 +771,13 @@ function Results({ participants }: { participants: Participant[] }) {
 }
 
 function EstimateControls({
+  deck,
   connected,
   estimate,
   hidden,
   send,
 }: {
+  deck: string[];
   connected: boolean;
   estimate?: string;
   hidden: boolean;

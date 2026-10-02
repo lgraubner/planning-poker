@@ -1,14 +1,11 @@
-import { deck } from './room-connection';
-
-const numbers = deck.filter((value) => value !== '?' && value !== '☕');
-
 // Proposes the median card and scores how much voters agree: each pair on the
-// same card counts 1, on neighbouring cards ½, further apart 0. The deck grows
-// about exponentially, so one card apart means the same at 2 as at 13.
+// same card counts 1, on neighbouring cards ½, further apart 0. Each deck grows
+// about exponentially, so one card apart means the same at 2 as at 13, or S as XL.
 // Agreement is an average, so it hides a lone outlier; the planning poker rule
 // does not: estimates that span more than neighbouring cards, or a "?", call
 // for discussion. "☕" is a break request, not an estimate.
-export function consensus(estimates: string[]) {
+export function consensus(estimates: string[], deck: string[]) {
+  const numbers = deck.filter((value) => value !== '?' && value !== '☕');
   // A card's position in the deck; -1 for "?".
   const positions = estimates
     .filter((estimate) => estimate !== '☕')

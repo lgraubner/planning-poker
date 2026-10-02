@@ -33,8 +33,8 @@ One value selected by a participant from the estimation deck during a round.
 _Avoid_: Vote, score
 
 **Estimation deck**:
-The fixed set of values available for estimates: `0`, `1`, `2`, `3`, `5`, `8`, `13`, `21`, `?`, and `☕`.
-_Avoid_: Fibonacci scale, card set
+The set of values available for estimates, chosen when the room is created and fixed for its lifetime. Fibonacci holds `0`, `1`, `2`, `3`, `5`, `8`, `13`, `21`; T-shirt sizes hold `XS`, `S`, `M`, `L`, `XL`, `XXL`. Every deck ends with `?` and `☕`.
+_Avoid_: Scale, card set
 
 **Card**:
 The room view of one participant and their estimate state. It shows whether an estimate has been selected and hides its value until the round is revealed.

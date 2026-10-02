@@ -25,7 +25,13 @@ const (
 
 const alphabet = "23456789abcdefghjkmnpqrstuvwxyz"
 
-var Deck = []string{"0", "1", "2", "3", "5", "8", "13", "21", "?", "☕"}
+// Decks are the estimation decks a room can use, by name. The first card values
+// rise in order; "?" and "☕" end every deck.
+var Decks = map[string][]string{
+	"fibonacci": {"0", "1", "2", "3", "5", "8", "13", "21", "?", "☕"},
+	"tshirt":    {"XS", "S", "M", "L", "XL", "XXL", "?", "☕"},
+}
+
 var ErrNotFound = errors.New("Room not found.")
 var ErrFull = errors.New("This room is full.")
 var ErrTooManyTabs = errors.New("You have this room open in too many tabs. Close one and try again.")
@@ -43,6 +49,7 @@ type Snapshot struct {
 	Type         string        `json:"type"`
 	Title        string        `json:"title"`
 	Round        uint64        `json:"round"`
+	Deck         []string      `json:"deck"`
 	Revealed     bool          `json:"revealed"`
 	Self         string        `json:"self"`
 	Participants []Participant `json:"participants"`
@@ -57,6 +64,7 @@ type member struct {
 
 type session struct {
 	title        string
+	deck         string
 	round        uint64
 	revealed     bool
 	participants []*member
@@ -97,6 +105,7 @@ func Open(path string) (*Store, error) {
 	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS rooms (
 		code TEXT PRIMARY KEY,
 		title TEXT NOT NULL,
+		deck TEXT NOT NULL DEFAULT 'fibonacci',
 		round INTEGER NOT NULL,
 		revealed INTEGER NOT NULL,
 		joined INTEGER NOT NULL,
@@ -105,10 +114,17 @@ func Open(path string) (*Store, error) {
 		db.Close()
 		return nil, err
 	}
+	// Databases from before decks lack the column, and SQLite cannot add one only if missing.
+	if _, err := db.Exec(`SELECT deck FROM rooms LIMIT 0`); err != nil {
+		if _, err := db.Exec(`ALTER TABLE rooms ADD COLUMN deck TEXT NOT NULL DEFAULT 'fibonacci'`); err != nil {
+			db.Close()
+			return nil, err
+		}
+	}
 	s := New()
 	// Rooms held for 30 days need more room slots, or a flood could lock out creation for a month.
 	s.db, s.ttl, s.maxRooms = db, 30*24*time.Hour, 100_000
-	rows, err := db.Query(`SELECT code, title, round, revealed, joined, empty_since FROM rooms`)
+	rows, err := db.Query(`SELECT code, title, deck, round, revealed, joined, empty_since FROM rooms`)
 	if err != nil {
 		db.Close()
 		return nil, err
@@ -118,7 +134,7 @@ func Open(path string) (*Store, error) {
 		var code string
 		var emptySince int64
 		r := &session{}
-		if err := rows.Scan(&code, &r.title, &r.round, &r.revealed, &r.joined, &emptySince); err != nil {
+		if err := rows.Scan(&code, &r.title, &r.deck, &r.round, &r.revealed, &r.joined, &emptySince); err != nil {
 			db.Close()
 			return nil, err
 		}
@@ -150,8 +166,8 @@ func (s *Store) save(code string, r *session) error {
 		if !r.emptySince.IsZero() {
 			emptySince = r.emptySince.Unix()
 		}
-		_, err = s.db.Exec(`INSERT OR REPLACE INTO rooms (code, title, round, revealed, joined, empty_since) VALUES (?, ?, ?, ?, ?, ?)`,
-			code, r.title, r.round, r.revealed, r.joined, emptySince)
+		_, err = s.db.Exec(`INSERT OR REPLACE INTO rooms (code, title, deck, round, revealed, joined, empty_since) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			code, r.title, r.deck, r.round, r.revealed, r.joined, emptySince)
 	}
 	if err != nil {
 		slog.Error("saving room failed", "error", err)
@@ -178,10 +194,13 @@ func validSecret(secret string) bool {
 	return err == nil
 }
 
-func (s *Store) Create(title string) (string, error) {
+func (s *Store) Create(title, deck string) (string, error) {
 	title, err := ValidateLabel(title, 100)
 	if err != nil {
 		return "", err
+	}
+	if Decks[deck] == nil {
+		return "", errors.New("Unknown deck.")
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -200,7 +219,7 @@ func (s *Store) Create(title string) (string, error) {
 		if _, exists := s.rooms[string(code)]; exists {
 			continue
 		}
-		r := &session{title: title, round: 1, emptySince: s.now()}
+		r := &session{title: title, deck: deck, round: 1, emptySince: s.now()}
 		if s.save(string(code), r) != nil {
 			return "", errors.New("Could not create room.")
 		}
@@ -359,7 +378,7 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 		if r.revealed {
 			return errors.New("Wait for reset before selecting.")
 		}
-		if !slices.Contains(Deck, value) {
+		if !slices.Contains(Decks[r.deck], value) {
 			return errors.New("Invalid estimate.")
 		}
 		if sub.member.estimate == value {
@@ -395,7 +414,7 @@ func (s *Store) publish(r *session) {
 		if len(viewer.connections) == 0 {
 			continue
 		}
-		snapshot := Snapshot{Type: "snapshot", Title: r.title, Round: r.round, Revealed: r.revealed, Self: viewer.id, Participants: make([]Participant, 0, len(r.participants))}
+		snapshot := Snapshot{Type: "snapshot", Title: r.title, Round: r.round, Deck: Decks[r.deck], Revealed: r.revealed, Self: viewer.id, Participants: make([]Participant, 0, len(r.participants))}
 		for _, p := range r.participants {
 			if p.departed {
 				continue

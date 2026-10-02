@@ -6,9 +6,16 @@ import { CenteredSection } from '../components/CenteredSection';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { Form } from '../components/Form';
 import { PageIntro } from '../components/PageIntro';
+import { SelectField } from '../components/SelectField';
 import { TextField } from '../components/TextField';
 
 export const Route = createFileRoute('/')({ component: Home });
+
+// The server's deck names, with the cards each one holds.
+const decks = [
+  { value: 'fibonacci', label: 'Fibonacci: 0, 1, 2, 3, 5, 8, 13, 21' },
+  { value: 'tshirt', label: 'T-shirt sizes: XS, S, M, L, XL, XXL' },
+];
 
 function Home() {
   return (
@@ -40,14 +47,14 @@ function CreateRoomForm() {
   const navigate = useNavigate();
   const [error, setError] = useState('');
   const form = useForm({
-    defaultValues: { title: '' },
+    defaultValues: { title: '', deck: 'fibonacci' },
     onSubmit: async ({ value }) => {
       setError('');
       try {
         const response = await fetch('/api/rooms', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: value.title }),
+          body: JSON.stringify(value),
         });
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(result.error || 'Could not create room.');
@@ -82,6 +89,16 @@ function CreateRoomForm() {
             onChange={(event) => field.handleChange(event.target.value)}
             placeholder="e.g. Friday sprint planning"
             autoComplete="off"
+          />
+        )}
+      </form.Field>
+      <form.Field name="deck">
+        {(field) => (
+          <SelectField
+            label="Estimation deck"
+            items={decks}
+            value={field.state.value}
+            onValueChange={field.handleChange}
           />
         )}
       </form.Field>

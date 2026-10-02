@@ -57,6 +57,34 @@ test('participants estimate privately, reveal together, and vote again', async (
   );
 });
 
+test('a room estimates with the deck it was created with', async ({ page, newParticipant }) => {
+  const url = await createRoom(page, 'Roadmap sizing', 'T-shirt sizes');
+  await join(page, url, 'Alice');
+  const bob = await newParticipant();
+  const snapshots: { deck: string[]; revealed: boolean; participants: { estimate?: string }[] }[] =
+    [];
+  bob.on('websocket', (socket) =>
+    socket.on('framereceived', ({ payload }) => {
+      const message = JSON.parse(String(payload));
+      if (message.type === 'snapshot') snapshots.push(message);
+    }),
+  );
+  await join(bob, url, 'Bob');
+  await expect(bob.getByRole('group', { name: 'Choose your card' }).getByRole('button')).toHaveText(
+    ['XS', 'S', 'M', 'L', 'XL', 'XXL', '?', '☕'],
+  );
+
+  await page.getByRole('button', { name: 'M', exact: true }).click();
+  await bob.getByRole('button', { name: 'Reveal cards' }).click();
+  await expect(card(bob, 'Alice')).toHaveAccessibleName('Alice: M');
+  await expect(bob.getByRole('status').filter({ hasText: 'Proposed estimate' })).toHaveText(
+    'Proposed estimate M',
+  );
+  const revealed = snapshots.filter((snapshot) => snapshot.revealed).at(-1);
+  expect(revealed?.deck).toEqual(['XS', 'S', 'M', 'L', 'XL', 'XXL', '?', '☕']);
+  expect(revealed?.participants[0].estimate).toBe('M');
+});
+
 test('joining a revealed room shows the cards without replaying the flip', async ({
   page,
   newParticipant,

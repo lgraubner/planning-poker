@@ -1,8 +1,10 @@
 package room
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -15,7 +17,7 @@ func TestRoundPrivacyAndReconnect(t *testing.T) {
 	s := New()
 	now := time.Now()
 	s.now = func() time.Time { return now }
-	code, err := s.Create("  Sprint  ")
+	code, err := s.Create("  Sprint  ", "fibonacci")
 	if err != nil || len(code) != 8 {
 		t.Fatalf("create: %q %v", code, err)
 	}
@@ -112,7 +114,7 @@ func TestValidationAndLimits(t *testing.T) {
 		t.Fatal("Unicode characters counted as bytes")
 	}
 	s := New()
-	code, _ := s.Create("Test")
+	code, _ := s.Create("Test", "fibonacci")
 	if _, err := s.Join(code, "guessable", "Alice"); err == nil {
 		t.Fatal("bad identity accepted")
 	}
@@ -160,7 +162,7 @@ func TestValidationAndLimits(t *testing.T) {
 
 func TestDepartHidesLastTabAndAllowsRejoin(t *testing.T) {
 	s := New()
-	code, _ := s.Create("Test")
+	code, _ := s.Create("Test", "fibonacci")
 	first, _ := s.Join(code, aliceID, "Alex")
 	second, _ := s.Join(code, aliceID, "Alex")
 	if err := s.Command(first, "select", "8", 1); err != nil {
@@ -192,8 +194,8 @@ func TestUnjoinedRoomsExpireEarly(t *testing.T) {
 	s := New()
 	now := time.Now()
 	s.now = func() time.Time { return now }
-	unused, _ := s.Create("Unused")
-	used, _ := s.Create("Used")
+	unused, _ := s.Create("Unused", "fibonacci")
+	used, _ := s.Create("Used", "fibonacci")
 	sub, _ := s.Join(used, aliceID, "Alex")
 	s.Leave(sub)
 	now = now.Add(10 * time.Minute)
@@ -208,7 +210,7 @@ func TestUnjoinedRoomsExpireEarly(t *testing.T) {
 
 func TestRenameIgnoresRoundAndValidates(t *testing.T) {
 	s := New()
-	code, _ := s.Create("Test")
+	code, _ := s.Create("Test", "fibonacci")
 	alice, _ := s.Join(code, aliceID, "Alice")
 	bob, _ := s.Join(code, bobID, "Bob")
 	<-alice.Updates
@@ -239,9 +241,9 @@ func TestSQLitePersistsRoomsAcrossRestarts(t *testing.T) {
 	now := time.Now().Add(-365 * 24 * time.Hour)
 	start := now
 	s.now = func() time.Time { return now }
-	code, _ := s.Create("Sprint")
-	unused, _ := s.Create("Unused")
-	idle, _ := s.Create("Idle")
+	code, _ := s.Create("Sprint", "tshirt")
+	unused, _ := s.Create("Unused", "fibonacci")
+	idle, _ := s.Create("Idle", "fibonacci")
 	alice, _ := s.Join(code, aliceID, "Alice")
 	for _, c := range []struct {
 		command, value string
@@ -269,7 +271,7 @@ func TestSQLitePersistsRoomsAcrossRestarts(t *testing.T) {
 	if err != nil {
 		t.Fatal("room lost on restart:", err)
 	}
-	if snapshot := <-bob.Updates; snapshot.Title != "Retro" || snapshot.Round != 2 || !snapshot.Revealed {
+	if snapshot := <-bob.Updates; snapshot.Title != "Retro" || snapshot.Deck[0] != "XS" || snapshot.Round != 2 || !snapshot.Revealed {
 		t.Fatalf("room state lost on restart: %+v", snapshot)
 	}
 	s.Leave(bob)
@@ -286,14 +288,68 @@ func TestSQLitePersistsRoomsAcrossRestarts(t *testing.T) {
 	}
 }
 
+func TestEachRoomUsesItsOwnDeck(t *testing.T) {
+	s := New()
+	for _, deck := range []string{"", "Fibonacci", "nope"} {
+		if _, err := s.Create("Room", deck); err == nil {
+			t.Errorf("created a room with deck %q", deck)
+		}
+	}
+	shirts, _ := s.Create("Shirts", "tshirt")
+	points, _ := s.Create("Points", "fibonacci")
+	alice, _ := s.Join(shirts, aliceID, "Alice")
+	bob, _ := s.Join(points, bobID, "Bob")
+	if snapshot := <-alice.Updates; !slices.Equal(snapshot.Deck, Decks["tshirt"]) {
+		t.Fatalf("snapshot deck: %v", snapshot.Deck)
+	}
+	<-bob.Updates
+	for _, c := range []struct {
+		sub   *Subscription
+		value string
+		ok    bool
+	}{{alice, "M", true}, {alice, "8", false}, {bob, "8", true}, {bob, "M", false}, {alice, "?", true}} {
+		if err := s.Command(c.sub, "select", c.value, 1); (err == nil) != c.ok {
+			t.Errorf("select %q: %v", c.value, err)
+		}
+	}
+}
+
+func TestSQLiteAddsDecksToOlderDatabases(t *testing.T) {
+	path := t.TempDir() + "/rooms.db"
+	db, err := sql.Open("sqlite", "file:"+path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.Exec(`CREATE TABLE rooms (code TEXT PRIMARY KEY, title TEXT NOT NULL, round INTEGER NOT NULL, revealed INTEGER NOT NULL, joined INTEGER NOT NULL, empty_since INTEGER NOT NULL);
+		INSERT INTO rooms VALUES ('abcdefgh', 'Old', 1, 0, 0, 0)`)
+	db.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for range 2 { // the second open finds the column already there
+		s, err := Open(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		alice, err := s.Join("abcdefgh", aliceID, "Alice")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if snapshot := <-alice.Updates; !slices.Equal(snapshot.Deck, Decks["fibonacci"]) {
+			t.Fatalf("old room deck: %v", snapshot.Deck)
+		}
+		s.db.Close()
+	}
+}
+
 func TestRoomLimitDependsOnPersistence(t *testing.T) {
 	memory := New()
 	for range 1000 {
-		if _, err := memory.Create("Room"); err != nil {
+		if _, err := memory.Create("Room", "fibonacci"); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if _, err := memory.Create("Room"); err == nil {
+	if _, err := memory.Create("Room", "fibonacci"); err == nil {
 		t.Fatal("in-memory store exceeded 1,000 rooms")
 	}
 	s, err := Open(t.TempDir() + "/rooms.db")
@@ -301,7 +357,7 @@ func TestRoomLimitDependsOnPersistence(t *testing.T) {
 		t.Fatal(err)
 	}
 	for range 1001 {
-		if _, err := s.Create("Room"); err != nil {
+		if _, err := s.Create("Room", "fibonacci"); err != nil {
 			t.Fatal("database store stopped at the in-memory room limit:", err)
 		}
 	}

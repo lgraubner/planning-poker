@@ -35,9 +35,15 @@ export const test = base.extend<{ newParticipant: () => Promise<Page> }>({
 });
 export { expect };
 
-export async function createRoom(page: Page, title = 'Sprint planning') {
+export async function createRoom(page: Page, title = 'Sprint planning', deck?: string) {
   await page.goto('/');
   await page.getByLabel('Room title').fill(title);
+  if (deck) {
+    const select = page.getByRole('combobox', { name: 'Estimation deck' });
+    await select.click();
+    await page.getByRole('option', { name: deck }).click();
+    await expect(select).toContainText(deck);
+  }
   await page.getByRole('button', { name: 'Create room' }).click();
   await expect(page).toHaveURL(/\/[a-z0-9]{8}$/);
   return page.url();

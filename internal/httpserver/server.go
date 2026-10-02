@@ -174,6 +174,7 @@ func (s *Server) create(w http.ResponseWriter, r *http.Request) {
 	decoder.DisallowUnknownFields()
 	var body struct {
 		Title string `json:"title"`
+		Deck  string `json:"deck"`
 	}
 	if err := decoder.Decode(&body); err != nil {
 		fail(w, 400, "Invalid room title or request body.")
@@ -183,7 +184,11 @@ func (s *Server) create(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "Send one JSON object.")
 		return
 	}
-	code, err := s.store.Create(body.Title)
+	// Clients from before decks send only a title.
+	if body.Deck == "" {
+		body.Deck = "fibonacci"
+	}
+	code, err := s.store.Create(body.Title, body.Deck)
 	if err != nil {
 		fail(w, 400, err.Error())
 		return

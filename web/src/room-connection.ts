@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 
-export const deck = ['0', '1', '2', '3', '5', '8', '13', '21', '?', '☕'];
 export type Identity = { id: string; name: string };
 export type Participant = {
   id: string;
@@ -13,6 +12,7 @@ export type Snapshot = {
   type: 'snapshot';
   title: string;
   round: number;
+  deck: string[];
   revealed: boolean;
   self: string;
   participants: Participant[];
