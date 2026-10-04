@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import clsx from 'clsx';
 import { buttonClassName } from './Button';
 import { HomeLink } from './HomeLink';
+import { LegalFooter } from './LegalFooter';
 
 const homeClassName = clsx(
   buttonClassName,
@@ -62,6 +63,7 @@ export function ErrorPage({
           </Link>
         )}
       </section>
+      <LegalFooter />
     </>
   );
 }

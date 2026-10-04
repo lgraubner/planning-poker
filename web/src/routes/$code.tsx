@@ -1,4 +1,5 @@
 import { AlertDialog } from '@base-ui/react/alert-dialog';
+import { Menu } from '@base-ui/react/menu';
 import { createFileRoute, useBlocker } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
@@ -14,6 +15,7 @@ import { Form } from '../components/Form';
 import { PageIntro } from '../components/PageIntro';
 import { TextField } from '../components/TextField';
 import { consensus } from '../consensus';
+import { legalLinks } from '../legal-links';
 import {
   identity,
   rememberedID,
@@ -318,12 +320,60 @@ function RoomHeader({
           inputClassName="field-sizing-content max-w-full min-w-16 px-[7px] py-1"
         />
       </h1>
-      <CopyLinkButton
-        className="justify-self-end"
-        buttonClassName="rounded-md border border-indigo-400 px-2.5 text-sm hover:bg-indigo-400/10"
-        statusClassName="right-0 text-right"
-      />
+      <div className="flex items-center gap-2 justify-self-end">
+        <CopyLinkButton
+          buttonClassName="rounded-md border border-indigo-400 px-2.5 text-sm hover:bg-indigo-400/10"
+          statusClassName="right-0 text-right"
+        />
+        <RoomMenu />
+      </div>
     </header>
+  );
+}
+
+const repository = 'https://github.com/lgraubner/planning-poker';
+
+const menuLinks = [
+  { href: `${repository}/issues/new`, label: 'Report a problem' },
+  { href: repository, label: 'Source on GitHub' },
+  ...legalLinks,
+];
+
+/** Links that open in a new tab, so following one keeps your seat. */
+function RoomMenu() {
+  return (
+    <Menu.Root>
+      <Menu.Trigger
+        aria-label="Menu"
+        className="flex size-8 items-center justify-center rounded-md border border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200 data-popup-open:border-zinc-500 data-popup-open:text-zinc-200"
+      >
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          className="size-4 fill-none stroke-current stroke-2 [stroke-linecap:round]"
+        >
+          <path d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </Menu.Trigger>
+      <Menu.Portal>
+        <Menu.Positioner align="end" sideOffset={4} className="z-30">
+          <Menu.Popup className="min-w-44 origin-(--transform-origin) rounded-lg border border-zinc-700 bg-zinc-900 p-1 shadow-lg shadow-black/40 outline-none transition-[opacity,scale] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] data-ending-style:opacity-0 data-starting-style:opacity-0 motion-safe:data-ending-style:scale-95 motion-safe:data-starting-style:scale-95">
+            {menuLinks.map(({ href, label }) => (
+              <Menu.LinkItem
+                key={label}
+                href={href}
+                target="_blank"
+                rel="noreferrer"
+                closeOnClick
+                className="flex rounded-md px-3 py-2 text-sm no-underline outline-none data-highlighted:bg-surface-raised"
+              >
+                {label}
+              </Menu.LinkItem>
+            ))}
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
   );
 }
 

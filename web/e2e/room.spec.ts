@@ -644,7 +644,9 @@ test('the deck and the results fade into each other', async ({ page }) => {
   expect(again.some(({ round }) => between(round))).toBe(true);
 });
 
-test('the legal pages the server names are linked from every page', async ({ page }) => {
+test('the legal pages the server names are linked from every page but the room', async ({
+  page,
+}) => {
   const linked = async () => {
     await expect(page.getByRole('link', { name: 'Legal notice' })).toHaveAttribute(
       'href',
@@ -658,9 +660,35 @@ test('the legal pages the server names are linked from every page', async ({ pag
   };
   await page.goto('/');
   await linked();
+  // Centred under the home page's column.
+  const first = (await page.getByRole('link', { name: 'Legal notice' }).boundingBox())!;
+  const last = (await page.getByRole('link', { name: 'Privacy policy' }).boundingBox())!;
+  expect((first.x + last.x + last.width) / 2).toBeCloseTo(page.viewportSize()!.width / 2, 0);
   const url = await createRoom(page);
-  await join(page, url, 'Alice');
+  await page.goto(url);
   await linked();
+  await join(page, url, 'Alice');
+  // The room's menu holds them instead.
+  await expect(page.getByRole('link', { name: 'Legal notice' })).toHaveCount(0);
   await page.goto('/missing/page');
   await linked();
+});
+
+test('the room menu links to the project, its issues and the legal pages', async ({ page }) => {
+  const url = await createRoom(page);
+  await join(page, url, 'Alice');
+  await page.getByRole('button', { name: 'Menu' }).click();
+  const links = {
+    'Report a problem': 'https://github.com/lgraubner/planning-poker/issues/new',
+    'Source on GitHub': 'https://github.com/lgraubner/planning-poker',
+    'Legal notice': 'https://example.com/legal-notice',
+    'Privacy policy': 'https://example.com/privacy?lang=en&v=2',
+  };
+  await expect(page.getByRole('menuitem')).toHaveText(Object.keys(links));
+  for (const [name, href] of Object.entries(links)) {
+    const item = page.getByRole('menuitem', { name });
+    await expect(item).toHaveAttribute('href', href);
+    // A new tab, so following a link keeps your seat.
+    await expect(item).toHaveAttribute('target', '_blank');
+  }
 });
