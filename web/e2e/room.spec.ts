@@ -116,8 +116,8 @@ test('joining a revealed room shows the cards without replaying the flip', async
   const bob = await newParticipant();
   // Not join(): it waits for the card picker, which a revealed room hides.
   await bob.goto(url);
-  await bob.getByLabel('Your name').fill('Bob');
-  await bob.getByRole('button', { name: 'Join room' }).click();
+  await bob.getByLabel('Name', { exact: true }).fill('Bob');
+  await bob.getByRole('button', { name: 'Join', exact: true }).click();
   await expect(card(bob, 'Alice')).toContainText('8');
   // A replayed flip would still be turning for another 600ms.
   const flips = await bob.evaluate(
@@ -139,7 +139,7 @@ test('a saved name rejoins automatically and tabs share one card', async ({
   const secondTab = await page.context().newPage();
   await secondTab.goto(url);
   await expect(secondTab.getByRole('group', { name: 'Choose your card' })).toBeVisible();
-  await expect(secondTab.getByLabel('Your name')).toBeHidden();
+  await expect(secondTab.getByLabel('Name', { exact: true })).toBeHidden();
   await secondTab.getByRole('button', { name: '5', exact: true }).click();
   await expect(page.getByRole('button', { name: '5', exact: true })).toHaveAttribute(
     'aria-pressed',
@@ -149,17 +149,22 @@ test('a saved name rejoins automatically and tabs share one card', async ({
 
   const visitor = await newParticipant();
   await visitor.goto(url);
-  await expect(visitor.getByLabel('Your name')).toBeVisible();
+  await expect(visitor.getByRole('heading', { name: 'Join Sprint planning' })).toBeVisible();
+  await expect(visitor.getByRole('link', { name: 'Planning Poker' })).toHaveAttribute('href', '/');
+  await expect(visitor.getByLabel('Name', { exact: true })).toBeVisible();
 });
 
 test('invalid names are rejected before joining', async ({ page }) => {
   const url = await createRoom(page);
   await page.goto(url);
-  await page.getByRole('button', { name: 'Join room' }).click();
+  await page.getByRole('button', { name: 'Join', exact: true }).click();
   await expect(page.getByRole('alert')).toHaveText('Enter your name');
-  await expect(page.getByLabel('Your name')).toHaveAttribute('aria-invalid', 'true');
-  await page.getByLabel('Your name').fill('x'.repeat(41));
-  await page.getByRole('button', { name: 'Join room' }).click();
+  await expect(page.getByLabel('Name', { exact: true })).toHaveAttribute('aria-invalid', 'true');
+  // The field's border takes the error's red.
+  const red = await page.getByRole('alert').evaluate((alert) => getComputedStyle(alert).color);
+  await expect(page.getByLabel('Name', { exact: true })).toHaveCSS('border-top-color', red);
+  await page.getByLabel('Name', { exact: true }).fill('x'.repeat(41));
+  await page.getByRole('button', { name: 'Join', exact: true }).click();
   await expect(page.getByRole('alert')).toHaveText(
     'Use 1–40 characters without control characters',
   );
@@ -240,7 +245,7 @@ test('a quick load never flashes the loader', async ({ page }) => {
   await page.clock.runFor(300);
   await expect(status).toHaveText('Loading room…');
   release();
-  await expect(page.getByLabel('Your name')).toBeVisible();
+  await expect(page.getByLabel('Name', { exact: true })).toBeVisible();
 });
 
 test('buttons give way when pressed and centre their content', async ({ page }) => {
@@ -530,8 +535,8 @@ test('full agreement throws confetti for everyone', async ({ page, newParticipan
   // Someone arriving after the reveal missed the moment.
   const carol = await newParticipant();
   await carol.goto(url);
-  await carol.getByLabel('Your name').fill('Carol');
-  await carol.getByRole('button', { name: 'Join room' }).click();
+  await carol.getByLabel('Name', { exact: true }).fill('Carol');
+  await carol.getByRole('button', { name: 'Join', exact: true }).click();
   await expect(card(carol, 'Alice')).toHaveAccessibleName('Alice: 5');
   await expect(carol.getByTestId('confetti')).toHaveCount(0);
 });

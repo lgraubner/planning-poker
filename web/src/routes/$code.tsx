@@ -12,7 +12,6 @@ import { ErrorPage } from '../components/ErrorPage';
 import { HomeLink } from '../components/HomeLink';
 import { EstimateCard } from '../components/EstimateCard';
 import { Form } from '../components/Form';
-import { PageIntro } from '../components/PageIntro';
 import { TextField } from '../components/TextField';
 import { consensus } from '../consensus';
 import { legalLinks } from '../legal-links';
@@ -158,13 +157,14 @@ function JoinRoom({
   });
 
   return (
-    <CenteredSection>
+    <CenteredSection header={<HomeLink />}>
       <title>{`${title} | Planning Poker`}</title>
-      <PageIntro
-        eyebrow="You're invited"
-        title={title}
-        description="Choose a name so your team knows it's you."
-      />
+      <h1 className="text-3xl font-semibold tracking-tight wrap-anywhere select-text">
+        Join {title}
+      </h1>
+      <p className="mt-2 leading-relaxed text-zinc-400 select-text">
+        Choose a name so your team knows it's you.
+      </p>
       <Form
         onSubmit={(event) => {
           event.preventDefault();
@@ -180,7 +180,7 @@ function JoinRoom({
           {(field) => (
             <TextField
               id="name"
-              label="Your name"
+              label="Name"
               name={field.name}
               error={field.state.meta.errors[0]}
               autoComplete="given-name"
@@ -191,7 +191,7 @@ function JoinRoom({
             />
           )}
         </form.Field>
-        <Button>Join room</Button>
+        <Button>Join</Button>
         <ErrorMessage>{error}</ErrorMessage>
       </Form>
     </CenteredSection>

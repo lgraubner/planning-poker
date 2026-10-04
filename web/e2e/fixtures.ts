@@ -51,8 +51,8 @@ export async function createRoom(page: Page, title = 'Sprint planning', deck?: s
 
 export async function join(page: Page, url: string, name: string) {
   await page.goto(url);
-  await page.getByLabel('Your name').fill(name);
-  await page.getByRole('button', { name: 'Join room' }).click();
+  await page.getByLabel('Name', { exact: true }).fill(name);
+  await page.getByRole('button', { name: 'Join', exact: true }).click();
   await expect(page.getByRole('group', { name: 'Choose your card' })).toBeVisible();
 }
 

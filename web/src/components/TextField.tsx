@@ -17,7 +17,7 @@ export function TextField({ id, label, error, ...props }: TextFieldProps) {
         aria-invalid={Boolean(error)}
         aria-describedby={error ? `${id}-error` : undefined}
         {...props}
-        className="min-h-10 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3.5 py-1.5"
+        className="min-h-10 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3.5 py-1.5 aria-invalid:border-red-400"
       />
       {error && (
         <p id={`${id}-error`} role="alert" className="text-sm text-red-400">

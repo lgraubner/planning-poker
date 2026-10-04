@@ -21,6 +21,9 @@ function Home() {
     <CenteredSection>
       {/* Prose stays selectable here, unlike the app's controls. */}
       <h1 className="text-3xl font-semibold tracking-tight select-text">Planning Poker</h1>
+      <p className="mt-2 leading-relaxed text-zinc-400 select-text">
+        Create a room, share the link, estimate together.
+      </p>
       <CreateRoomForm />
     </CenteredSection>
   );
