@@ -33,7 +33,7 @@ One value selected by a participant from the estimation deck during a round.
 _Avoid_: Vote, score
 
 **Estimation deck**:
-The set of values available for estimates, chosen when the room is created and fixed for its lifetime. Fibonacci holds `0`, `1`, `2`, `3`, `5`, `8`, `13`, `21`; T-shirt sizes hold `XS`, `S`, `M`, `L`, `XL`, `XXL`. Every deck ends with `?` and `☕`.
+The set of values available for estimates, chosen when the room is created and fixed for its lifetime. Modified Fibonacci holds `0`, `1`, `2`, `3`, `5`, `8`, `13`, `20`, `40`, `100`; T-shirt sizes hold `XS`, `S`, `M`, `L`, `XL`, `XXL`. Every deck ends with `?` and `☕`.
 _Avoid_: Scale, card set
 
 **Card**:

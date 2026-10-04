@@ -85,8 +85,11 @@ test('a room estimates with the deck it was created with', async ({ page, newPar
   expect(revealed?.participants[0].estimate).toBe('M');
 });
 
-test('a room estimates with Fibonacci unless told otherwise', async ({ page, newParticipant }) => {
-  const fibonacci = ['0', '1', '2', '3', '5', '8', '13', '21', '34', '?', '☕'];
+test('a room estimates with modified Fibonacci unless told otherwise', async ({
+  page,
+  newParticipant,
+}) => {
+  const fibonacci = ['0', '1', '2', '3', '5', '8', '13', '20', '40', '100', '?', '☕'];
   const url = await createRoom(page);
   await join(page, url, 'Alice');
   const bob = await newParticipant();

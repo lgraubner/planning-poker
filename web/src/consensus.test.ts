@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { consensus } from './consensus';
 
-const fibonacci = ['0', '1', '2', '3', '5', '8', '13', '21', '34', '?', '☕'];
+const fibonacci = ['0', '1', '2', '3', '5', '8', '13', '20', '40', '100', '?', '☕'];
 const tshirt = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '?', '☕'];
 
 describe('consensus', () => {
