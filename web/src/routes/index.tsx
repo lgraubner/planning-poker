@@ -40,10 +40,13 @@ function CreateRoomForm() {
           body: JSON.stringify(value),
         });
         const result = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(result.error || 'Could not create room.');
+        if (!response.ok) throw new Error(result.error || 'Could not create room');
         await navigate({ to: '/$code', params: { code: result.code } });
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : 'Could not create room.');
+        // Form errors end without a full stop, the server's included.
+        setError(
+          cause instanceof Error ? cause.message.replace(/\.$/, '') : 'Could not create room',
+        );
       }
     },
   });
@@ -58,7 +61,7 @@ function CreateRoomForm() {
       <form.Field
         name="title"
         validators={{
-          onSubmit: ({ value }) => (value.trim() ? undefined : 'Enter a room title.'),
+          onSubmit: ({ value }) => (value.trim() ? undefined : 'Enter a room title'),
         }}
       >
         {(field) => (

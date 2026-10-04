@@ -156,12 +156,12 @@ test('invalid names are rejected before joining', async ({ page }) => {
   const url = await createRoom(page);
   await page.goto(url);
   await page.getByRole('button', { name: 'Join room' }).click();
-  await expect(page.getByRole('alert')).toHaveText('Enter your name.');
+  await expect(page.getByRole('alert')).toHaveText('Enter your name');
   await expect(page.getByLabel('Your name')).toHaveAttribute('aria-invalid', 'true');
   await page.getByLabel('Your name').fill('x'.repeat(41));
   await page.getByRole('button', { name: 'Join room' }).click();
   await expect(page.getByRole('alert')).toHaveText(
-    'Use 1–40 characters without control characters.',
+    'Use 1–40 characters without control characters',
   );
 });
 
@@ -299,7 +299,7 @@ test('a proxy error page reads as a plain message', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Room title').fill('Sprint planning');
   await page.getByRole('button', { name: 'Create room' }).click();
-  await expect(page.getByRole('alert')).toHaveText('Could not create room.');
+  await expect(page.getByRole('alert')).toHaveText('Could not create room');
 
   await page.goto('/abcdefgh');
   await expect(
@@ -332,10 +332,20 @@ test('the room link can be copied', async ({ page, context, browserName }) => {
   await expect(page.getByRole('button', { name: 'Copy room link' })).toHaveCount(2);
 });
 
+test("the server's errors show without a full stop", async ({ page }) => {
+  await page.route('**/api/rooms', (route) =>
+    route.fulfill({ status: 429, json: { error: 'Room limit reached. Try again later.' } }),
+  );
+  await page.goto('/');
+  await page.getByLabel('Room title').fill('Sprint planning');
+  await page.getByRole('button', { name: 'Create room' }).click();
+  await expect(page.getByRole('alert')).toHaveText('Room limit reached. Try again later');
+});
+
 test('a room needs a title before it is created', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Create room' }).click();
-  await expect(page.getByRole('alert')).toHaveText('Enter a room title.');
+  await expect(page.getByRole('alert')).toHaveText('Enter a room title');
   await expect(page.getByLabel('Room title')).toHaveAttribute('aria-invalid', 'true');
   await expect(page).toHaveURL('/');
 

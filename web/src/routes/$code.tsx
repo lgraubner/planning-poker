@@ -85,13 +85,13 @@ function RoomEntry({ code }: { code: string }) {
 
   function join(name: string) {
     if (!name.trim() || [...name.trim()].length > 40 || /\p{Cc}/u.test(name)) {
-      setJoinError('Use 1–40 characters without control characters.');
+      setJoinError('Use 1–40 characters without control characters');
       return;
     }
     try {
       setParticipant(identity(name.trim()));
     } catch {
-      setJoinError('Allow browser storage to remember your participant, then try again.');
+      setJoinError('Allow browser storage to remember your participant, then try again');
     }
   }
 
@@ -174,7 +174,7 @@ function JoinRoom({
         <form.Field
           name="name"
           validators={{
-            onSubmit: ({ value }) => (value.trim() ? undefined : 'Enter your name.'),
+            onSubmit: ({ value }) => (value.trim() ? undefined : 'Enter your name'),
           }}
         >
           {(field) => (
