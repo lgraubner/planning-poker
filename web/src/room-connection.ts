@@ -154,6 +154,8 @@ export function useRoom(code: string, participant: Identity) {
       window.removeEventListener('pagehide', leave);
       clearTimeout(timer);
       abort.abort();
+      // Navigating away is a deliberate exit, not a dropped connection to wait out.
+      leave();
       socket.current?.close();
       socket.current = null;
     };

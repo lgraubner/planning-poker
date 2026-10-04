@@ -375,8 +375,47 @@ test('anyone can rename the room for everyone', async ({ page, newParticipant })
   await expect(page.getByRole('heading', { name: 'Daily' })).toBeVisible();
 
   await page.getByRole('link', { name: 'Planning Poker' }).click();
+  await page.getByRole('button', { name: 'Leave room' }).click();
   await expect(page).toHaveURL('/');
   await expect(page).toHaveTitle('Planning Poker');
+});
+
+test('leaving a room by link or back button asks first', async ({ page, newParticipant }) => {
+  const url = await createRoom(page);
+  await join(page, url, 'Alice');
+  const bob = await newParticipant();
+  // Check the server's view, as the dialog could hide a dropped connection.
+  const seen: string[][] = [];
+  bob.on('websocket', (socket) =>
+    socket.on('framereceived', ({ payload }) => {
+      const message = JSON.parse(String(payload));
+      if (message.type === 'snapshot')
+        seen.push(message.participants.map((p: { name: string }) => p.name));
+    }),
+  );
+  await join(bob, url, 'Bob');
+
+  await page.getByRole('link', { name: 'Planning Poker' }).click();
+  const dialog = page.getByRole('alertdialog', { name: 'Leave the room?' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'Stay' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page).toHaveURL(url);
+  await page.getByRole('button', { name: '5', exact: true }).click();
+  await expect(card(bob, 'Alice')).toHaveAccessibleName('Alice: selected');
+  expect(seen.at(-1)).toContain('Alice');
+
+  // The back button asks too. The room was opened from the home page.
+  await page.goBack();
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'Stay' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page).toHaveURL(url);
+  await page.goBack();
+  await dialog.getByRole('button', { name: 'Leave room' }).click();
+  await expect(page).toHaveURL('/');
+  await expect(card(bob, 'Alice')).toBeHidden();
+  expect(seen.at(-1)).not.toContain('Alice');
 });
 
 test('revealed cards show how many voted for each value', async ({ page, newParticipant }) => {
