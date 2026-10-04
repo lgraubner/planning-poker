@@ -278,6 +278,22 @@ test('the longest room title stays on one line', async ({ page }, info) => {
   await info.attach('room', { body: await page.screenshot(), contentType: 'image/png' });
 });
 
+test('phones give the room title a line of its own', async ({ page, isMobile }) => {
+  const url = await createRoom(page, 'Friday sprint planning session');
+  await join(page, url, you);
+  const title = (await page.getByRole('heading', { level: 1 }).boundingBox())!;
+  const menu = (await page.getByRole('button', { name: 'Menu' }).boundingBox())!;
+  // Beneath the bar on a phone, within it on a desktop.
+  if (isMobile) expect(title.y).toBeGreaterThanOrEqual(menu.y + menu.height);
+  else expect(title.y).toBeLessThan(menu.y + menu.height);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+    'Friday sprint planning session',
+  );
+  // Not cut short with an ellipsis.
+  const text = page.getByRole('heading', { level: 1 }).getByText('Friday sprint planning session');
+  expect(await text.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+});
+
 test('the card deck sits at the bottom of the window', async ({ page }) => {
   const url = await createRoom(page);
   await join(page, url, you);

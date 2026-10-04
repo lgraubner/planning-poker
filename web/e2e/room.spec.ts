@@ -307,8 +307,9 @@ test('a proxy error page reads as a plain message', async ({ page }) => {
   ).toBeVisible();
 });
 
-test('the room link can be copied', async ({ page, context, browserName }) => {
+test('the room link can be copied', async ({ page, context, browserName, isMobile }) => {
   test.skip(browserName !== 'chromium', 'Clipboard permissions are Chromium-specific.');
+  test.skip(isMobile, 'Phones copy from the menu.');
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   const url = await createRoom(page);
   await join(page, url, 'Alice');
@@ -330,6 +331,20 @@ test('the room link can be copied', async ({ page, context, browserName }) => {
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(url);
   // The labels return, so the buttons can be used again.
   await expect(page.getByRole('button', { name: 'Copy room link' })).toHaveCount(2);
+});
+
+test('phones copy the room link from the menu', async ({ page, context, isMobile }) => {
+  test.skip(!isMobile, 'Desktops copy from the header.');
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  const url = await createRoom(page);
+  await join(page, url, 'Alice');
+  // Leaves the title the header's width.
+  await expect(page.locator('header').getByRole('button', { name: 'Copy room link' })).toBeHidden();
+
+  await page.getByRole('button', { name: 'Menu' }).click();
+  await page.getByRole('menuitem', { name: 'Copy room link' }).click();
+  await expect(page.getByRole('menuitem', { name: 'Link copied' })).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(url);
 });
 
 test("the server's errors show without a full stop", async ({ page }) => {
@@ -684,7 +699,10 @@ test('the legal pages the server names are linked from every page but the room',
   await linked();
 });
 
-test('the room menu links to the project, its issues and the legal pages', async ({ page }) => {
+test('the room menu links to the project, its issues and the legal pages', async ({
+  page,
+  isMobile,
+}) => {
   const url = await createRoom(page);
   await join(page, url, 'Alice');
   await page.getByRole('button', { name: 'Menu' }).click();
@@ -694,7 +712,10 @@ test('the room menu links to the project, its issues and the legal pages', async
     'Legal notice': 'https://example.com/legal-notice',
     'Privacy policy': 'https://example.com/privacy?lang=en&v=2',
   };
-  await expect(page.getByRole('menuitem')).toHaveText(Object.keys(links));
+  await expect(page.getByRole('menuitem')).toHaveText([
+    ...(isMobile ? ['Copy room link'] : []),
+    ...Object.keys(links),
+  ]);
   for (const [name, href] of Object.entries(links)) {
     const item = page.getByRole('menuitem', { name });
     await expect(item).toHaveAttribute('href', href);

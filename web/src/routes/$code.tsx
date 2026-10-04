@@ -305,10 +305,11 @@ function RoomHeader({
   onRename: (title: string) => void;
 }) {
   return (
-    <header className="mb-2 grid min-h-11 grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-3">
+    // Phones give the title a line of its own beneath the bar, so a long one still fits.
+    <header className="mb-2 grid min-h-11 grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[1fr_minmax(0,auto)_1fr] sm:gap-y-3">
       <HomeLink />
       <LeaveRoomDialog />
-      <h1 className="min-w-0 text-center text-lg leading-tight font-semibold tracking-tight">
+      <h1 className="col-span-full row-start-2 min-w-0 text-center sm:col-span-1 sm:col-start-2 sm:row-start-1 text-lg leading-tight font-semibold tracking-tight">
         {/* Button and field share one box, so the text stays put when editing starts. */}
         <InlineEdit
           value={title}
@@ -320,8 +321,10 @@ function RoomHeader({
           inputClassName="field-sizing-content max-w-full min-w-16 px-[7px] py-1"
         />
       </h1>
-      <div className="flex items-center gap-2 justify-self-end">
+      <div className="col-start-2 row-start-1 flex items-center gap-2 justify-self-end sm:col-start-3">
+        {/* Phones copy from the menu instead, leaving the title room. */}
         <CopyLinkButton
+          className="max-sm:hidden"
           buttonClassName="rounded-md border border-indigo-400 px-2.5 text-sm hover:bg-indigo-400/10"
           statusClassName="right-0 text-right"
         />
@@ -341,6 +344,7 @@ const menuLinks = [
 
 /** Links that open in a new tab, so following one keeps your seat. */
 function RoomMenu() {
+  const [result, copy] = useCopyLink();
   return (
     <Menu.Root>
       <Menu.Trigger
@@ -358,6 +362,21 @@ function RoomMenu() {
       <Menu.Portal>
         <Menu.Positioner align="end" sideOffset={4} className="z-30">
           <Menu.Popup className="min-w-44 origin-(--transform-origin) rounded-lg border border-zinc-700 bg-zinc-900 p-1 shadow-lg shadow-black/40 outline-none transition-[opacity,scale] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] data-ending-style:opacity-0 data-starting-style:opacity-0 motion-safe:data-ending-style:scale-95 motion-safe:data-starting-style:scale-95">
+            {/* Stays open, so the item can confirm the copy. */}
+            <Menu.Item
+              closeOnClick={false}
+              onClick={copy}
+              className="flex rounded-md px-3 py-2 text-sm font-semibold text-indigo-400 outline-none data-highlighted:bg-surface-raised sm:hidden"
+            >
+              {result === 'copied'
+                ? 'Link copied'
+                : result === 'failed'
+                  ? 'Copy the link from your address bar'
+                  : 'Copy room link'}
+            </Menu.Item>
+            <span role="status" className="sr-only">
+              {result === 'copied' && 'Link copied'}
+            </span>
             {menuLinks.map(({ href, label }) => (
               <Menu.LinkItem
                 key={label}
@@ -500,23 +519,8 @@ function CopyLinkButton({
   buttonClassName?: string;
   statusClassName: string;
 }) {
-  const [result, setResult] = useState<'copied' | 'failed' | null>(null);
+  const [result, copy] = useCopyLink();
   const copied = result === 'copied';
-
-  useEffect(() => {
-    if (!result) return;
-    const timer = setTimeout(() => setResult(null), 3000);
-    return () => clearTimeout(timer);
-  }, [result]);
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(location.href);
-      setResult('copied');
-    } catch {
-      setResult('failed');
-    }
-  }
 
   return (
     <div className={clsx('relative whitespace-nowrap', className)}>
@@ -578,6 +582,28 @@ function CopyLinkButton({
       </span>
     </div>
   );
+}
+
+/** Copies the room's link; the result shows for three seconds. */
+function useCopyLink() {
+  const [result, setResult] = useState<'copied' | 'failed' | null>(null);
+
+  useEffect(() => {
+    if (!result) return;
+    const timer = setTimeout(() => setResult(null), 3000);
+    return () => clearTimeout(timer);
+  }, [result]);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(location.href);
+      setResult('copied');
+    } catch {
+      setResult('failed');
+    }
+  }
+
+  return [result, copy] as const;
 }
 
 function PokerTable({

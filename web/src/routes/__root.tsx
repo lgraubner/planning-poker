@@ -17,7 +17,9 @@ function AppLayout() {
 }
 
 function Shell({ children }: PropsWithChildren) {
-  return <main className="flex min-h-dvh w-full flex-col px-4 pt-4 sm:px-6">{children}</main>;
+  return (
+    <main className="flex min-h-dvh w-full flex-col px-4 pt-2 sm:px-6 sm:pt-4">{children}</main>
+  );
 }
 
 // Any path's first segment matches a room, so this renders inside the room route.
