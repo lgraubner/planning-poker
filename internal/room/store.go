@@ -28,7 +28,7 @@ const alphabet = "23456789abcdefghjkmnpqrstuvwxyz"
 // Decks are the estimation decks a room can use, by name. The first card values
 // rise in order; "?" and "☕" end every deck.
 var Decks = map[string][]string{
-	"fibonacci": {"0", "1", "2", "3", "5", "8", "13", "21", "?", "☕"},
+	"fibonacci": {"0", "1", "2", "3", "5", "8", "13", "21", "34", "?", "☕"},
 	"tshirt":    {"XS", "S", "M", "L", "XL", "XXL", "?", "☕"},
 }
 

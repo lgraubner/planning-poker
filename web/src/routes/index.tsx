@@ -5,7 +5,6 @@ import { Button } from '../components/Button';
 import { CenteredSection } from '../components/CenteredSection';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { Form } from '../components/Form';
-import { PageIntro } from '../components/PageIntro';
 import { SelectField } from '../components/SelectField';
 import { TextField } from '../components/TextField';
 
@@ -13,32 +12,16 @@ export const Route = createFileRoute('/')({ component: Home });
 
 // The server's deck names, with the cards each one holds.
 const decks = [
-  { value: 'fibonacci', label: 'Fibonacci: 0, 1, 2, 3, 5, 8, 13, 21' },
-  { value: 'tshirt', label: 'T-shirt sizes: XS, S, M, L, XL, XXL' },
+  { value: 'fibonacci', label: 'Fibonacci', description: '0, 1, 2, 3, 5, 8, 13, 21, 34, ?, ☕' },
+  { value: 'tshirt', label: 'T-shirt sizes', description: 'XS, S, M, L, XL, XXL, ?, ☕' },
 ];
 
 function Home() {
   return (
     <CenteredSection>
-      <PageIntro
-        eyebrow="A little less guessing"
-        title={
-          <>
-            Different perspectives.
-            <br />
-            One shared estimate.
-          </>
-        }
-        description={
-          <>
-            Pick your estimate privately, then reveal together.
-            <br />
-            Create a room and share the link with your team.
-          </>
-        }
-      />
+      {/* Prose stays selectable here, unlike the app's controls. */}
+      <h1 className="text-3xl font-semibold tracking-tight select-text">Planning Poker</h1>
       <CreateRoomForm />
-      <p className="mt-4 text-sm text-zinc-400">No account needed. Rooms are temporary.</p>
     </CenteredSection>
   );
 }

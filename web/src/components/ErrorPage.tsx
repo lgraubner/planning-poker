@@ -4,7 +4,7 @@ import { buttonClassName } from './Button';
 import { HomeLink } from './HomeLink';
 
 const homeClassName = clsx(
-  buttonClassName(true),
+  buttonClassName,
   'mt-6 no-underline transition-[scale] duration-150 ease-out active:scale-[0.97] motion-reduce:transition-none',
 );
 

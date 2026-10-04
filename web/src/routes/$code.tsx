@@ -268,7 +268,7 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
             )}
           </div>
           <div className="w-full border-t border-zinc-700 py-4">
-            <Button compact disabled={!connected} onClick={() => send('reset')}>
+            <Button disabled={!connected} onClick={() => send('reset')}>
               <svg
                 aria-hidden="true"
                 viewBox="0 0 24 24"
@@ -348,9 +348,7 @@ function LeaveRoomDialog() {
             <AlertDialog.Close className="min-h-10 rounded-lg border border-indigo-400 px-3.5 py-2 text-sm font-semibold hover:bg-indigo-400/10">
               Stay
             </AlertDialog.Close>
-            <Button compact onClick={proceed}>
-              Leave room
-            </Button>
+            <Button onClick={proceed}>Leave room</Button>
           </div>
         </AlertDialog.Popup>
       </AlertDialog.Portal>
@@ -608,7 +606,7 @@ function PokerTable({
         )}
       >
         {!revealed && hasVotes ? (
-          <Button compact disabled={!connected} onClick={onReveal}>
+          <Button disabled={!connected} onClick={onReveal}>
             Reveal cards
           </Button>
         ) : result ? (

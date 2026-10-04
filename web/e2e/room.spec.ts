@@ -85,6 +85,25 @@ test('a room estimates with the deck it was created with', async ({ page, newPar
   expect(revealed?.participants[0].estimate).toBe('M');
 });
 
+test('a room estimates with Fibonacci unless told otherwise', async ({ page, newParticipant }) => {
+  const fibonacci = ['0', '1', '2', '3', '5', '8', '13', '21', '34', '?', '☕'];
+  const url = await createRoom(page);
+  await join(page, url, 'Alice');
+  const bob = await newParticipant();
+  const decks: string[][] = [];
+  bob.on('websocket', (socket) =>
+    socket.on('framereceived', ({ payload }) => {
+      const message = JSON.parse(String(payload));
+      if (message.type === 'snapshot') decks.push(message.deck);
+    }),
+  );
+  await join(bob, url, 'Bob');
+  await expect(bob.getByRole('group', { name: 'Choose your card' }).getByRole('button')).toHaveText(
+    fibonacci,
+  );
+  expect(decks.at(-1)).toEqual(fibonacci);
+});
+
 test('joining a revealed room shows the cards without replaying the flip', async ({
   page,
   newParticipant,
@@ -324,10 +343,11 @@ test('a room needs a title before it is created', async ({ page }) => {
   await expect(page.getByRole('alert')).toBeHidden();
 });
 
-test('only what someone types and errors can be selected', async ({ page }) => {
+test('only prose, what someone types and errors can be selected', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Create room' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveCSS('user-select', 'none');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveCSS('user-select', 'text');
+  await expect(page.getByText('Estimation deck')).toHaveCSS('user-select', 'none');
   await expect(page.getByLabel('Room title')).toHaveCSS('user-select', 'text');
   await expect(page.getByRole('alert')).toHaveCSS('user-select', 'text');
 });

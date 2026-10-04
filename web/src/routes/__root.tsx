@@ -1,5 +1,4 @@
-import { createRootRoute, Outlet, useRouterState } from '@tanstack/react-router';
-import clsx from 'clsx';
+import { createRootRoute, Outlet } from '@tanstack/react-router';
 import type { PropsWithChildren } from 'react';
 import { ErrorPage } from '../components/ErrorPage';
 
@@ -10,11 +9,8 @@ export const Route = createRootRoute({
 });
 
 function AppLayout() {
-  const isRoom = useRouterState({
-    select: (state) => state.matches.some((match) => match.routeId === '/$code'),
-  });
   return (
-    <Shell bare={isRoom}>
+    <Shell>
       <Outlet />
     </Shell>
   );
@@ -29,16 +25,9 @@ const legalLinks = [
   return href ? [{ href, label }] : [];
 });
 
-/** A bare page draws its own header and uses the full width. */
-function Shell({ bare = false, children }: PropsWithChildren<{ bare?: boolean }>) {
+function Shell({ children }: PropsWithChildren) {
   return (
-    <main
-      className={clsx(
-        'mx-auto flex min-h-dvh w-full flex-col px-4 pt-4 sm:px-6',
-        bare ? 'max-w-none' : 'max-w-7xl',
-      )}
-    >
-      {!bare && <p className="text-base font-bold tracking-wide">Planning Poker</p>}
+    <main className="flex min-h-dvh w-full flex-col px-4 pt-4 sm:px-6">
       {children}
       {/* Pinned only where the widest deck, centred, leaves it room. */}
       {legalLinks.length > 0 && (
@@ -68,7 +57,7 @@ function NotFound() {
 // Replaces the whole layout, so it brings its own.
 function RouteError() {
   return (
-    <Shell bare>
+    <Shell>
       <ErrorPage title="Something went wrong" description="Please try again later" failed />
     </Shell>
   );
