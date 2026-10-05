@@ -41,7 +41,7 @@ export function SpectatorList({
             : 'text-zinc-400 hover:text-zinc-200 data-popup-open:text-zinc-200',
         )}
       >
-        <EyeIcon />
+        <Icon name="eye" />
         {/* A zero reads like a broken counter, so an empty room shows the eye alone. */}
         {count > 0 && count}
       </Popover.Trigger>
@@ -64,10 +64,7 @@ export function SpectatorList({
                       !spectator.connected && 'opacity-50',
                     )}
                   >
-                    <Icon>
-                      <circle cx="12" cy="8" r="5" />
-                      <path d="M20 21a8 8 0 0 0-16 0" />
-                    </Icon>
+                    <Icon name="user" />
                     {spectator.id === self ? (
                       <InlineEdit
                         value={spectator.name}
@@ -98,32 +95,12 @@ export function SpectatorList({
                 'w-full hover:bg-surface-raised focus-visible:bg-surface-raised disabled:opacity-50',
               )}
             >
-              {watching ? <ArmchairIcon /> : <EyeIcon />}
+              <Icon name={watching ? 'armchair' : 'eye'} />
               {watching ? 'Take a seat' : 'Watch as spectator'}
             </Popover.Close>
           </Popover.Popup>
         </Popover.Positioner>
       </Popover.Portal>
     </Popover.Root>
-  );
-}
-
-function ArmchairIcon() {
-  return (
-    <Icon>
-      <path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3" />
-      <path d="M3 16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0z" />
-      <path d="M5 18v2" />
-      <path d="M19 18v2" />
-    </Icon>
-  );
-}
-
-function EyeIcon() {
-  return (
-    <Icon>
-      <path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0" />
-      <circle cx="12" cy="12" r="3" />
-    </Icon>
   );
 }

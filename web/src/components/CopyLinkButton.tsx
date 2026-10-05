@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
+import { Icon } from './Icon';
 
 export function CopyLinkButton({
   className = '',
@@ -39,22 +40,16 @@ export function CopyLinkButton({
               !copied && 'invisible opacity-0 blur-xs motion-safe:scale-95',
             )}
           >
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 24 24"
-              className="size-4 fill-none stroke-current stroke-[2.5] [stroke-linecap:round] [stroke-linejoin:round]"
-            >
-              <path
-                d="M4 12.5l5 5L20 6.5"
-                pathLength={1}
-                className={clsx(
-                  '[stroke-dasharray:1] transition-[stroke-dashoffset] motion-reduce:transition-none',
-                  copied
-                    ? 'delay-75 duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] [stroke-dashoffset:0]'
-                    : '[stroke-dashoffset:1]',
-                )}
-              />
-            </svg>
+            <Icon
+              name="check"
+              strokeWidth={2.5}
+              className={clsx(
+                'size-4 [&>path]:[stroke-dasharray:1] [&>path]:transition-[stroke-dashoffset] motion-reduce:[&>path]:transition-none',
+                copied
+                  ? '[&>path]:delay-75 [&>path]:duration-300 [&>path]:ease-[cubic-bezier(0.23,1,0.32,1)] [&>path]:[stroke-dashoffset:0]'
+                  : '[&>path]:[stroke-dashoffset:1]',
+              )}
+            />
             Link copied
           </span>
         </span>

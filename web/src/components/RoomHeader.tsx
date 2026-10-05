@@ -76,9 +76,7 @@ function RoomMenu() {
         aria-label="Menu"
         className="flex size-8 items-center justify-center rounded-md border border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200 data-popup-open:border-zinc-500 data-popup-open:text-zinc-200"
       >
-        <Icon>
-          <path d="M4 6h16M4 12h16M4 18h16" />
-        </Icon>
+        <Icon name="menu" />
       </Menu.Trigger>
       <Menu.Portal>
         <Menu.Positioner align="end" sideOffset={4} className="z-30">

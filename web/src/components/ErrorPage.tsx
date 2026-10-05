@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { HomeLink } from './HomeLink';
+import { Icon } from './Icon';
 import { LegalFooter } from './LegalFooter';
 
 export function ErrorPage({
@@ -25,16 +26,7 @@ export function ErrorPage({
           aria-hidden="true"
           className="mb-8 flex h-21 w-14 -rotate-6 items-center justify-center rounded-xl border-2 border-border bg-surface text-2xl font-semibold text-zinc-500"
         >
-          {failed ? (
-            <svg
-              viewBox="0 0 24 24"
-              className="size-5 fill-none stroke-current stroke-3 [stroke-linecap:round]"
-            >
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
-          ) : (
-            '?'
-          )}
+          {failed ? <Icon name="x" className="size-5" strokeWidth={3} /> : '?'}
         </div>
         <h1 className="max-w-md text-3xl font-semibold tracking-tight text-balance wrap-anywhere">
           {title}
