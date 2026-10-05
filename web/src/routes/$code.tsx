@@ -201,10 +201,8 @@ function JoinRoom({
             />
           )}
         </form.Field>
-        {/* Grouped closer than the form's fields: two ways into the same room. */}
         <div className="flex flex-col gap-3">
           <Button>Join</Button>
-          {/* Most come to vote, so watching is offered quietly beneath. */}
           <p className="text-center text-sm text-zinc-400">
             or{' '}
             <button

@@ -30,14 +30,12 @@ export function ErrorPage({
       <header className="flex min-h-11 items-center">
         <HomeLink />
       </header>
-      {/* Sits a little above the middle, where the eye expects the centre to be. */}
       <section className="flex grow flex-col items-center justify-center pb-[12vh] text-center">
         <div
           aria-hidden="true"
           className="mb-8 flex h-21 w-14 -rotate-6 items-center justify-center rounded-xl border-2 border-border bg-surface text-2xl font-semibold text-zinc-500"
         >
           {failed ? (
-            // Drawn, as a typed × sits small and thin beside the question mark
             <svg
               viewBox="0 0 24 24"
               className="size-5 fill-none stroke-current stroke-3 [stroke-linecap:round]"

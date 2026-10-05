@@ -41,15 +41,10 @@ export function InlineEdit({
       type="button"
       disabled={disabled}
       onClick={() => setDraft(shown)}
-      // Text to edit, not a button to press: it opens a field without giving way
       className={clsx('group active:scale-none', className)}
     >
-      {/* Hugs the text, so the pencil sits the same distance from it whatever the button's padding. */}
       <span className="relative block">
         <span className="block truncate">{shown}</span>
-        {/* Muted, so it reads as a hint beside the text rather than part of it. It shares the
-            text's line, so it sits on the same baseline at any line height; sized in em to match
-            each font, and centred on the capitals (about 0.7em tall). */}
         <span
           aria-hidden="true"
           className="absolute top-0 left-full ml-[0.3em] text-zinc-400 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
@@ -67,7 +62,6 @@ export function InlineEdit({
   ) : (
     <input
       aria-label={label}
-      // A label to change in place, not a form to fill
       autoComplete="off"
       autoFocus
       enterKeyHint="done"

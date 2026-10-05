@@ -1,6 +1,5 @@
 import { legalLinks } from '../legal-links';
 
-/** The legal pages, for every page but the room, whose menu holds them. */
 export function LegalFooter() {
   if (legalLinks.length === 0) {
     return null;

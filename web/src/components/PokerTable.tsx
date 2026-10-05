@@ -123,7 +123,6 @@ export function PokerTable({
         revealed={revealed}
         right
       />
-      {/* You always sit in the bottom row, so only it offers your name for editing. */}
       <ParticipantRow
         participants={bottom}
         self={self}
