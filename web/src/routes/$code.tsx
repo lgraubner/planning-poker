@@ -1,5 +1,6 @@
 import { AlertDialog } from '@base-ui/react/alert-dialog';
 import { Menu } from '@base-ui/react/menu';
+import { Popover } from '@base-ui/react/popover';
 import { createFileRoute, useBlocker } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
@@ -19,7 +20,9 @@ import {
   identity,
   rememberedID,
   rememberedName,
+  rememberedSpectator,
   rememberName,
+  rememberSpectator,
   useRoom,
   type Identity,
   type Participant,
@@ -68,7 +71,7 @@ function RoomEntry({ code }: { code: string }) {
         if (abort.signal.aborted) return;
         setInfo(data);
         const savedName = rememberedName().trim();
-        if (data.available && savedName) join(savedName);
+        if (data.available && savedName) join(savedName, rememberedSpectator());
       } catch (cause) {
         if (!abort.signal.aborted)
           setError(cause instanceof Error ? cause.message : 'Could not load room.');
@@ -82,13 +85,13 @@ function RoomEntry({ code }: { code: string }) {
     };
   }, [code]);
 
-  function join(name: string) {
+  function join(name: string, spectator: boolean) {
     if (!name.trim() || [...name.trim()].length > 40 || /\p{Cc}/u.test(name)) {
       setJoinError('Use 1–40 characters without control characters');
       return;
     }
     try {
-      setParticipant(identity(name.trim()));
+      setParticipant(identity(name.trim(), spectator));
     } catch {
       setJoinError('Allow browser storage to remember your participant, then try again');
     }
@@ -149,11 +152,12 @@ function JoinRoom({
 }: {
   title: string;
   error: string;
-  onJoin: (name: string) => void;
+  onJoin: (name: string, spectator: boolean) => void;
 }) {
   const form = useForm({
     defaultValues: { name: rememberedName() },
-    onSubmit: ({ value }) => onJoin(value.name),
+    onSubmitMeta: { spectator: false },
+    onSubmit: ({ value, meta }) => onJoin(value.name, meta.spectator),
   });
 
   return (
@@ -168,7 +172,11 @@ function JoinRoom({
       <Form
         onSubmit={(event) => {
           event.preventDefault();
-          void form.handleSubmit();
+          // Enter submits with the first button, so it joins to vote.
+          const submitter = (event.nativeEvent as SubmitEvent).submitter;
+          void form.handleSubmit({
+            spectator: submitter?.getAttribute('value') === 'spectator',
+          });
         }}
       >
         <form.Field
@@ -191,7 +199,20 @@ function JoinRoom({
             />
           )}
         </form.Field>
-        <Button>Join</Button>
+        {/* Grouped closer than the form's fields: two ways into the same room. */}
+        <div className="flex flex-col gap-3">
+          <Button>Join</Button>
+          {/* Most come to vote, so watching is offered quietly beneath. */}
+          <p className="text-center text-sm text-zinc-400">
+            or{' '}
+            <button
+              value="spectator"
+              className="py-1 font-semibold text-indigo-400 hover:text-indigo-300"
+            >
+              watch as spectator
+            </button>
+          </p>
+        </div>
         <ErrorMessage>{error}</ErrorMessage>
       </Form>
     </CenteredSection>
@@ -208,7 +229,17 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
   if (!snapshot) return <RoomLoading>Connecting to room…{error}</RoomLoading>;
 
   const own = snapshot.participants.find((participant) => participant.id === snapshot.self);
+  const spectating = !!own?.spectator;
+  const spectators = snapshot.participants.filter((participant) => participant.spectator);
   if (snapshot.revealed) results.current = snapshot.participants;
+  function renameSelf(name: string) {
+    send('name', name);
+    rememberName(name);
+  }
+  function spectate(spectator: boolean) {
+    send('role', spectator ? 'spectator' : 'voter');
+    rememberSpectator(spectator);
+  }
   return (
     <section className="flex grow flex-col">
       <title>{`${snapshot.title} | Planning Poker`}</title>
@@ -216,6 +247,15 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
         title={snapshot.title}
         connected={connected}
         onRename={(title) => send('rename', title)}
+        spectators={
+          <SpectatorList
+            spectators={spectators}
+            self={snapshot.self}
+            connected={connected}
+            onRenameSelf={renameSelf}
+            onSpectate={spectate}
+          />
+        }
       />
       {/* Stays mounted so it can fade out; `visibility` hides it from everyone once it has. */}
       <p
@@ -242,16 +282,14 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
       </p>
       <ErrorMessage>{error}</ErrorMessage>
       <PokerTable
-        participants={snapshot.participants}
+        participants={snapshot.participants.filter((participant) => !participant.spectator)}
         deck={snapshot.deck}
         self={snapshot.self}
         connected={connected}
         revealed={snapshot.revealed}
+        spectating={spectating}
         onReveal={() => send('reveal')}
-        onRenameSelf={(name) => {
-          send('name', name);
-          rememberName(name);
-        }}
+        onRenameSelf={renameSelf}
       />
       {/* Both bars share one cell, so the footer keeps its height and the table stays put.
           The results sit inside the sticky footer, so a scrolled table passes under them. */}
@@ -287,7 +325,7 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
           deck={snapshot.deck}
           connected={connected}
           estimate={own?.estimate}
-          hidden={snapshot.revealed}
+          hidden={snapshot.revealed || spectating}
           send={send}
         />
       </div>
@@ -299,14 +337,16 @@ function RoomHeader({
   title,
   connected,
   onRename,
+  spectators,
 }: {
   title: string;
   connected: boolean;
   onRename: (title: string) => void;
+  spectators: ReactNode;
 }) {
   return (
     // Phones give the title a line of its own beneath the bar, so a long one still fits.
-    <header className="mb-2 grid min-h-11 grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[1fr_minmax(0,auto)_1fr] sm:gap-y-3">
+    <header className="mb-2 grid min-h-11 grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[1fr_minmax(0,auto)_1fr]">
       <HomeLink />
       <LeaveRoomDialog />
       <h1 className="col-span-full row-start-2 min-w-0 text-center sm:col-span-1 sm:col-start-2 sm:row-start-1 text-lg leading-tight font-semibold tracking-tight">
@@ -317,11 +357,12 @@ function RoomHeader({
           maxLength={100}
           disabled={!connected}
           onCommit={onRename}
-          className="inline-block max-w-full border border-transparent px-[7px] py-1 active:scale-none"
-          inputClassName="field-sizing-content max-w-full min-w-16 px-[7px] py-1"
+          className="inline-block max-w-full border border-transparent px-[7px] py-1"
+          inputClassName="field-sizing-content max-w-full min-w-16 px-[7px] py-1 text-center"
         />
       </h1>
       <div className="col-start-2 row-start-1 flex items-center gap-2 justify-self-end sm:col-start-3">
+        {spectators}
         {/* Phones copy from the menu instead, leaving the title room. */}
         <CopyLinkButton
           className="max-sm:hidden"
@@ -334,6 +375,145 @@ function RoomHeader({
   );
 }
 
+/** A 16px line icon in the text's colour, from Lucide's 24px grid. */
+function Icon({ children }: { children: ReactNode }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="size-4 shrink-0 fill-none stroke-current stroke-2 [stroke-linecap:round] [stroke-linejoin:round]"
+    >
+      {children}
+    </svg>
+  );
+}
+
+function ArmchairIcon() {
+  return (
+    <Icon>
+      <path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3" />
+      <path d="M3 16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0z" />
+      <path d="M5 18v2" />
+      <path d="M19 18v2" />
+    </Icon>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <Icon>
+      <path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0" />
+      <circle cx="12" cy="12" r="3" />
+    </Icon>
+  );
+}
+
+// Shared by the room's menu and the spectator list, so both popups read as one family.
+const popupClassName =
+  'min-w-44 origin-(--transform-origin) rounded-lg border border-border bg-surface p-1 shadow-lg shadow-black/40 outline-none transition-[opacity,scale] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] data-ending-style:opacity-0 data-starting-style:opacity-0 motion-safe:data-ending-style:scale-95 motion-safe:data-starting-style:scale-95';
+
+/** Spectators watch without a seat at the table. Usually there are none or one, so the bar
+    shows only how many, and opens their names. It turns your colour while you watch too. */
+function SpectatorList({
+  spectators,
+  self,
+  connected,
+  onRenameSelf,
+  onSpectate,
+}: {
+  spectators: Participant[];
+  self: string;
+  connected: boolean;
+  onRenameSelf: (name: string) => void;
+  onSpectate: (spectator: boolean) => void;
+}) {
+  const count = spectators.length;
+  const watching = spectators.some((spectator) => spectator.id === self);
+  const label =
+    count === 0
+      ? 'Spectators'
+      : `${count} ${count === 1 ? 'spectator' : 'spectators'}${watching ? ', including you' : ''}`;
+  return (
+    <Popover.Root>
+      <Popover.Trigger
+        aria-label={label}
+        title={label}
+        className={clsx(
+          // A ghost button: quieter than the bar's outlined buttons, as it only informs.
+          'flex h-8 items-center gap-1.5 rounded-md px-2 text-sm tabular-nums hover:bg-surface-raised data-popup-open:bg-surface-raised',
+          watching
+            ? 'font-semibold text-indigo-300'
+            : 'text-zinc-400 hover:text-zinc-200 data-popup-open:text-zinc-200',
+        )}
+      >
+        <EyeIcon />
+        {/* A zero reads like a broken counter, so an empty room shows the eye alone. */}
+        {count > 0 && count}
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Positioner align="end" sideOffset={4} className="z-30">
+          <Popover.Popup className={clsx(popupClassName, 'w-48')}>
+            <Popover.Title className="px-3 pt-2 pb-1 text-xs font-semibold text-zinc-400">
+              Spectators
+            </Popover.Title>
+            {count === 0 ? (
+              <p className="px-3 py-2 text-sm text-zinc-400">No spectators yet</p>
+            ) : (
+              <ul className="text-sm">
+                {spectators.map((spectator) => (
+                  <li
+                    key={spectator.id}
+                    title={spectator.name}
+                    className={clsx(
+                      'flex items-center gap-2.5 px-3 py-2 [&>svg]:text-zinc-400',
+                      !spectator.connected && 'opacity-50',
+                    )}
+                  >
+                    <Icon>
+                      <circle cx="12" cy="8" r="5" />
+                      <path d="M20 21a8 8 0 0 0-16 0" />
+                    </Icon>
+                    {spectator.id === self ? (
+                      <InlineEdit
+                        value={spectator.name}
+                        label="Your name"
+                        maxLength={40}
+                        disabled={!connected}
+                        onCommit={onRenameSelf}
+                        // The padding holds the pencil, which hangs past a name cut short.
+                        className="block min-w-0 pr-4 text-left font-bold text-indigo-300"
+                        // Looks like the name it edits, in its 20px line so the list keeps its height.
+                        // Touch screens get 16px, or phones zoom in on focus. Pulled left by its
+                        // padding and border, so the text starts where the name did.
+                        inputClassName="-ml-[7px] h-5 field-sizing-content max-w-full min-w-16 px-1.5 leading-none font-bold text-indigo-300 pointer-coarse:text-base"
+                      />
+                    ) : (
+                      <span className="min-w-0 truncate">{spectator.name}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="mx-1 my-1 border-t border-border" />
+            {/* Everything about watching lives here, the way in and the way back out. */}
+            <Popover.Close
+              disabled={!connected}
+              onClick={() => onSpectate(!watching)}
+              className={clsx(
+                menuItemClassName,
+                'w-full hover:bg-surface-raised focus-visible:bg-surface-raised disabled:opacity-50',
+              )}
+            >
+              {watching ? <ArmchairIcon /> : <EyeIcon />}
+              {watching ? 'Take a seat' : 'Watch as spectator'}
+            </Popover.Close>
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
 const repository = 'https://github.com/lgraubner/planning-poker';
 
 const menuLinks = [
@@ -341,6 +521,10 @@ const menuLinks = [
   { href: repository, label: 'Source on GitHub' },
   ...legalLinks,
 ];
+
+// An icon, where an item has one, leads it muted so the label still reads first.
+const menuItemClassName =
+  'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm outline-none data-highlighted:bg-surface-raised [&>svg]:text-zinc-400';
 
 /** Links that open in a new tab, so following one keeps your seat. */
 function RoomMenu() {
@@ -361,12 +545,12 @@ function RoomMenu() {
       </Menu.Trigger>
       <Menu.Portal>
         <Menu.Positioner align="end" sideOffset={4} className="z-30">
-          <Menu.Popup className="min-w-44 origin-(--transform-origin) rounded-lg border border-border bg-surface p-1 shadow-lg shadow-black/40 outline-none transition-[opacity,scale] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] data-ending-style:opacity-0 data-starting-style:opacity-0 motion-safe:data-ending-style:scale-95 motion-safe:data-starting-style:scale-95">
+          <Menu.Popup className={popupClassName}>
             {/* Stays open, so the item can confirm the copy. */}
             <Menu.Item
               closeOnClick={false}
               onClick={copy}
-              className="flex rounded-md px-3 py-2 text-sm font-semibold text-indigo-400 outline-none data-highlighted:bg-surface-raised sm:hidden"
+              className={clsx(menuItemClassName, 'font-semibold text-indigo-400 sm:hidden')}
             >
               {result === 'copied'
                 ? 'Link copied'
@@ -384,7 +568,7 @@ function RoomMenu() {
                 target="_blank"
                 rel="noreferrer"
                 closeOnClick
-                className="flex rounded-md px-3 py-2 text-sm no-underline outline-none data-highlighted:bg-surface-raised"
+                className={clsx(menuItemClassName, 'no-underline')}
               >
                 {label}
               </Menu.LinkItem>
@@ -464,7 +648,8 @@ function InlineEdit({
       type="button"
       disabled={disabled}
       onClick={() => setDraft(shown)}
-      className={clsx('group', className)}
+      // Text to edit, not a button to press: it opens a field without giving way.
+      className={clsx('group active:scale-none', className)}
     >
       {/* Hugs the text, so the pencil sits the same distance from it whatever the button's padding. */}
       <span className="relative block">
@@ -503,7 +688,7 @@ function InlineEdit({
         if (event.key === 'Escape') setDraft(null);
       }}
       className={clsx(
-        'rounded-md border border-zinc-700 bg-zinc-900 text-center outline-none focus:border-indigo-400',
+        'rounded-md border border-zinc-700 bg-zinc-900 outline-none focus:border-indigo-400',
         inputClassName,
       )}
     />
@@ -612,6 +797,7 @@ function PokerTable({
   self,
   connected,
   revealed,
+  spectating,
   onReveal,
   onRenameSelf,
 }: {
@@ -620,6 +806,7 @@ function PokerTable({
   self: string;
   connected: boolean;
   revealed: boolean;
+  spectating: boolean;
   onReveal: () => void;
   onRenameSelf: (name: string) => void;
 }) {
@@ -708,7 +895,7 @@ function PokerTable({
           </p>
         ) : (
           <p role="status" className="text-center text-base font-bold text-zinc-200">
-            {revealed ? 'Cards revealed' : 'Pick your card'}
+            {revealed ? 'Cards revealed' : spectating ? 'Waiting for votes' : 'Pick your card'}
           </p>
         )}
       </div>
@@ -735,7 +922,10 @@ function Confetti() {
   const canvas = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const burst = confetti.create(canvas.current!, { resize: true, disableForReducedMotion: true });
+    const burst = confetti.create(canvas.current!, {
+      resize: true,
+      disableForReducedMotion: true,
+    });
     const number = canvas.current!.parentElement!.getBoundingClientRect();
     void burst({
       particleCount: 60,
@@ -819,6 +1009,22 @@ function ParticipantRow({
           onRename={onRenameSelf}
         />
       ))}
+      {/* A spectator's row stays a seat high, so taking a seat does not move the table. */}
+      {participants.length === 0 && (
+        <div className="invisible">
+          <ParticipantCard
+            participant={{
+              id: '',
+              name: 'Seat',
+              connected: true,
+              selected: false,
+              spectator: false,
+            }}
+            own={false}
+            revealed={false}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -903,8 +1109,9 @@ function ParticipantCard({
             disabled={!connected}
             onCommit={onRename}
             className="mx-auto block max-w-full font-bold text-indigo-300"
-            // Grows with the name past the seat's width, and 16px so phones do not zoom in on focus.
-            inputClassName="absolute top-1/2 left-1/2 z-10 field-sizing-content max-w-72 min-w-16 -translate-1/2 px-2 py-0.5 text-base"
+            // Looks like the name it edits and grows with it past the seat's width. Touch screens
+            // get 16px, or phones zoom in on focus.
+            inputClassName="absolute top-1/2 left-1/2 z-10 field-sizing-content max-w-72 min-w-16 -translate-1/2 px-2 py-0.5 text-center font-bold text-indigo-300 pointer-coarse:text-base"
           />
         </div>
       ) : (

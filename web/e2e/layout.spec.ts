@@ -294,6 +294,18 @@ test('phones give the room title a line of its own', async ({ page, isMobile }) 
   expect(await text.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
 });
 
+test('a small room fits the window without scrolling', async ({ page }) => {
+  const url = await createRoom(page);
+  await join(page, url, you);
+  await joinOthers(page, 1);
+  await expect(page.getByRole('article')).toHaveCount(2);
+  const overflow = () => page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
+  expect(await overflow()).toBeLessThanOrEqual(0);
+  await page.getByRole('button', { name: 'Reveal cards' }).click();
+  await expect(page.getByRole('list', { name: 'Results' })).toBeVisible();
+  expect(await overflow()).toBeLessThanOrEqual(0);
+});
+
 test('the card deck sits at the bottom of the window', async ({ page }) => {
   const url = await createRoom(page);
   await join(page, url, you);

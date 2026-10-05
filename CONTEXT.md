@@ -16,6 +16,10 @@ _Avoid_: Password, token, room ID
 A person currently taking part in a room under a display name. A display name is a label and does not establish identity.
 _Avoid_: User, player, member
 
+**Spectator**:
+A participant who watches a room without holding an estimate. Spectators have no card, do not count toward a round, and may still reveal and reset. Any participant can switch between spectator and voter at any time.
+_Avoid_: Observer, viewer, guest
+
 **Round**:
 One cycle in which participants select estimates, reveal them, and reset before estimating again.
 _Avoid_: Vote, game, turn

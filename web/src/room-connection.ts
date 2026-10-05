@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 
-export type Identity = { id: string; name: string };
+export type Identity = { id: string; name: string; spectator: boolean };
 export type Participant = {
   id: string;
   name: string;
   connected: boolean;
   selected: boolean;
+  spectator: boolean;
   estimate?: string;
 };
 export type Snapshot = {
@@ -35,6 +36,22 @@ export function rememberName(name: string) {
   }
 }
 
+export function rememberedSpectator() {
+  try {
+    return localStorage.getItem('poker.spectator') === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function rememberSpectator(spectator: boolean) {
+  try {
+    localStorage.setItem('poker.spectator', String(spectator));
+  } catch {
+    /* The room has the new role; only the next visit misses it. */
+  }
+}
+
 export function rememberedID() {
   try {
     return localStorage.getItem('poker.id') || '';
@@ -43,13 +60,14 @@ export function rememberedID() {
   }
 }
 
-export function identity(name: string): Identity {
+export function identity(name: string, spectator: boolean): Identity {
   // Identity must survive refreshes. Surface blocked storage instead of silently
   // creating duplicate cards that cannot reconnect.
   const id = localStorage.getItem('poker.id') || crypto.randomUUID();
   localStorage.setItem('poker.id', id);
   localStorage.setItem('poker.name', name);
-  return { id, name };
+  localStorage.setItem('poker.spectator', String(spectator));
+  return { id, name, spectator };
 }
 
 export function useRoom(code: string, participant: Identity) {
@@ -64,6 +82,9 @@ export function useRoom(code: string, participant: Identity) {
     let terminal = false;
     let delay = 500;
     let timer: ReturnType<typeof setTimeout>;
+    // Who you last were in the room. A server that forgot you, after 30 seconds away,
+    // seats you again from it rather than from the name and role you first joined with.
+    let self: Identity = participant;
     const abort = new AbortController();
     setSnapshot(null);
     setFatal(false);
@@ -107,12 +128,14 @@ export function useRoom(code: string, participant: Identity) {
       url.protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
       const ws = new WebSocket(url);
       socket.current = ws;
-      ws.onopen = () => ws.send(JSON.stringify({ type: 'join', ...participant }));
+      ws.onopen = () => ws.send(JSON.stringify({ type: 'join', ...self }));
       ws.onmessage = (event) => {
         if (disposed) return;
         try {
           const message: Message = JSON.parse(event.data);
           if (message.type === 'snapshot') {
+            const own = message.participants.find((p) => p.id === message.self);
+            if (own) self = { ...self, name: own.name, spectator: own.spectator };
             setSnapshot(message);
             setConnected(true);
             setError('');
@@ -161,7 +184,7 @@ export function useRoom(code: string, participant: Identity) {
     };
   }, [code, participant]);
 
-  function send(type: 'select' | 'reveal' | 'reset' | 'rename' | 'name', value?: string) {
+  function send(type: 'select' | 'reveal' | 'reset' | 'rename' | 'name' | 'role', value?: string) {
     if (!connected || !snapshot || socket.current?.readyState !== WebSocket.OPEN) return;
     setError('');
     socket.current.send(JSON.stringify({ type, value, round: snapshot.round }));

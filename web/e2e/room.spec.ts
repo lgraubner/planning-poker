@@ -61,8 +61,11 @@ test('a room estimates with the deck it was created with', async ({ page, newPar
   const url = await createRoom(page, 'Roadmap sizing', 'T-shirt sizes');
   await join(page, url, 'Alice');
   const bob = await newParticipant();
-  const snapshots: { deck: string[]; revealed: boolean; participants: { estimate?: string }[] }[] =
-    [];
+  const snapshots: {
+    deck: string[];
+    revealed: boolean;
+    participants: { estimate?: string }[];
+  }[] = [];
   bob.on('websocket', (socket) =>
     socket.on('framereceived', ({ payload }) => {
       const message = JSON.parse(String(payload));
@@ -196,7 +199,9 @@ test('a dropped connection reconnects and keeps the estimate', async ({ page }) 
     server.onMessage((message) =>
       reconnect ? void held.then(() => socket.send(message)) : socket.send(message),
     );
-    sockets.push({ close: () => Promise.all([socket.close(), server.close()]).then(() => {}) });
+    sockets.push({
+      close: () => Promise.all([socket.close(), server.close()]).then(() => {}),
+    });
   });
   await join(page, url, 'Alice');
   await page.getByRole('button', { name: '3', exact: true }).click();
@@ -211,6 +216,50 @@ test('a dropped connection reconnects and keeps the estimate', async ({ page }) 
     'aria-pressed',
     'true',
   );
+});
+
+test('a reconnect rejoins with your current name and role', async ({ page }) => {
+  const url = await createRoom(page);
+  // The server seats you from the join only once it has forgotten you, 30 seconds away:
+  // too slow to wait out, so check the join the reconnect sends instead.
+  const joins: { name: string; spectator?: boolean }[] = [];
+  let confirmed: { name: string; spectator: boolean } | undefined;
+  const sockets: { close: () => Promise<void> }[] = [];
+  await page.routeWebSocket(/\/ws$/, (socket) => {
+    const server = socket.connectToServer();
+    server.onMessage((message) => {
+      const parsed = JSON.parse(String(message));
+      if (parsed.type === 'snapshot')
+        confirmed = parsed.participants.find((p: { id: string }) => p.id === parsed.self);
+      socket.send(message);
+    });
+    socket.onMessage((message) => {
+      const parsed = JSON.parse(String(message));
+      if (parsed.type === 'join') joins.push(parsed);
+      server.send(message);
+    });
+    sockets.push({
+      close: () => Promise.all([socket.close(), server.close()]).then(() => {}),
+    });
+  });
+  await join(page, url, 'Alice');
+  await page.getByRole('button', { name: 'Spectators', exact: true }).click();
+  await page.getByRole('button', { name: 'Watch as spectator' }).click();
+  await page.getByRole('button', { name: '1 spectator' }).click();
+  await page
+    .getByRole('dialog', { name: 'Spectators' })
+    .getByRole('button', { name: 'Alice' })
+    .click();
+  await page.getByLabel('Your name').fill('Alicia');
+  await page.getByLabel('Your name').press('Enter');
+  // The list shows a rename before the server has it, so wait for the server's word.
+  await expect
+    .poll(() => confirmed)
+    .toEqual(expect.objectContaining({ name: 'Alicia', spectator: true }));
+
+  await sockets[0].close();
+  await expect.poll(() => joins.length).toBe(2);
+  expect(joins[1]).toEqual(expect.objectContaining({ name: 'Alicia', spectator: true }));
 });
 
 test('a rename shows at once, before the server confirms it', async ({ page }) => {
@@ -262,6 +311,13 @@ test('buttons give way when pressed and centre their content', async ({ page }) 
     await expect.poll(() => scale(name)).toBe('0.97');
     await page.mouse.up();
   };
+  // Names edit in place: pressing one opens a field rather than giving way.
+  await page.getByRole('button', { name: 'Alice', exact: true }).hover();
+  await page.mouse.down();
+  await page.waitForTimeout(200);
+  expect(await scale('Alice')).toBe('none');
+  await page.mouse.up();
+  await page.keyboard.press('Escape');
   await press('3');
   await expect.poll(() => scale('3')).toBe('none');
   await expect(page.getByRole('button', { name: '3', exact: true })).toHaveCSS(
@@ -302,7 +358,11 @@ test('an unknown page leads back home', async ({ page }) => {
 
 test('a proxy error page reads as a plain message', async ({ page }) => {
   await page.route('**/api/rooms**', (route) =>
-    route.fulfill({ status: 502, contentType: 'text/html', body: '<h1>Bad Gateway</h1>' }),
+    route.fulfill({
+      status: 502,
+      contentType: 'text/html',
+      body: '<h1>Bad Gateway</h1>',
+    }),
   );
   await page.goto('/');
   await page.getByLabel('Room title').fill('Sprint planning');
@@ -357,7 +417,10 @@ test('phones copy the room link from the menu', async ({ page, context, isMobile
 
 test("the server's errors show without a full stop", async ({ page }) => {
   await page.route('**/api/rooms', (route) =>
-    route.fulfill({ status: 429, json: { error: 'Room limit reached. Try again later.' } }),
+    route.fulfill({
+      status: 429,
+      json: { error: 'Room limit reached. Try again later.' },
+    }),
   );
   await page.goto('/');
   await page.getByLabel('Room title').fill('Sprint planning');
@@ -388,7 +451,10 @@ test('only prose, what someone types and errors can be selected', async ({ page 
 test('the title field opens exactly over the title', async ({ page }) => {
   const url = await createRoom(page, 'Sprint planning');
   await join(page, url, 'Alice');
-  const title = page.getByRole('button', { name: 'Sprint planning', exact: true });
+  const title = page.getByRole('button', {
+    name: 'Sprint planning',
+    exact: true,
+  });
   const before = (await title.boundingBox())!;
   await title.click();
   const after = (await page.getByRole('textbox', { name: 'Room title' }).boundingBox())!;
@@ -611,6 +677,23 @@ test('your own name stands out from the others', async ({ page, newParticipant }
   }
 });
 
+test('a name edits in its own type, large enough that phones do not zoom', async ({
+  page,
+  hasTouch,
+}) => {
+  const url = await createRoom(page);
+  await join(page, url, 'Alice');
+  const font = (element: Element) => {
+    const style = getComputedStyle(element);
+    return { size: style.fontSize, weight: style.fontWeight, color: style.color };
+  };
+  const name = await page.getByRole('button', { name: 'Alice', exact: true }).evaluate(font);
+  await page.getByRole('button', { name: 'Alice', exact: true }).click();
+  const field = await page.getByRole('textbox', { name: 'Your name' }).evaluate(font);
+  // Phones zoom in on a field under 16px, so touch screens get that much.
+  expect(field).toEqual({ ...name, size: hasTouch ? '16px' : name.size });
+});
+
 test('you can change your name for everyone and keep it', async ({ page, newParticipant }) => {
   const url = await createRoom(page);
   await join(page, url, 'Alice');
@@ -730,4 +813,95 @@ test('the room menu links to the project, its issues and the legal pages', async
     // A new tab, so following a link keeps your seat.
     await expect(item).toHaveAttribute('target', '_blank');
   }
+});
+
+test('spectators watch from beside the table and can switch to voting', async ({
+  page,
+  newParticipant,
+}) => {
+  const url = await createRoom(page);
+  await join(page, url, 'Alice');
+  // What reaches Alice proves the role lives on the server, not only in Bob's view.
+  let bobFrame: { name: string; spectator: boolean } | undefined;
+  page.on('websocket', (socket) =>
+    socket.on('framereceived', ({ payload }) => {
+      const message = JSON.parse(String(payload));
+      if (message.type === 'snapshot')
+        bobFrame = message.participants.find((p: { name: string }) => p.name !== 'Alice');
+    }),
+  );
+  // Alice's socket opened before the listener; a reload lets it see the frames.
+  await page.reload();
+  await expect(page.getByRole('group', { name: 'Choose your card' })).toBeVisible();
+  // A cancelled animation, like a menu closing early, rejects; it has settled all the same.
+  const settled = (viewer: typeof page) =>
+    viewer.evaluate(() =>
+      Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))),
+    );
+  const aliceBefore = await card(page, 'Alice').boundingBox();
+
+  const bob = await newParticipant();
+  await bob.goto(url);
+  await bob.getByLabel('Name', { exact: true }).fill('Bob');
+  await bob.getByRole('button', { name: 'Watch as spectator' }).click();
+  await expect(bob.getByRole('group', { name: 'Choose your card' })).toBeHidden();
+  await expect(bob.getByRole('status').filter({ hasText: 'Waiting for votes' })).toBeVisible();
+  for (const viewer of [page, bob]) {
+    await viewer.getByRole('button', { name: '1 spectator' }).click();
+    await expect(
+      viewer.getByRole('dialog', { name: 'Spectators' }).getByRole('listitem'),
+    ).toHaveText(['Bob']);
+    await viewer.keyboard.press('Escape');
+    await expect(card(viewer, 'Bob')).toBeHidden();
+  }
+  await expect.poll(() => bobFrame).toEqual(expect.objectContaining({ spectator: true }));
+  // Only Bob is told he is among them.
+  await expect(bob.getByRole('button', { name: '1 spectator, including you' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '1 spectator', exact: true })).toBeVisible();
+  // A spectator arriving must not move the table.
+  expect(await card(page, 'Alice').boundingBox()).toEqual(aliceBefore);
+
+  // Spectators do not hold up the round, but may reveal it.
+  await page.getByRole('button', { name: '8', exact: true }).click();
+  await bob.getByRole('button', { name: 'Reveal cards' }).click();
+  await expect(card(bob, 'Alice')).toHaveAccessibleName('Alice: 8');
+  await settled(bob);
+  await bob.getByRole('button', { name: 'Vote again' }).click();
+
+  // Spectators keep their name editable from the list.
+  await bob.getByRole('button', { name: '1 spectator' }).click();
+  const list = bob.getByRole('dialog', { name: 'Spectators' });
+  await settled(bob);
+  const listBefore = await list.boundingBox();
+  await list.getByRole('button', { name: 'Bob' }).click();
+  // The field opens in the name's line, so the list keeps its height.
+  expect((await list.boundingBox())?.height).toBe(listBefore?.height);
+  await bob.getByLabel('Your name').fill('Robert');
+  await bob.getByLabel('Your name').press('Enter');
+  await bob.keyboard.press('Escape');
+  await page.getByRole('button', { name: '1 spectator' }).click();
+  await expect(page.getByRole('dialog', { name: 'Spectators' }).getByRole('list')).toHaveText(
+    'Robert',
+  );
+  await page.keyboard.press('Escape');
+  await expect.poll(() => bobFrame?.name).toBe('Robert');
+
+  // The list offers each their way: a seat to a spectator, watching to a voter.
+  await page.getByRole('button', { name: '1 spectator' }).click();
+  await expect(page.getByRole('button', { name: 'Take a seat' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Watch as spectator' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await settled(bob);
+  const aliceSeat = await card(bob, 'Alice').boundingBox();
+  await bob.getByRole('button', { name: '1 spectator, including you' }).click();
+  await bob.getByRole('button', { name: 'Take a seat' }).click();
+  await expect(bob.getByRole('group', { name: 'Choose your card' })).toBeVisible();
+  await expect(card(page, 'Robert')).toHaveAccessibleName('Robert: not selected');
+  // With nobody watching, the eye stays, offering the way back.
+  await page.getByRole('button', { name: 'Spectators', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Spectators' })).toContainText('No spectators yet');
+  await page.keyboard.press('Escape');
+  await expect.poll(() => bobFrame).toEqual(expect.objectContaining({ spectator: false }));
+  await settled(bob);
+  expect(await card(bob, 'Alice').boundingBox()).toEqual(aliceSeat);
 });

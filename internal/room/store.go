@@ -42,6 +42,7 @@ type Participant struct {
 	Name      string `json:"name"`
 	Connected bool   `json:"connected"`
 	Selected  bool   `json:"selected"`
+	Spectator bool   `json:"spectator"`
 	Estimate  string `json:"estimate,omitempty"`
 }
 
@@ -59,7 +60,7 @@ type member struct {
 	id, secret, name, estimate string
 	connections                map[*Subscription]bool
 	disconnected               time.Time
-	departed                   bool
+	departed, spectator        bool
 }
 
 type session struct {
@@ -276,7 +277,8 @@ func (s *Store) Release(code string) {
 	}
 }
 
-func (s *Store) Join(code, secret, name string) (*Subscription, error) {
+// Join seats a new participant as a spectator or voter; a returning one keeps their role.
+func (s *Store) Join(code, secret, name string, spectator bool) (*Subscription, error) {
 	name, err := ValidateLabel(name, 40)
 	if err != nil {
 		return nil, err
@@ -301,7 +303,7 @@ func (s *Store) Join(code, secret, name string) (*Subscription, error) {
 		if len(r.participants) >= MaxParticipants {
 			return nil, ErrFull
 		}
-		p = &member{id: rand.Text(), secret: secret, name: name, connections: make(map[*Subscription]bool)}
+		p = &member{id: rand.Text(), secret: secret, name: name, spectator: spectator, connections: make(map[*Subscription]bool)}
 		r.participants = append(r.participants, p)
 	}
 	if len(p.connections) >= maxTabs {
@@ -380,11 +382,24 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 		s.publish(r)
 		return nil
 	}
+	// Spectators hold no estimate, so changing role is not tied to a round either.
+	if command == "role" {
+		if value != "spectator" && value != "voter" {
+			return errors.New("Unknown role.")
+		}
+		sub.member.spectator = value == "spectator"
+		sub.member.estimate = ""
+		s.publish(r)
+		return nil
+	}
 	if round != r.round {
 		return errors.New("The round changed. Try again.")
 	}
 	switch command {
 	case "select":
+		if sub.member.spectator {
+			return errors.New("Spectators do not estimate.")
+		}
 		if r.revealed {
 			return errors.New("Wait for reset before selecting.")
 		}
@@ -429,7 +444,7 @@ func (s *Store) publish(r *session) {
 			if p.departed {
 				continue
 			}
-			card := Participant{ID: p.id, Name: p.name, Connected: len(p.connections) > 0, Selected: p.estimate != ""}
+			card := Participant{ID: p.id, Name: p.name, Connected: len(p.connections) > 0, Selected: p.estimate != "", Spectator: p.spectator}
 			if r.revealed || p == viewer {
 				card.Estimate = p.estimate
 			}

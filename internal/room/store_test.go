@@ -23,7 +23,7 @@ func TestRoundPrivacyAndReconnect(t *testing.T) {
 	}
 	join := func(id, name string) *Subscription {
 		t.Helper()
-		sub, err := s.Join(code, id, name)
+		sub, err := s.Join(code, id, name, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -115,11 +115,11 @@ func TestValidationAndLimits(t *testing.T) {
 	}
 	s := New()
 	code, _ := s.Create("Test", "fibonacci")
-	if _, err := s.Join(code, "guessable", "Alice"); err == nil {
+	if _, err := s.Join(code, "guessable", "Alice", false); err == nil {
 		t.Fatal("bad identity accepted")
 	}
 	for i := 0; i < MaxParticipants; i++ {
-		if _, err := s.Join(code, fmt.Sprintf("00000000-0000-4000-8000-%012d", i), "Same name"); err != nil {
+		if _, err := s.Join(code, fmt.Sprintf("00000000-0000-4000-8000-%012d", i), "Same name", false); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -129,15 +129,15 @@ func TestValidationAndLimits(t *testing.T) {
 	if _, err := s.Info(code, aliceID); err != nil {
 		t.Fatalf("full room blocked a returning participant: %v", err)
 	}
-	if _, err := s.Join(code, "00000000-0000-4000-8000-999999999999", "Extra"); err != ErrFull {
+	if _, err := s.Join(code, "00000000-0000-4000-8000-999999999999", "Extra", false); err != ErrFull {
 		t.Fatal("participant cap missing")
 	}
 	for i := 0; i < 4; i++ {
-		if _, err := s.Join(code, aliceID, "Alex"); err != nil {
+		if _, err := s.Join(code, aliceID, "Alex", false); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if _, err := s.Join(code, aliceID, "Alex"); err != ErrTooManyTabs {
+	if _, err := s.Join(code, aliceID, "Alex", false); err != ErrTooManyTabs {
 		t.Fatalf("tab cap missing: %v", err)
 	}
 	if _, err := s.Info(code, aliceID); err != ErrTooManyTabs {
@@ -163,12 +163,12 @@ func TestValidationAndLimits(t *testing.T) {
 func TestDepartHidesLastTabAndAllowsRejoin(t *testing.T) {
 	s := New()
 	code, _ := s.Create("Test", "fibonacci")
-	first, _ := s.Join(code, aliceID, "Alex")
-	second, _ := s.Join(code, aliceID, "Alex")
+	first, _ := s.Join(code, aliceID, "Alex", false)
+	second, _ := s.Join(code, aliceID, "Alex", false)
 	if err := s.Command(first, "select", "8", 1); err != nil {
 		t.Fatal(err)
 	}
-	bob, _ := s.Join(code, bobID, "Bob")
+	bob, _ := s.Join(code, bobID, "Bob", false)
 
 	s.Depart(first)
 	if snapshot := <-bob.Updates; len(snapshot.Participants) != 2 || !snapshot.Participants[0].Connected {
@@ -178,7 +178,7 @@ func TestDepartHidesLastTabAndAllowsRejoin(t *testing.T) {
 	if snapshot := <-bob.Updates; len(snapshot.Participants) != 1 {
 		t.Fatal("leaving the last tab did not hide the participant")
 	}
-	rejoined, _ := s.Join(code, aliceID, "Alex")
+	rejoined, _ := s.Join(code, aliceID, "Alex", false)
 	if snapshot := <-bob.Updates; len(snapshot.Participants) != 2 || !snapshot.Participants[0].Connected {
 		t.Fatal("departed participant could not rejoin")
 	}
@@ -196,7 +196,7 @@ func TestUnjoinedRoomsExpireEarly(t *testing.T) {
 	s.now = func() time.Time { return now }
 	unused, _ := s.Create("Unused", "fibonacci")
 	used, _ := s.Create("Used", "fibonacci")
-	sub, _ := s.Join(used, aliceID, "Alex")
+	sub, _ := s.Join(used, aliceID, "Alex", false)
 	s.Leave(sub)
 	now = now.Add(10 * time.Minute)
 	s.Sweep(true)
@@ -211,8 +211,8 @@ func TestUnjoinedRoomsExpireEarly(t *testing.T) {
 func TestRenameIgnoresRoundAndValidates(t *testing.T) {
 	s := New()
 	code, _ := s.Create("Test", "fibonacci")
-	alice, _ := s.Join(code, aliceID, "Alice")
-	bob, _ := s.Join(code, bobID, "Bob")
+	alice, _ := s.Join(code, aliceID, "Alice", false)
+	bob, _ := s.Join(code, bobID, "Bob", false)
 	<-alice.Updates
 	<-bob.Updates
 	for _, title := range []string{"", "  ", "a\nb", strings.Repeat("界", 101)} {
@@ -234,8 +234,8 @@ func TestRenameIgnoresRoundAndValidates(t *testing.T) {
 func TestNameIgnoresRoundAndValidates(t *testing.T) {
 	s := New()
 	code, _ := s.Create("Test", "fibonacci")
-	alice, _ := s.Join(code, aliceID, "Alice")
-	bob, _ := s.Join(code, bobID, "Bob")
+	alice, _ := s.Join(code, aliceID, "Alice", false)
+	bob, _ := s.Join(code, bobID, "Bob", false)
 	<-alice.Updates
 	<-bob.Updates
 	for _, name := range []string{"", "  ", "a\nb", strings.Repeat("界", 41)} {
@@ -248,6 +248,45 @@ func TestNameIgnoresRoundAndValidates(t *testing.T) {
 	}
 	if snapshot := <-bob.Updates; snapshot.Participants[0].Name != "Alicia" || snapshot.Participants[1].Name != "Bob" {
 		t.Fatalf("other participant saw %+v", snapshot.Participants)
+	}
+}
+
+func TestSpectatorsHoldNoEstimate(t *testing.T) {
+	s := New()
+	code, _ := s.Create("Test", "fibonacci")
+	alice, _ := s.Join(code, aliceID, "Alice", true)
+	bob, _ := s.Join(code, bobID, "Bob", false)
+	<-alice.Updates
+	if snapshot := <-bob.Updates; !snapshot.Participants[0].Spectator || snapshot.Participants[1].Spectator {
+		t.Fatalf("join did not set roles: %+v", snapshot.Participants)
+	}
+	if err := s.Command(alice, "select", "8", 1); err == nil {
+		t.Error("spectator selected an estimate")
+	}
+	for _, role := range []string{"", "Spectator", "admin"} {
+		if err := s.Command(bob, "role", role, 1); err == nil {
+			t.Errorf("accepted role %q", role)
+		}
+	}
+	if err := s.Command(bob, "select", "8", 1); err != nil {
+		t.Fatal(err)
+	}
+	<-bob.Updates
+	// A stale round must not block a role change, as with renames.
+	if err := s.Command(bob, "role", "spectator", 7); err != nil {
+		t.Fatal(err)
+	}
+	if snapshot := <-alice.Updates; !snapshot.Participants[1].Spectator || snapshot.Participants[1].Selected {
+		t.Fatalf("spectator kept an estimate: %+v", snapshot.Participants[1])
+	}
+	if err := s.Command(alice, "role", "voter", 1); err != nil {
+		t.Fatal(err)
+	}
+	<-alice.Updates
+	// Another tab joining as a spectator shares the voter's seat.
+	secondTab, _ := s.Join(code, aliceID, "Alice", true)
+	if snapshot := <-secondTab.Updates; snapshot.Participants[0].Spectator {
+		t.Fatal("rejoining changed an existing participant's role")
 	}
 }
 
@@ -264,7 +303,7 @@ func TestSQLitePersistsRoomsAcrossRestarts(t *testing.T) {
 	code, _ := s.Create("Sprint", "tshirt")
 	unused, _ := s.Create("Unused", "fibonacci")
 	idle, _ := s.Create("Idle", "fibonacci")
-	alice, _ := s.Join(code, aliceID, "Alice")
+	alice, _ := s.Join(code, aliceID, "Alice", false)
 	for _, c := range []struct {
 		command, value string
 		round          uint64
@@ -274,7 +313,7 @@ func TestSQLitePersistsRoomsAcrossRestarts(t *testing.T) {
 		}
 	}
 	// Alice stays connected: the restart finds the room occupied.
-	bob, _ := s.Join(idle, bobID, "Bob")
+	bob, _ := s.Join(idle, bobID, "Bob", false)
 	s.Leave(bob)
 	now = now.Add(10 * time.Minute)
 	s.Sweep(true)
@@ -287,7 +326,7 @@ func TestSQLitePersistsRoomsAcrossRestarts(t *testing.T) {
 	if _, err := s.Info(unused, ""); err != ErrNotFound {
 		t.Fatal("expired room came back after restart")
 	}
-	bob, err = s.Join(code, bobID, "Bob")
+	bob, err = s.Join(code, bobID, "Bob", false)
 	if err != nil {
 		t.Fatal("room lost on restart:", err)
 	}
@@ -317,8 +356,8 @@ func TestEachRoomUsesItsOwnDeck(t *testing.T) {
 	}
 	shirts, _ := s.Create("Shirts", "tshirt")
 	points, _ := s.Create("Points", "fibonacci")
-	alice, _ := s.Join(shirts, aliceID, "Alice")
-	bob, _ := s.Join(points, bobID, "Bob")
+	alice, _ := s.Join(shirts, aliceID, "Alice", false)
+	bob, _ := s.Join(points, bobID, "Bob", false)
 	if snapshot := <-alice.Updates; !slices.Equal(snapshot.Deck, Decks["tshirt"]) {
 		t.Fatalf("snapshot deck: %v", snapshot.Deck)
 	}
@@ -351,7 +390,7 @@ func TestSQLiteAddsDecksToOlderDatabases(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		alice, err := s.Join("abcdefgh", aliceID, "Alice")
+		alice, err := s.Join("abcdefgh", aliceID, "Alice", false)
 		if err != nil {
 			t.Fatal(err)
 		}

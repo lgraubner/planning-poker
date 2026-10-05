@@ -249,6 +249,8 @@ type command struct {
 	Name  string `json:"name,omitempty"`
 	Value string `json:"value,omitempty"`
 	Round uint64 `json:"round,omitempty"`
+	// Only a join reads it.
+	Spectator bool `json:"spectator,omitempty"`
 }
 type socketError struct {
 	Type    string `json:"type"`
@@ -297,7 +299,7 @@ func (s *Server) socket(w http.ResponseWriter, r *http.Request) {
 		_ = write(ctx, conn, socketError{"error", "Join before sending commands.", true})
 		return
 	}
-	sub, err := s.store.Join(code, join.ID, join.Name)
+	sub, err := s.store.Join(code, join.ID, join.Name, join.Spectator)
 	if err != nil {
 		_ = write(ctx, conn, socketError{"error", err.Error(), true})
 		return
