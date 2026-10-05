@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import clsx from 'clsx';
 
-/** Text that turns into a field when clicked, for a value anyone may change at any time. */
+// Text that turns into a field when clicked, for a value anyone may change at any time
 export function InlineEdit({
   value,
   label,

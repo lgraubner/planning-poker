@@ -4,8 +4,10 @@ import type { Participant } from '../hooks/useRoom';
 import { Icon } from './Icon';
 import { InlineEdit } from './InlineEdit';
 
-/** Spectators watch without a seat at the table. Usually there are none or one, so the bar
-    shows only how many, and opens their names. It turns your colour while you watch too. */
+/**
+ * Spectators watch without a seat at the table. Usually there are none or one, so the bar
+ * shows only how many, and opens their names. It turns your colour while you watch too.
+ */
 export function SpectatorList({
   spectators,
   self,

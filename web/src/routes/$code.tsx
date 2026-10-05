@@ -182,14 +182,11 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
           />
         }
       />
-      {/* Stays mounted so it can fade out; `visibility` hides it from everyone once it has. */}
       <p
         role="status"
         className={clsx(
           'fixed top-4 left-1/2 z-30 flex w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-3 rounded-full border border-amber-400/40 bg-surface px-4 py-2 text-sm text-zinc-100 shadow-lg shadow-black/40 transition-[opacity,filter,scale,translate,visibility] duration-300',
-          // Enters with a slide and scale but leaves with only a fade: scale and translate wait
-          // out the fade (delays follow the property order above), then reset unseen.
-          // The fade eases in and out; a strong ease-out would spend it in the first frames.
+          // The delays follow the property order above, so scale and translate wait out the fade
           reconnecting
             ? 'ease-[cubic-bezier(0.23,1,0.32,1)]'
             : 'invisible opacity-0 blur-xs ease-in-out delay-[0s,0s,300ms,300ms,0s] motion-safe:-translate-y-3 motion-safe:scale-95',

@@ -24,6 +24,8 @@ A comment in Go or TypeScript records the **why** the code cannot show: an edge 
 
 A `//` comment starts with a capital letter, except a Go doc comment, which starts with the name it documents (`// clientIP groups …`). A one-line `//` comment holding a single sentence ends without a full stop; one with several sentences, or spanning several lines, ends each sentence with one.
 
+In TypeScript, a one-line comment uses `//`. `/**` opens only a multi-line docblock, with `/**` and `*/` on lines of their own and `*` leading each line between.
+
 ## Styling
 
 Share styling through components. A class string stays inside the component that renders it and is never exported; where two places need the same look and no component fits, duplicate the classes.

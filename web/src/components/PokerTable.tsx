@@ -303,7 +303,6 @@ function ParticipantCard({
                 : 'border-surface-raised bg-surface-raised text-zinc-500',
             )}
           >
-            {/* Stays mounted so it fades out on "Vote again"; visibility flips once the fade ends. */}
             <span
               className={clsx(
                 'transition-[opacity,filter,scale,visibility] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]',

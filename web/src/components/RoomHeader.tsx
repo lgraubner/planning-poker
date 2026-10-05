@@ -67,7 +67,7 @@ const menuLinks = [
 const menuItemClassName =
   'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm outline-none data-highlighted:bg-surface-raised [&>svg]:text-zinc-400';
 
-/** Links that open in a new tab, so following one keeps your seat. */
+// Links that open in a new tab, so following one keeps your seat
 function RoomMenu() {
   const [result, copy] = useCopyLink();
   return (
@@ -117,7 +117,7 @@ function RoomMenu() {
   );
 }
 
-/** Asks before any way out of the room, the back button included: leaving drops your seat. */
+// Asks before any way out of the room, the back button included: leaving drops your seat
 function LeaveRoomDialog() {
   const { status, proceed, reset } = useBlocker({
     shouldBlockFn: ({ current, next }) => current.pathname !== next.pathname,

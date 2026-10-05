@@ -44,7 +44,6 @@ export function CopyLinkButton({
               viewBox="0 0 24 24"
               className="size-4 fill-none stroke-current stroke-[2.5] [stroke-linecap:round] [stroke-linejoin:round]"
             >
-              {/* Draws itself in once the label has faded in. */}
               <path
                 d="M4 12.5l5 5L20 6.5"
                 pathLength={1}

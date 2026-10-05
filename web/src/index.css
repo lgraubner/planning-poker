@@ -10,7 +10,6 @@
   /* Its own name: changing only the direction would not restart a finished flip. */
   --animate-card-unflip: card-unflip 600ms both;
 
-  /* Tilts and lifts toward the viewer mid-turn, so the flip reads as a card in hand. */
   @keyframes card-flip {
     from {
       transform: translateZ(0) rotateY(0) rotateX(0);

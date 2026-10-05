@@ -2,7 +2,7 @@ import { Select } from '@base-ui/react/select';
 
 type SelectFieldProps = {
   label: string;
-  /** A description shows under its label in the list, not in the closed field. */
+  // A description shows under its label in the list, not in the closed field
   items: { value: string; label: string; description?: string }[];
   value: string;
   onValueChange: (value: string) => void;

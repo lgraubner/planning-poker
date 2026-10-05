@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-/** True once `active` has held for `ms`, so a state that clears quickly never flashes. */
+// True once `active` has held for `ms`, so a state that clears quickly never flashes
 export function useDelayed(active: boolean, ms = 300) {
   const [elapsed, setElapsed] = useState(false);
   useEffect(() => {
