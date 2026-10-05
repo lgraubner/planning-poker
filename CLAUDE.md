@@ -30,6 +30,16 @@ In TypeScript, a one-line comment uses `//`. `/**` opens only a multi-line docbl
 
 Share styling through components. A class string stays inside the component that renders it and is never exported; where two places need the same look and no component fits, duplicate the classes.
 
+## Effects
+
+React code follows _You Might Not Need an Effect_. Use `useEffect` only to keep a component in sync with an outside system for as long as it is mounted, such as the room's WebSocket or a timer that follows a prop. Everything else has a better place:
+
+- Data a page needs when it opens: the route's `loader`, with `pendingComponent` for the loading state.
+- What a click or submit sets off: its event handler.
+- Setup on a DOM node: a ref callback that returns its cleanup, defined outside the component so a re-render does not call it again.
+- State that resets when a prop changes: a `key` on the component.
+- A value derived from props or state: compute it during render.
+
 ## Commits
 
 Write every commit message as a Conventional Commit: `type(scope)!: subject`, with a lowercase subject. Pull request titles follow the same format. The `commit-msg` hook and CI on pull requests enforce it with commitlint (`web/commitlint.config.mjs`); when commitlint rejects a message, rewrite the message and commit again.
