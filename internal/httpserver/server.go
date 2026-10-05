@@ -35,7 +35,6 @@ type server struct {
 	meta     []byte
 }
 
-// Links are the operator's legal pages, shown in the app's footer when set.
 type Links struct{ LegalNotice, PrivacyPolicy string }
 
 // New serves the API and SPA. ipHeader names a header set by a trusted proxy
@@ -218,14 +217,14 @@ func (s *server) info(w http.ResponseWriter, r *http.Request) {
 }
 
 type command struct {
-	Type  string `json:"type"`
-	ID    string `json:"id,omitempty"`
-	Name  string `json:"name,omitempty"`
-	Value string `json:"value,omitempty"`
-	Round uint64 `json:"round,omitempty"`
-	// Only a join reads it.
-	Spectator bool `json:"spectator,omitempty"`
+	Type      string `json:"type"`
+	ID        string `json:"id,omitempty"`
+	Name      string `json:"name,omitempty"`
+	Value     string `json:"value,omitempty"`
+	Round     uint64 `json:"round,omitempty"`
+	Spectator bool   `json:"spectator,omitempty"`
 }
+
 type socketError struct {
 	Type    string `json:"type"`
 	Message string `json:"message"`

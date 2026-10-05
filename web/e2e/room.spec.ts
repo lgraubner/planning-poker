@@ -397,7 +397,6 @@ test('the room link can be copied', async ({ page, context, browserName, isMobil
   await expect(invite.getByRole('button', { name: 'Link copied' })).toBeVisible();
   await expect(invite.getByRole('status')).toHaveText('Link copied');
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(url);
-  // The labels return, so the buttons can be used again.
   await expect(page.getByRole('button', { name: 'Copy room link' })).toHaveCount(2);
 });
 
@@ -624,7 +623,6 @@ test('results stay clear of the table on a short screen', async ({ page, newPart
   await page.getByRole('button', { name: 'Reveal cards' }).click();
   const results = page.getByRole('list', { name: 'Results' });
   await expect(results).toBeVisible();
-  // The table stays put on reveal.
   expect(await card(page, 'Alice').boundingBox()).toEqual(before);
   // Inside the sticky footer, whose background hides the table scrolling under it.
   const list = (await results.boundingBox())!;

@@ -33,7 +33,6 @@ func (b *bucket) allow(rate, burst float64) bool {
 	return true
 }
 
-// limiter keeps one token bucket per client address.
 type limiter struct {
 	mu          sync.Mutex
 	buckets     map[netip.Addr]*bucket
@@ -44,7 +43,6 @@ func newLimiter(rate, burst float64) *limiter {
 	return &limiter{buckets: make(map[netip.Addr]*bucket), rate: rate, burst: burst}
 }
 
-// allow spends one of the client's tokens, if it has one left.
 func (l *limiter) allow(ip netip.Addr) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()

@@ -126,7 +126,6 @@ async function expectSound(page: Page) {
     for (const name of await seat.getByRole('paragraph').all())
       await expect(name).toHaveAttribute('title', /.+/);
     expect(await lines(seat.locator('p, button'))).toBe(1);
-    // Every seat can be scrolled into view, however full its row.
     await seat.scrollIntoViewIfNeeded();
     await expect(seat).toBeInViewport();
   }
@@ -152,7 +151,6 @@ test('a full room turns the thirty-first person away', async ({ page, newPartici
   await join(page, url, you);
   const others = await joinOthers(page, 29);
   try {
-    // Over the socket, the server refuses a thirty-first seat.
     await expect(joinOthers(page, 1)).rejects.toThrow('This room is full.');
     // In the browser, they learn why before they get to the name form.
     const latecomer = await newParticipant();
@@ -283,7 +281,6 @@ test('phones give the room title a line of its own', async ({ page, isMobile }) 
   await join(page, url, you);
   const title = (await page.getByRole('heading', { level: 1 }).boundingBox())!;
   const menu = (await page.getByRole('button', { name: 'Menu' }).boundingBox())!;
-  // Beneath the bar on a phone, within it on a desktop.
   if (isMobile) expect(title.y).toBeGreaterThanOrEqual(menu.y + menu.height);
   else expect(title.y).toBeLessThan(menu.y + menu.height);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(

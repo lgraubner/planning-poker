@@ -75,7 +75,6 @@ export function CopyLinkButton({
   );
 }
 
-/** Copies the room's link; the result shows for three seconds. */
 export function useCopyLink() {
   const [result, setResult] = useState<'copied' | 'failed' | null>(null);
 

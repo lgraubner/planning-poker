@@ -18,6 +18,10 @@ gofmt never adds blank lines, so write Go function bodies in **paragraphs**, one
 - A blank line follows each closing `}` and each run of `defer`s when more statements follow.
 - A blank line precedes an `if`, `for`, `switch` or `select` that starts a new step, and the final `return` of a function with several steps.
 
+## Comments
+
+A comment in Go or TypeScript records the **why** the code cannot show: an edge case, a constraint (security, CSP, browser quirk), a product rule, or a `ponytail:` shortcut with its ceiling. Name and type carry the what, so a comment that restates the code below it gets deleted. Write short, full sentences.
+
 ## Commits
 
 Write every commit message as a Conventional Commit: `type(scope)!: subject`, with a lowercase subject. Pull request titles follow the same format. The `commit-msg` hook and CI on pull requests enforce it with commitlint (`web/commitlint.config.mjs`); when commitlint rejects a message, rewrite the message and commit again.

@@ -12,7 +12,6 @@ const homeClassName = clsx(
 // Headings and the line under them read without a closing full stop.
 const bare = (text: string) => text.replace(/\.$/, '');
 
-/** A dead end: what went wrong, centred under a tilted card, and maybe a way on. */
 export function ErrorPage({
   title,
   description,

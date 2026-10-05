@@ -74,7 +74,6 @@ function EyeIcon() {
   );
 }
 
-// Shared by the room's menu and the spectator list, so both popups read as one family.
 const popupClassName =
   'min-w-44 origin-(--transform-origin) rounded-lg border border-border bg-surface p-1 shadow-lg shadow-black/40 outline-none transition-[opacity,scale] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] data-ending-style:opacity-0 data-starting-style:opacity-0 motion-safe:data-ending-style:scale-95 motion-safe:data-starting-style:scale-95';
 
@@ -161,7 +160,6 @@ export function SpectatorList({
               </ul>
             )}
             <div className="mx-1 my-1 border-t border-border" />
-            {/* Everything about watching lives here, the way in and the way back out. */}
             <Popover.Close
               disabled={!connected}
               onClick={() => onSpectate(!watching)}

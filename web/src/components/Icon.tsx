@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 
-/** A 16px line icon in the text's colour, from Lucide's 24px grid. */
 export function Icon({ children }: { children: ReactNode }) {
   return (
     <svg
