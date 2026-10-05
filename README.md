@@ -1,14 +1,18 @@
 # Planning Poker
 
-Self-hosted planning poker without accounts: create a room, share the link, and start estimating with up to 30 people. It ships as one small container, a single binary with no external services and no analytics. Rooms can optionally be kept in SQLite.
+Self-hosted planning poker without accounts: create a room, share the link, and start estimating with up to 30 people. It ships as one small container, a single binary with no external services and no analytics. Rooms can optionally be kept in SQLite, and you can link your own legal notice and privacy policy.
 
-| Voting                                                                      | Revealed                                                                               | Consensus                                                            |
-| --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| ![Five participants, three have picked a card](docs/screenshots/voting.png) | ![Revealed estimates of 3, 5 and 8 call for discussion](docs/screenshots/revealed.png) | ![Everyone picked 5: 100% agreement](docs/screenshots/consensus.png) |
+![Five voters revealed their cards: 5 with 80% agreement, while two spectators watch](docs/screenshots/room.png)
 
-## Rules
+## How it works
+
+Whoever creates a room picks its deck: Modified Fibonacci (`0`, `1`, `2`, `3`, `5`, `8`, `13`, `20`, `40`, `100`) or T-shirt sizes (`XS` to `XXL`). Both end with `?` and `☕`. The deck is fixed for the room's lifetime; the title can be renamed at any time.
 
 Cards stay hidden until someone reveals them. If the estimates span more than neighbouring cards (for example 3 and 8), or anyone played `?`, the table shows **Discuss!**. Otherwise it proposes the median card with an **agreement** score: every pair of voters on the same card counts 100%, on neighbouring cards 50%, further apart 0%, averaged over all pairs. `☕` asks for a break and is left out of the result.
+
+Anyone can join as a **spectator** instead, or switch at any time. Spectators sit beside the table without a card, do not hold up the round, and can still reveal and start the next one.
+
+The room link is the only key: anyone who has it can join under any name. The browser remembers your name and seat, so a reload or a dropped connection keeps your place for 30 seconds.
 
 ## Run with Docker
 
@@ -50,8 +54,8 @@ To update, run `docker compose pull && docker compose up -d`.
 | `PORT`               | `8080`            | Listening port.                                                                                                                                                                                                                                                    |
 | `DATABASE_PATH`      | unset (in memory) | SQLite file that keeps rooms across restarts. Created if missing; its directory must exist and be writable.                                                                                                                                                        |
 | `CLIENT_IP_HEADER`   | unset             | Header your reverse proxy sets with the client address, such as `X-Forwarded-For` (last entry is used), so rate limits apply per client instead of to the proxy. Only set it when every request passes through that proxy, because clients can otherwise forge it. |
-| `LEGAL_NOTICE_URL`   | unset             | Your legal notice (Impressum), linked in the footer of every page. Must be an `http` or `https` URL.                                                                                                                                                               |
-| `PRIVACY_POLICY_URL` | unset             | Your privacy policy, linked in the footer of every page. Must be an `http` or `https` URL.                                                                                                                                                                         |
+| `LEGAL_NOTICE_URL`   | unset             | Your legal notice (Impressum), linked in the page footer and the room menu. Must be an `http` or `https` URL.                                                                                                                                                      |
+| `PRIVACY_POLICY_URL` | unset             | Your privacy policy, linked in the page footer and the room menu. Must be an `http` or `https` URL.                                                                                                                                                                |
 
 ### SQLite persistence
 
@@ -67,7 +71,24 @@ Rooms nobody ever joined expire after ten minutes either way.
 
 ### Production
 
-Run exactly one replica: rooms live in that process, so a second one would not see them. Put HTTPS termination in front of it (browsers only allow "Copy room link" on HTTPS or localhost), preserve the public `Host` header, and forward WebSocket upgrades. `/healthz` returns process health. Logs go to stdout and omit room codes, names, titles, and estimates. The distroless image runs as a non-root user.
+Run exactly one replica: rooms live in that process, so a second one would not see them. Put HTTPS termination in front of it (browsers only allow "Copy room link" on HTTPS or localhost), preserve the public `Host` header, and forward WebSocket upgrades. `/healthz` returns process health. Logs go to stdout and omit room codes, names, titles, and estimates. The distroless image runs as a non-root user and contains no shell or curl, so check `/healthz` from outside the container rather than with a Docker `HEALTHCHECK`.
+
+Each client address can create 5 rooms at once, then one per minute. Behind a proxy, set `CLIENT_IP_HEADER`, or everyone shares that limit. Cross-origin requests are refused and pages cannot be embedded in frames.
+
+[Caddy](https://caddyserver.com) covers HTTPS, the `Host` header, and WebSocket upgrades with `reverse_proxy localhost:8080`. With nginx:
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+```
+
+Both set `X-Forwarded-For`, so use `CLIENT_IP_HEADER=X-Forwarded-For`. The room menu's "Report a problem" link opens an issue in this repository.
 
 ## Technical overview
 
