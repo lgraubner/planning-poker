@@ -7,18 +7,9 @@ import { ErrorMessage } from '../components/ErrorMessage';
 import { Form } from '../components/Form';
 import { SelectField } from '../components/SelectField';
 import { TextField } from '../components/TextField';
+import { decks } from '../decks';
 
 export const Route = createFileRoute('/')({ component: Home });
-
-// The server's deck names, with the cards each one holds
-const decks = [
-  {
-    value: 'fibonacci',
-    label: 'Modified Fibonacci',
-    description: '0, 1, 2, 3, 5, 8, 13, 20, 40, 100, ?, ☕',
-  },
-  { value: 'tshirt', label: 'T-shirt sizes', description: 'XS, S, M, L, XL, XXL, ?, ☕' },
-];
 
 function Home() {
   return (
