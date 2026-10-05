@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Icon } from './Icon';
 
@@ -71,15 +71,7 @@ export function CopyLinkButton({
 
 export function useCopyLink() {
   const [result, setResult] = useState<'copied' | 'failed' | null>(null);
-
-  useEffect(() => {
-    if (!result) {
-      return;
-    }
-
-    const timer = setTimeout(() => setResult(null), 3000);
-    return () => clearTimeout(timer);
-  }, [result]);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   async function copy() {
     try {
@@ -88,6 +80,9 @@ export function useCopyLink() {
     } catch {
       setResult('failed');
     }
+
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setResult(null), 3000);
   }
 
   return [result, copy] as const;

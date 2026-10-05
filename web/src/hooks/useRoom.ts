@@ -36,10 +36,6 @@ export function useRoom(code: string, participant: Identity) {
     // seats you again from it rather than from the name and role you first joined with.
     let self: Identity = participant;
     const abort = new AbortController();
-    setSnapshot(null);
-    setFatal(false);
-    setError('');
-    setConnected(false);
 
     function scheduleReconnect() {
       if (disposed || terminal) {

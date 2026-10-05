@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { ErrorPage } from '../components/ErrorPage';
@@ -12,103 +12,93 @@ import { useDelayed } from '../hooks/useDelayed';
 import { identity, remember, remembered, type Identity } from '../identity';
 import { useRoom, type Participant } from '../hooks/useRoom';
 
-export const Route = createFileRoute('/$code')({ component: RoomPage });
+type RoomInfo = { title: string; available: boolean; reason?: string; missing?: boolean };
+
+export const Route = createFileRoute('/$code')({
+  loader: ({ params, abortController }) => lookup(params.code, abortController.signal),
+  // A room left and entered again asks the server anew rather than showing a cached answer
+  gcTime: 0,
+  // RoomLoading holds back its text itself, so the router shows it at once and for no longer
+  pendingMs: 0,
+  pendingMinMs: 0,
+  pendingComponent: () => <RoomLoading>Loading room…</RoomLoading>,
+  component: RoomPage,
+});
+
+async function lookup(code: string, signal: AbortSignal): Promise<RoomInfo> {
+  const id = remembered('id');
+
+  for (let attempt = 0; ; attempt++) {
+    // A network failure reads like any other failed response
+    const response = await fetch(`/api/rooms/${encodeURIComponent(code)}`, {
+      signal,
+      headers: { 'X-Participant-ID': id },
+    }).catch(() => Response.error());
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      // Only a room that does not exist makes a new one the way on
+      return {
+        title: '',
+        available: false,
+        reason: data.error || 'Could not load room',
+        missing: response.status === 404,
+      };
+    }
+
+    // A reload can arrive before the old tab's socket has finished closing
+    if (data.available || !id || attempt === 3) {
+      return data;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+}
 
 function RoomPage() {
   const { code } = Route.useParams();
   return <RoomEntry key={code} code={code} />;
 }
 
+// The participant who entered, or why they could not
+function enter(name: string, spectator: boolean): Identity | string {
+  if (!name.trim() || [...name.trim()].length > 40 || /\p{Cc}/u.test(name)) {
+    return 'Use 1–40 characters without control characters';
+  }
+
+  try {
+    return identity(name.trim(), spectator);
+  } catch {
+    return 'Allow browser storage to remember your participant, then try again';
+  }
+}
+
 function RoomEntry({ code }: { code: string }) {
-  const [info, setInfo] = useState<{
-    title: string;
-    available: boolean;
-    reason?: string;
-  } | null>(null);
+  const info = Route.useLoaderData();
+  const [entry, setEntry] = useState(() => {
+    const savedName = remembered('name').trim();
+    return info.available && savedName ? enter(savedName, remembered('spectator') === 'true') : '';
+  });
 
-  const [error, setError] = useState('');
-  // Only a room that does not exist makes a new one the way on
-  const [missing, setMissing] = useState(false);
-  const [joinError, setJoinError] = useState('');
-  const [participant, setParticipant] = useState<Identity | null>(null);
-
-  useEffect(() => {
-    const abort = new AbortController();
-    let retry: ReturnType<typeof setTimeout>;
-    const id = remembered('id');
-
-    async function lookup(attempt = 0) {
-      try {
-        const response = await fetch(`/api/rooms/${encodeURIComponent(code)}`, {
-          signal: abort.signal,
-          headers: { 'X-Participant-ID': id },
-        });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          setMissing(response.status === 404);
-          throw new Error(data.error || 'Could not load room');
-        }
-
-        // A reload can arrive before the old tab's socket has finished closing
-        if (!data.available && id && attempt < 3) {
-          retry = setTimeout(() => void lookup(attempt + 1), 500);
-          return;
-        }
-
-        if (abort.signal.aborted) {
-          return;
-        }
-
-        setInfo(data);
-        const savedName = remembered('name').trim();
-        if (data.available && savedName) {
-          join(savedName, remembered('spectator') === 'true');
-        }
-      } catch (cause) {
-        if (!abort.signal.aborted) {
-          setError(cause instanceof Error ? cause.message : 'Could not load room');
-        }
-      }
-    }
-
-    void lookup();
-    return () => {
-      abort.abort();
-      clearTimeout(retry);
-    };
-  }, [code]);
-
-  function join(name: string, spectator: boolean) {
-    if (!name.trim() || [...name.trim()].length > 40 || /\p{Cc}/u.test(name)) {
-      setJoinError('Use 1–40 characters without control characters');
-      return;
-    }
-
-    try {
-      setParticipant(identity(name.trim(), spectator));
-    } catch {
-      setJoinError('Allow browser storage to remember your participant, then try again');
-    }
+  if (typeof entry === 'object') {
+    return <Room code={code} participant={entry} />;
   }
 
-  if (participant) {
-    return <Room code={code} participant={participant} />;
-  }
-
-  if (error || info?.available === false) {
+  if (!info.available) {
     return (
       <UnavailableRoom
-        message={error || info?.reason || 'You cannot join this room right now'}
-        missing={missing}
+        message={info.reason || 'You cannot join this room right now'}
+        missing={!!info.missing}
       />
     );
   }
 
-  if (!info) {
-    return <RoomLoading>Loading room…</RoomLoading>;
-  }
-
-  return <JoinRoom title={info.title} error={joinError} onJoin={join} />;
+  return (
+    <JoinRoom
+      title={info.title}
+      error={entry}
+      onJoin={(name, spectator) => setEntry(enter(name, spectator))}
+    />
+  );
 }
 
 function UnavailableRoom({ message, missing }: { message: string; missing: boolean }) {

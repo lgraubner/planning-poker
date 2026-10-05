@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import confetti from 'canvas-confetti';
 import clsx from 'clsx';
 import { consensus } from '../consensus';
@@ -136,36 +136,31 @@ export function PokerTable({
 
 // A fixed canvas painted before the number, so the burst starts behind it
 function Confetti() {
-  const canvas = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const burst = confetti.create(canvas.current!, {
-      resize: true,
-      disableForReducedMotion: true,
-    });
-
-    const number = canvas.current!.parentElement!.getBoundingClientRect();
-    void burst({
-      particleCount: 60,
-      spread: 360,
-      startVelocity: 25,
-      origin: {
-        x: (number.left + number.width / 2) / innerWidth,
-        y: (number.top + number.height / 2) / innerHeight,
-      },
-    });
-
-    return () => burst.reset();
-  }, []);
-
   return (
     <canvas
-      ref={canvas}
+      ref={burst}
       aria-hidden="true"
       data-testid="confetti"
       className="pointer-events-none fixed inset-0 size-full"
     />
   );
+}
+
+// Lives outside Confetti, so a re-render keeps the same ref and does not burst again
+function burst(canvas: HTMLCanvasElement) {
+  const fire = confetti.create(canvas, { resize: true, disableForReducedMotion: true });
+  const number = canvas.parentElement!.getBoundingClientRect();
+  void fire({
+    particleCount: 60,
+    spread: 360,
+    startVelocity: 25,
+    origin: {
+      x: (number.left + number.width / 2) / innerWidth,
+      y: (number.top + number.height / 2) / innerHeight,
+    },
+  });
+
+  return () => fire.reset();
 }
 
 // Two stacked seats outgrow the table's height, so a side spans all three rows
