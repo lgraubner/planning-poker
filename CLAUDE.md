@@ -22,6 +22,8 @@ gofmt never adds blank lines, so write Go function bodies in **paragraphs**, one
 
 A comment in Go or TypeScript records the **why** the code cannot show: an edge case, a constraint (security, CSP, browser quirk), a product rule, or a `ponytail:` shortcut with its ceiling. Name and type carry the what, so a comment that restates the code below it gets deleted. Write short, full sentences.
 
+A `//` comment starts with a capital letter, except a Go doc comment, which starts with the name it documents (`// clientIP groups …`). A one-line `//` comment holding a single sentence ends without a full stop; one with several sentences, or spanning several lines, ends each sentence with one.
+
 ## Commits
 
 Write every commit message as a Conventional Commit: `type(scope)!: subject`, with a lowercase subject. Pull request titles follow the same format. The `commit-msg` hook and CI on pull requests enforce it with commitlint (`web/commitlint.config.mjs`); when commitlint rejects a message, rewrite the message and commit again.

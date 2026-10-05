@@ -1,7 +1,7 @@
 import { type Locator, type Page } from '@playwright/test';
 import { card, createRoom, expect, join, test } from './fixtures';
 
-// First names of every length, and one full name as the rare long one.
+// First names of every length, and one full name as the rare long one
 const [you, ...names] = [
   'Maximiliane',
   'Bo',
@@ -35,7 +35,7 @@ const [you, ...names] = [
   'Mei',
 ];
 
-// Everyone but you joins over a bare WebSocket: a browser context each would be slow.
+// Everyone but you joins over a bare WebSocket: a browser context each would be slow
 async function joinOthers(page: Page, count: number) {
   const url = new URL(
     `${page
@@ -46,7 +46,7 @@ async function joinOthers(page: Page, count: number) {
   const ip = `10.${Math.floor(Math.random() * 254) + 1}.0.1`;
   return Promise.all(
     Array.from({ length: count }, (_, i) => {
-      // Node's WebSocket takes headers, the browser one does not.
+      // Node's WebSocket takes headers, the browser one does not
       const socket = new WebSocket(url, { headers: { 'X-Forwarded-For': ip } } as never);
       return new Promise<WebSocket>((resolve, reject) => {
         socket.onopen = () =>
@@ -55,7 +55,7 @@ async function joinOthers(page: Page, count: number) {
           const message = JSON.parse(String(event.data));
           if (message.type !== 'snapshot') return reject(new Error(message.message));
           socket.onmessage = null;
-          // Every other one picks a card, so the table shows both states.
+          // Every other one picks a card, so the table shows both states
           if (i % 2 === 0)
             socket.send(
               JSON.stringify({
@@ -92,11 +92,11 @@ async function expectSound(page: Page) {
     await Promise.all(
       seats.map((seat) =>
         seat.evaluate((element) => {
-          // Your own name is a button, so you can change it.
+          // Your own name is a button, so you can change it
           const label = element.querySelector('p, button')!;
           const range = document.createRange();
           range.selectNodeContents(label);
-          // A cut-off name's text runs past its label, so clip it to what shows.
+          // A cut-off name's text runs past its label, so clip it to what shows
           const box = label.getBoundingClientRect();
           const text = range.getBoundingClientRect();
           const left = Math.max(text.left, box.left);
@@ -122,21 +122,21 @@ async function expectSound(page: Page) {
     }
   }
   for (const seat of seats) {
-    // Others' names show in full on hover; your own is yours to know.
+    // Others' names show in full on hover; your own is yours to know
     for (const name of await seat.getByRole('paragraph').all())
       await expect(name).toHaveAttribute('title', /.+/);
     expect(await lines(seat.locator('p, button'))).toBe(1);
     await seat.scrollIntoViewIfNeeded();
     await expect(seat).toBeInViewport();
   }
-  // Back to where people start, for the next screenshot.
+  // Back to where people start, for the next screenshot
   await page.evaluate(() => {
     for (const element of document.querySelectorAll('*')) element.scrollLeft = 0;
     scrollTo(0, 0);
   });
 }
 
-// A full-page shot leaves the sticky deck over a tall room: grow the window to the page instead.
+// A full-page shot leaves the sticky deck over a tall room: grow the window to the page instead
 async function wholePage(page: Page) {
   const size = page.viewportSize()!;
   const height = await page.evaluate(() => document.documentElement.scrollHeight);
@@ -152,14 +152,14 @@ test('a full room turns the thirty-first person away', async ({ page, newPartici
   const others = await joinOthers(page, 29);
   try {
     await expect(joinOthers(page, 1)).rejects.toThrow('This room is full.');
-    // In the browser, they learn why before they get to the name form.
+    // In the browser, they learn why before they get to the name form
     const latecomer = await newParticipant();
     await latecomer.goto(url);
     await expect(
       latecomer.getByRole('heading', { name: 'This room is full', exact: true }),
     ).toBeVisible();
     await expect(latecomer.getByLabel('Name', { exact: true })).toBeHidden();
-    // A new room is no answer to a full one.
+    // A new room is no answer to a full one
     await expect(latecomer.getByRole('link', { name: 'Start a new room' })).toBeHidden();
     await info.attach('full room', {
       body: await latecomer.screenshot(),
@@ -178,7 +178,7 @@ function settled(page: Page) {
   );
 }
 
-// Top, left, right and bottom seats: your row is the bottom one, the other wide row the top.
+// Top, left, right and bottom seats: your row is the bottom one, the other wide row the top
 function seating(page: Page) {
   return page.getByRole('article').evaluateAll((articles, you) => {
     const mine = articles.find((article) =>
@@ -263,7 +263,7 @@ test('a common name shows in full on a desktop', async ({ page, isMobile }) => {
 });
 
 test('the longest room title stays on one line', async ({ page }, info) => {
-  // The longest title the server accepts.
+  // The longest title the server accepts
   const title =
     'Quarterly refinement of the payments platform roadmap, including the checkout migration epic 2026-Q4';
   const url = await createRoom(page, title);
@@ -286,7 +286,7 @@ test('phones give the room title a line of its own', async ({ page, isMobile }) 
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(
     'Friday sprint planning session',
   );
-  // Not cut short with an ellipsis.
+  // Not cut short with an ellipsis
   const text = page.getByRole('heading', { level: 1 }).getByText('Friday sprint planning session');
   expect(await text.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
 });
@@ -306,7 +306,7 @@ test('a small room fits the window without scrolling', async ({ page }) => {
 test('the card deck sits at the bottom of the window', async ({ page }) => {
   const url = await createRoom(page);
   await join(page, url, you);
-  // The deck shares its cell with the taller round controls, so it must hug the cell's bottom.
+  // The deck shares its cell with the taller round controls, so it must hug the cell's bottom
   const gap = await page.getByRole('group', { name: 'Choose your card' }).evaluate((element) => {
     const cell = element.closest('section')!.parentElement!.getBoundingClientRect();
     return cell.bottom - element.getBoundingClientRect().bottom;

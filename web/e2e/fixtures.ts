@@ -11,7 +11,7 @@ export const test = base.extend<{ newParticipant: () => Promise<Page> }>({
   // Playwright requires the object pattern even when a fixture uses no others.
   // oxlint-disable-next-line no-empty-pattern
   extraHTTPHeaders: async ({}, use) => use({ 'X-Forwarded-For': clientIP() }),
-  // Each participant needs their own browser context: tabs in one context share an identity.
+  // Each participant needs their own browser context: tabs in one context share an identity
   newParticipant: async (
     { browser, contextOptions, baseURL, viewport, isMobile, hasTouch, userAgent },
     use,

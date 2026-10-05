@@ -245,7 +245,7 @@ func TestPerClientRateLimits(t *testing.T) {
 		t.Fatal("another IPv6 prefix was limited")
 	}
 
-	// A team behind one office address reconnects at once after a deploy: only guesses count.
+	// A team behind one office address reconnects at once after a deploy: only guesses count
 	code, _ := store.Create("Sprint", "fibonacci")
 	for i := 0; i < 200; i++ {
 		if status := request("GET", "/api/rooms/"+code, "192.0.2.1"); status != 200 {

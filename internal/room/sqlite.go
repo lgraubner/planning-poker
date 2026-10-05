@@ -30,7 +30,7 @@ func Open(path string) (*Store, error) {
 		return nil, err
 	}
 
-	// Databases from before decks lack the column, and SQLite cannot add one only if missing.
+	// Databases from before decks lack the column, and SQLite cannot add one only if missing
 	if _, err := db.Exec(`SELECT deck FROM rooms LIMIT 0`); err != nil {
 		if _, err := db.Exec(`ALTER TABLE rooms ADD COLUMN deck TEXT NOT NULL DEFAULT 'fibonacci'`); err != nil {
 			db.Close()
@@ -39,7 +39,7 @@ func Open(path string) (*Store, error) {
 	}
 
 	s := New()
-	// Rooms held for 30 days need more room slots, or a full store would remove idle rooms long before then.
+	// Rooms held for 30 days need more room slots, or a full store would remove idle rooms long before then
 	s.db, s.ttl, s.maxRooms = db, 30*24*time.Hour, 100_000
 	rows, err := db.Query(`SELECT code, title, deck, round, revealed, joined, empty_since FROM rooms`)
 	if err != nil {
@@ -57,13 +57,13 @@ func Open(path string) (*Store, error) {
 			return nil, err
 		}
 
-		// The votes of a revealed round were in memory, so the room comes back ready for the next.
+		// The votes of a revealed round were in memory, so the room comes back ready for the next
 		if r.revealed {
 			r.revealed = false
 			r.round++
 		}
 
-		// Rooms occupied at shutdown start their idle clock now.
+		// Rooms occupied at shutdown start their idle clock now
 		r.emptySince = s.now()
 		if emptySince != 0 {
 			r.emptySince = time.Unix(emptySince, 0)

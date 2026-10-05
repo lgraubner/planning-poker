@@ -16,8 +16,8 @@ import (
 
 const (
 	MaxParticipants = 30
-	maxSockets      = 4 * MaxParticipants // per room, including sockets that have not joined yet
-	maxTabs         = 5                   // connections per participant
+	maxSockets      = 4 * MaxParticipants // Per room, including sockets that have not joined yet
+	maxTabs         = 5                   // Connections per participant
 )
 
 const alphabet = "23456789abcdefghjkmnpqrstuvwxyz"
@@ -84,9 +84,9 @@ type Store struct {
 	mu    sync.Mutex
 	rooms map[string]*session
 	now   func() time.Time
-	db    *sql.DB       // nil keeps rooms in memory only
-	ttl   time.Duration // how long a joined room survives without connections
-	// Bounds memory, since every room stays loaded, and the chance of guessing a code.
+	db    *sql.DB       // Nil keeps rooms in memory only
+	ttl   time.Duration // How long a joined room survives without connections
+	// Bounds memory, since every room stays loaded, and the chance of guessing a code
 	maxRooms int
 }
 
@@ -184,7 +184,7 @@ func (s *Store) removeLongestEmpty() bool {
 	return true
 }
 
-// Info returns the room's title, and the error a join would meet right now.
+// Info returns the room's title, and the error a join would meet right now
 func (s *Store) Info(code, secret string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -215,7 +215,7 @@ func (s *Store) Info(code, secret string) (string, error) {
 	return r.title, nil
 }
 
-// Reserve bounds sockets even before the client has sent its join message.
+// Reserve bounds sockets even before the client has sent its join message
 func (s *Store) Reserve(code string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -242,7 +242,7 @@ func (s *Store) Release(code string) {
 	}
 }
 
-// Join seats a new participant as a spectator or voter; a returning one keeps their role.
+// Join seats a new participant as a spectator or voter; a returning one keeps their role
 func (s *Store) Join(code, secret, name string, spectator bool) (*Subscription, error) {
 	name, err := ValidateLabel(name, 40)
 	if err != nil {
@@ -282,7 +282,7 @@ func (s *Store) Join(code, secret, name string, spectator bool) (*Subscription, 
 		return nil, ErrTooManyTabs
 	}
 
-	// Existing tabs share the first joined name as well as the estimate.
+	// Existing tabs share the first joined name as well as the estimate
 	sub := &Subscription{Updates: make(chan Snapshot, 1), code: code, member: p}
 	p.connections[sub] = true
 	p.disconnected = time.Time{}
@@ -343,7 +343,7 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 		return ErrNotFound
 	}
 
-	// Only estimating belongs to a round: renaming or changing role must survive a reset.
+	// Only estimating belongs to a round: renaming or changing role must survive a reset
 	if round != r.round && (command == "select" || command == "reveal" || command == "reset") {
 		return errors.New("The round changed. Try again.")
 	}
@@ -369,7 +369,7 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 		}
 
 		sub.member.spectator = value == "spectator"
-		// A revealed vote stays until reset, so the cards under discussion do not change.
+		// A revealed vote stays until reset, so the cards under discussion do not change
 		if !r.revealed {
 			sub.member.estimate = ""
 		}
@@ -407,7 +407,7 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 		return errors.New("Unknown command.")
 	}
 
-	// Names, roles and estimates live only in memory, so only the room's own fields are saved.
+	// Names, roles and estimates live only in memory, so only the room's own fields are saved
 	if command == "rename" || command == "reveal" || command == "reset" {
 		s.save(sub.code, r)
 	}

@@ -50,7 +50,7 @@ func (l *limiter) allow(ip netip.Addr) bool {
 	return l.bucket(ip).allow(l.rate, l.burst)
 }
 
-// ready reports whether the client has a token left, without spending it.
+// ready reports whether the client has a token left, without spending it
 func (l *limiter) ready(ip netip.Addr) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()

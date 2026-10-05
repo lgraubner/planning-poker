@@ -324,7 +324,7 @@ func TestSpectatorsHoldNoEstimate(t *testing.T) {
 
 	<-bob.Updates
 
-	// A stale round must not block a role change, as with renames.
+	// A stale round must not block a role change, as with renames
 	if err := s.Command(bob, "role", "spectator", 7); err != nil {
 		t.Fatal(err)
 	}
@@ -338,7 +338,7 @@ func TestSpectatorsHoldNoEstimate(t *testing.T) {
 	}
 
 	<-alice.Updates
-	// Another tab joining as a spectator shares the voter's seat.
+	// Another tab joining as a spectator shares the voter's seat
 	secondTab, _ := s.Join(code, aliceID, "Alice", true)
 	if snapshot := <-secondTab.Updates; snapshot.Participants[0].Spectator {
 		t.Fatal("rejoining changed an existing participant's role")
@@ -359,7 +359,7 @@ func TestWatchingAfterTheRevealKeepsTheVote(t *testing.T) {
 		}
 	}
 
-	// The team is still discussing the revealed cards, so they must not change under it.
+	// The team is still discussing the revealed cards, so they must not change under it
 	if snapshot := <-alice.Updates; snapshot.Participants[1].Estimate != "8" || !snapshot.Participants[1].Spectator {
 		t.Fatalf("revealed vote changed: %+v", snapshot.Participants[1])
 	}
@@ -380,7 +380,7 @@ func TestSQLitePersistsRoomsAcrossRestarts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// A past clock tells a persisted idle clock apart from one reset at startup.
+	// A past clock tells a persisted idle clock apart from one reset at startup
 	now := time.Now().Add(-365 * 24 * time.Hour)
 	start := now
 	s.now = func() time.Time { return now }
@@ -397,7 +397,7 @@ func TestSQLitePersistsRoomsAcrossRestarts(t *testing.T) {
 		}
 	}
 
-	// Alice stays connected: the restart finds the room occupied.
+	// Alice stays connected: the restart finds the room occupied
 	bob, _ := s.Join(idle, bobID, "Bob", false)
 	s.Leave(bob)
 	now = now.Add(10 * time.Minute)
@@ -418,7 +418,7 @@ func TestSQLitePersistsRoomsAcrossRestarts(t *testing.T) {
 		t.Fatal("room lost on restart:", err)
 	}
 
-	// The votes of a revealed round stay in memory, so the room comes back ready for the next round.
+	// The votes of a revealed round stay in memory, so the room comes back ready for the next round
 	if snapshot := <-bob.Updates; snapshot.Title != "Retro" || snapshot.Deck[0] != "XS" || snapshot.Round != 3 || snapshot.Revealed {
 		t.Fatalf("room state lost on restart: %+v", snapshot)
 	}
@@ -483,7 +483,7 @@ func TestSQLiteAddsDecksToOlderDatabases(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for range 2 { // the second open finds the column already there
+	for range 2 { // The second open finds the column already there
 		s, err := Open(path)
 		if err != nil {
 			t.Fatal(err)
@@ -537,7 +537,7 @@ func TestFullStoreMakesRoomFromTheLongestEmpty(t *testing.T) {
 		now = now.Add(time.Minute)
 	}
 
-	// Someone is joining the oldest room, so it must survive.
+	// Someone is joining the oldest room, so it must survive
 	if err := s.Reserve(codes[0]); err != nil {
 		t.Fatal(err)
 	}
@@ -565,7 +565,7 @@ func TestFullStoreMakesRoomFromTheLongestEmpty(t *testing.T) {
 	}
 }
 
-// Sweep runs every second under the store lock, so it must stay cheap at the room limit.
+// Sweep runs every second under the store lock, so it must stay cheap at the room limit
 func BenchmarkSweepAtDatabaseRoomLimit(b *testing.B) {
 	s := New()
 	for i := range 100_000 {

@@ -22,7 +22,7 @@ export default defineConfig({
     },
   ],
   build: { outDir: '../internal/webui/dist', emptyOutDir: true },
-  // Unit tests live next to the code; Playwright owns e2e/.
+  // Unit tests live next to the code; Playwright owns e2e/
   test: { include: ['src/**/*.test.{ts,tsx}'] },
   server: {
     proxy: {

@@ -41,7 +41,7 @@ type Links struct{ LegalNotice, PrivacyPolicy string }
 // (e.g. X-Forwarded-For); when empty, the TCP peer address identifies clients.
 func New(ctx context.Context, store *room.Store, files fs.FS, ipHeader string, links Links) http.Handler {
 	s := &server{store: store, files: files, ctx: ctx, ipHeader: ipHeader, creators: newLimiter(1.0/60, 5), guesses: newLimiter(5, 60)}
-	// The page reads them from its head, so they show from the first paint.
+	// The page reads them from its head, so they show from the first paint
 	for _, link := range [][2]string{{"legal-notice", links.LegalNotice}, {"privacy-policy", links.PrivacyPolicy}} {
 		if link[1] != "" {
 			s.meta = fmt.Appendf(s.meta, `<meta name="%s" content="%s">`, link[0], html.EscapeString(link[1]))
@@ -77,7 +77,7 @@ func headers(next http.Handler) http.Handler {
 
 		if origin := r.Header.Get("Origin"); origin != "" {
 			u, err := url.Parse(origin)
-			// TLS may terminate at the proxy; compare the preserved public Host.
+			// TLS may terminate at the proxy; compare the preserved public Host
 			if err != nil || (u.Scheme != "http" && u.Scheme != "https") || !strings.EqualFold(u.Host, r.Host) || u.User != nil || u.Path != "" || u.RawQuery != "" || u.Fragment != "" {
 				fail(w, http.StatusForbidden, "Cross-origin requests are not allowed.")
 				return
@@ -104,12 +104,12 @@ func fail(w http.ResponseWriter, status int, message string) {
 	reply(w, status, map[string]string{"error": message})
 }
 
-// clientIP groups IPv6 clients by /64, since one host usually controls a whole prefix.
+// clientIP groups IPv6 clients by /64, since one host usually controls a whole prefix
 func (s *server) clientIP(r *http.Request) netip.Addr {
 	value := r.RemoteAddr
 
 	if values := r.Header.Values(s.ipHeader); s.ipHeader != "" && len(values) > 0 {
-		// The trusted proxy appends the peer it saw, so only the last entry is reliable.
+		// The trusted proxy appends the peer it saw, so only the last entry is reliable
 		last := values[len(values)-1]
 		value = last[strings.LastIndex(last, ",")+1:]
 	}
@@ -163,7 +163,7 @@ func (s *server) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Clients from before decks send only a title.
+	// Clients from before decks send only a title
 	if body.Deck == "" {
 		body.Deck = "fibonacci"
 	}
@@ -203,7 +203,7 @@ func (s *server) info(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// A room nobody can join right now still says why.
+	// A room nobody can join right now still says why
 	var reason string
 	if err != nil {
 		reason = err.Error()
@@ -357,7 +357,7 @@ func (s *server) spa(w http.ResponseWriter, r *http.Request) {
 	}
 
 	status := http.StatusOK
-	// Any other page still gets the app, which says it is not found, under a 404.
+	// Any other page still gets the app, which says it is not found, under a 404
 	if path != "" && (len(path) != 8 || strings.Contains(path, "/")) {
 		status = http.StatusNotFound
 	}

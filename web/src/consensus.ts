@@ -6,7 +6,7 @@
 // for discussion. "☕" is a break request, not an estimate.
 export function consensus(estimates: string[], deck: string[]) {
   const numbers = deck.filter((value) => value !== '?' && value !== '☕');
-  // A card's position in the deck; -1 for "?".
+  // A card's position in the deck; -1 for "?"
   const positions = estimates
     .filter((estimate) => estimate !== '☕')
     .map((vote) => numbers.indexOf(vote));

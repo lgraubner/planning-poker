@@ -34,7 +34,7 @@ export function PokerTable({
     participants.length > 0 && participants.every((participant) => participant.selected);
   const current = participants.find((participant) => participant.id === self);
   const result = revealed ? consensus(estimates, deck) : null;
-  // A reveal that happened before you arrived is already over: no confetti for it.
+  // A reveal that happened before you arrived is already over: no confetti for it
   const [arrivedRevealed, setArrivedRevealed] = useState(revealed);
   if (arrivedRevealed && !revealed) setArrivedRevealed(false);
   const others = participants.filter((participant) => participant.id !== self);
@@ -43,7 +43,7 @@ export function PokerTable({
   const sideCount = others.length >= 12 ? 0 : others.length >= 9 ? 4 : others.length >= 4 ? 2 : 0;
   const sides = others.slice(0, sideCount);
   const remaining = others.slice(sideCount);
-  // The rows split evenly with you below, and the spare seat goes on top.
+  // The rows split evenly with you below, and the spare seat goes on top
   const bottomCount = Math.max(Math.floor((remaining.length + 1) / 2) - 1, 0);
   const top = remaining.slice(0, remaining.length - bottomCount);
   const bottomOthers = remaining.slice(top.length);
@@ -54,7 +54,7 @@ export function PokerTable({
 
   return (
     <div
-      // A crowded room stretches the table under its longest row: 90px a seat, less the sides.
+      // A crowded room stretches the table under its longest row: 90px a seat, less the sides
       style={
         {
           '--table': `${Math.max(320, Math.max(top.length, bottom.length) * 90 - 180)}px`,
@@ -131,7 +131,7 @@ export function PokerTable({
   );
 }
 
-// A fixed canvas painted before the number, so the burst starts behind it.
+// A fixed canvas painted before the number, so the burst starts behind it
 function Confetti() {
   const canvas = useRef<HTMLCanvasElement>(null);
 
@@ -163,7 +163,7 @@ function Confetti() {
   );
 }
 
-// Two stacked seats outgrow the table's height, so a side spans all three rows.
+// Two stacked seats outgrow the table's height, so a side spans all three rows
 function SideSeats({
   participants,
   self,
@@ -208,7 +208,7 @@ function ParticipantRow({
   return (
     <div
       className={clsx(
-        // Seats flow as inline blocks so a crowded row wraps into lines of even length.
+        // Seats flow as inline blocks so a crowded row wraps into lines of even length
         'col-span-full w-full px-2 py-1 text-center text-balance *:mx-[3px] *:my-1.5 *:inline-block *:align-top',
         top ? 'row-1 self-end' : 'row-3 self-start',
       )}
@@ -256,12 +256,12 @@ function ParticipantCard({
   connected?: boolean;
   onRename?: (name: string) => void;
 }) {
-  // "Vote again" clears the estimate at once, so keep the face until the card has turned back.
+  // "Vote again" clears the estimate at once, so keep the face until the card has turned back
   const face = revealed && participant.selected ? participant.estimate || '' : '';
   const [shown, setShown] = useState(face);
   if (face && face !== shown) setShown(face);
   const unflipping = !face && !!shown;
-  // A reveal that happened before you arrived is already over: show the face without turning it.
+  // A reveal that happened before you arrived is already over: show the face without turning it
   const [arrivedRevealed, setArrivedRevealed] = useState(!!face);
   if (arrivedRevealed && !face) setArrivedRevealed(false);
   const reconnecting = useDelayed(!participant.connected);
@@ -304,7 +304,7 @@ function ParticipantCard({
             <div
               className={clsx(
                 'absolute inset-0 flex items-center justify-center rounded-lg border-2 font-semibold text-indigo-400 backface-hidden rotate-y-180 border-indigo-400 bg-surface',
-                // "XXL" fills the card edge to edge at full size.
+                // "XXL" fills the card edge to edge at full size
                 (face || shown).length > 2 ? 'text-base' : 'text-xl',
               )}
             >
@@ -314,7 +314,7 @@ function ParticipantCard({
         </div>
       </div>
       {own && onRename ? (
-        // Holds the name's line while the field floats over it, so the seats stay put.
+        // Holds the name's line while the field floats over it, so the seats stay put
         <div className="relative mt-2 mb-0.5 h-5 text-sm">
           <InlineEdit
             value={participant.name}

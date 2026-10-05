@@ -22,12 +22,12 @@ function Shell({ children }: PropsWithChildren) {
   );
 }
 
-// Any path's first segment matches a room, so this renders inside the room route.
+// Any path's first segment matches a room, so this renders inside the room route
 function NotFound() {
   return <ErrorPage title="Page not found" home="Back to home" />;
 }
 
-// Replaces the whole layout, so it brings its own.
+// Replaces the whole layout, so it brings its own
 function RouteError() {
   return (
     <Shell>

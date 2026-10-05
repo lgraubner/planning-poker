@@ -9,7 +9,7 @@ const homeClassName = clsx(
   'mt-6 no-underline transition-[scale] duration-150 ease-out active:scale-[0.97] motion-reduce:transition-none',
 );
 
-// Headings and the line under them read without a closing full stop.
+// Headings and the line under them read without a closing full stop
 const bare = (text: string) => text.replace(/\.$/, '');
 
 export function ErrorPage({
@@ -37,7 +37,7 @@ export function ErrorPage({
           className="mb-8 flex h-21 w-14 -rotate-6 items-center justify-center rounded-xl border-2 border-border bg-surface text-2xl font-semibold text-zinc-500"
         >
           {failed ? (
-            // Drawn, as a typed × sits small and thin beside the question mark.
+            // Drawn, as a typed × sits small and thin beside the question mark
             <svg
               viewBox="0 0 24 24"
               className="size-5 fill-none stroke-current stroke-3 [stroke-linecap:round]"

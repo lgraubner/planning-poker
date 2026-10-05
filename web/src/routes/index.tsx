@@ -10,7 +10,7 @@ import { TextField } from '../components/TextField';
 
 export const Route = createFileRoute('/')({ component: Home });
 
-// The server's deck names, with the cards each one holds.
+// The server's deck names, with the cards each one holds
 const decks = [
   {
     value: 'fibonacci',
@@ -50,7 +50,7 @@ function CreateRoomForm() {
         if (!response.ok) throw new Error(result.error || 'Could not create room');
         await navigate({ to: '/$code', params: { code: result.code } });
       } catch (cause) {
-        // Form errors end without a full stop, the server's included.
+        // Form errors end without a full stop, the server's included
         setError(
           cause instanceof Error ? cause.message.replace(/\.$/, '') : 'Could not create room',
         );

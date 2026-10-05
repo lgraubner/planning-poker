@@ -24,7 +24,7 @@ export function RoomHeader({
   spectators: ReactNode;
 }) {
   return (
-    // Phones give the title a line of its own beneath the bar, so a long one still fits.
+    // Phones give the title a line of its own beneath the bar, so a long one still fits
     <header className="mb-2 grid min-h-11 grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[1fr_minmax(0,auto)_1fr]">
       <HomeLink />
       <LeaveRoomDialog />
@@ -104,7 +104,7 @@ export function SpectatorList({
         aria-label={label}
         title={label}
         className={clsx(
-          // A ghost button: quieter than the bar's outlined buttons, as it only informs.
+          // A ghost button: quieter than the bar's outlined buttons, as it only informs
           'flex h-8 items-center gap-1.5 rounded-md px-2 text-sm tabular-nums hover:bg-surface-raised data-popup-open:bg-surface-raised',
           watching
             ? 'font-semibold text-indigo-300'
@@ -145,7 +145,7 @@ export function SpectatorList({
                         maxLength={40}
                         disabled={!connected}
                         onCommit={onRenameSelf}
-                        // The padding holds the pencil, which hangs past a name cut short.
+                        // The padding holds the pencil, which hangs past a name cut short
                         className="block min-w-0 pr-4 text-left font-bold text-indigo-300"
                         // Looks like the name it edits, in its 20px line so the list keeps its height.
                         // Touch screens get 16px, or phones zoom in on focus. Pulled left by its
@@ -186,7 +186,7 @@ const menuLinks = [
   ...legalLinks,
 ];
 
-// An icon, where an item has one, leads it muted so the label still reads first.
+// An icon, where an item has one, leads it muted so the label still reads first
 const menuItemClassName =
   'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm outline-none data-highlighted:bg-surface-raised [&>svg]:text-zinc-400';
 
@@ -244,7 +244,7 @@ function RoomMenu() {
 function LeaveRoomDialog() {
   const { status, proceed, reset } = useBlocker({
     shouldBlockFn: ({ current, next }) => current.pathname !== next.pathname,
-    // Reloading rejoins at once, so it needs no prompt.
+    // Reloading rejoins at once, so it needs no prompt
     enableBeforeUnload: false,
     withResolver: true,
   });

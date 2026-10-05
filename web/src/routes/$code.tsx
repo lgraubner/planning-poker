@@ -40,7 +40,7 @@ function RoomEntry({ code }: { code: string }) {
     reason?: string;
   } | null>(null);
   const [error, setError] = useState('');
-  // Only a room that does not exist makes a new one the way on.
+  // Only a room that does not exist makes a new one the way on
   const [missing, setMissing] = useState(false);
   const [joinError, setJoinError] = useState('');
   const [participant, setParticipant] = useState<Identity | null>(null);
@@ -61,7 +61,7 @@ function RoomEntry({ code }: { code: string }) {
           setMissing(response.status === 404);
           throw new Error(data.error || 'Could not load room.');
         }
-        // A reload can arrive before the old tab's socket has finished closing.
+        // A reload can arrive before the old tab's socket has finished closing
         if (!data.available && id && attempt < 3) {
           retry = setTimeout(() => void lookup(attempt + 1), 500);
           return;
@@ -108,7 +108,7 @@ function RoomEntry({ code }: { code: string }) {
 }
 
 function UnavailableRoom({ message, missing }: { message: string; missing: boolean }) {
-  // The server's messages are sentences: the first heads the page, the rest explain it.
+  // The server's messages are sentences: the first heads the page, the rest explain it
   const [headline, ...rest] = message.split(/(?<=\.)\s+/);
   return (
     <ErrorPage
@@ -156,7 +156,7 @@ function JoinRoom({
       <Form
         onSubmit={(event) => {
           event.preventDefault();
-          // Enter submits with the first button, so it joins to vote.
+          // Enter submits with the first button, so it joins to vote
           const submitter = (event.nativeEvent as SubmitEvent).submitter;
           void form.handleSubmit({
             spectator: submitter?.getAttribute('value') === 'spectator',
@@ -206,7 +206,7 @@ function JoinRoom({
 function Room({ code, participant }: { code: string; participant: Identity }) {
   const { snapshot, connected, error, fatal, send } = useRoom(code, participant);
   const reconnecting = useDelayed(!connected);
-  // The last revealed round, so the results can fade out after the votes are cleared.
+  // The last revealed round, so the results can fade out after the votes are cleared
   const results = useRef<Participant[]>([]);
 
   if (fatal) return <ErrorPage title="Unable to join" description={error} failed />;
@@ -267,7 +267,7 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
       <ErrorMessage>{error}</ErrorMessage>
       <PokerTable
         participants={snapshot.participants.filter((participant) => !participant.spectator)}
-        // A voter who turns spectator after the reveal still counts until the next round.
+        // A voter who turns spectator after the reveal still counts until the next round
         estimates={snapshot.participants.flatMap((participant) => participant.estimate ?? [])}
         deck={snapshot.deck}
         self={snapshot.self}
@@ -323,7 +323,7 @@ function Results({ participants, deck }: { participants: Participant[]; deck: st
     }))
     .filter(({ count }) => count > 0);
   const max = Math.max(...counts.map(({ count }) => count));
-  // A tie has no leader to point out.
+  // A tie has no leader to point out
   const lead = counts.filter(({ count }) => count === max).length === 1 ? max : null;
 
   return (
