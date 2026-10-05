@@ -102,6 +102,7 @@ func Open(path string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	db.SetMaxOpenConns(1)
 	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS rooms (
 		code TEXT PRIMARY KEY,
@@ -115,6 +116,7 @@ func Open(path string) (*Store, error) {
 		db.Close()
 		return nil, err
 	}
+
 	// Databases from before decks lack the column, and SQLite cannot add one only if missing.
 	if _, err := db.Exec(`SELECT deck FROM rooms LIMIT 0`); err != nil {
 		if _, err := db.Exec(`ALTER TABLE rooms ADD COLUMN deck TEXT NOT NULL DEFAULT 'fibonacci'`); err != nil {
@@ -122,6 +124,7 @@ func Open(path string) (*Store, error) {
 			return nil, err
 		}
 	}
+
 	s := New()
 	// Rooms held for 30 days need more room slots, or a full store would remove idle rooms long before then.
 	s.db, s.ttl, s.maxRooms = db, 30*24*time.Hour, 100_000
@@ -131,6 +134,7 @@ func Open(path string) (*Store, error) {
 		return nil, err
 	}
 	defer rows.Close()
+
 	for rows.Next() {
 		var code string
 		var emptySince int64
@@ -139,22 +143,27 @@ func Open(path string) (*Store, error) {
 			db.Close()
 			return nil, err
 		}
+
 		// The votes of a revealed round were in memory, so the room comes back ready for the next.
 		if r.revealed {
 			r.revealed = false
 			r.round++
 		}
+
 		// Rooms occupied at shutdown start their idle clock now.
 		r.emptySince = s.now()
 		if emptySince != 0 {
 			r.emptySince = time.Unix(emptySince, 0)
 		}
+
 		s.rooms[code] = r
 	}
+
 	if err := rows.Err(); err != nil {
 		db.Close()
 		return nil, err
 	}
+
 	return s, nil
 }
 
@@ -164,6 +173,7 @@ func (s *Store) save(code string, r *session) error {
 	if s.db == nil {
 		return nil
 	}
+
 	var err error
 	if r == nil {
 		_, err = s.db.Exec(`DELETE FROM rooms WHERE code = ?`, code)
@@ -172,12 +182,15 @@ func (s *Store) save(code string, r *session) error {
 		if !r.emptySince.IsZero() {
 			emptySince = r.emptySince.Unix()
 		}
+
 		_, err = s.db.Exec(`INSERT OR REPLACE INTO rooms (code, title, deck, round, revealed, joined, empty_since) VALUES (?, ?, ?, ?, ?, ?, ?)`,
 			code, r.title, r.deck, r.round, r.revealed, r.joined, emptySince)
 	}
+
 	if err != nil {
 		slog.Error("saving room failed", "error", err)
 	}
+
 	return err
 }
 
@@ -185,10 +198,12 @@ func ValidateLabel(value string, max int) (string, error) {
 	if !utf8.ValidString(value) || strings.ContainsFunc(value, unicode.IsControl) {
 		return "", errors.New("Use text without control characters.")
 	}
+
 	value = strings.TrimSpace(value)
 	if n := utf8.RuneCountInString(value); n == 0 || n > max {
 		return "", errors.New("Text is empty or too long.")
 	}
+
 	return value, nil
 }
 
@@ -196,6 +211,7 @@ func validSecret(secret string) bool {
 	if len(secret) != 36 || secret[8] != '-' || secret[13] != '-' || secret[18] != '-' || secret[23] != '-' {
 		return false
 	}
+
 	_, err := hex.DecodeString(strings.ReplaceAll(secret, "-", ""))
 	return err == nil
 }
@@ -205,14 +221,18 @@ func (s *Store) Create(title, deck string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	if Decks[deck] == nil {
 		return "", errors.New("Unknown deck.")
 	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	if len(s.rooms) >= s.maxRooms && !s.removeLongestEmpty() {
 		return "", errors.New("Room limit reached. Try again later.")
 	}
+
 	for {
 		code := make([]byte, 8)
 		for i := range code {
@@ -220,15 +240,19 @@ func (s *Store) Create(title, deck string) (string, error) {
 			if err != nil {
 				return "", errors.New("Could not create room.")
 			}
+
 			code[i] = alphabet[n.Int64()]
 		}
+
 		if _, exists := s.rooms[string(code)]; exists {
 			continue
 		}
+
 		r := &session{title: title, deck: deck, round: 1, emptySince: s.now()}
 		if s.save(string(code), r) != nil {
 			return "", errors.New("Could not create room.")
 		}
+
 		s.rooms[string(code)] = r
 		return string(code), nil
 	}
@@ -239,19 +263,24 @@ func (s *Store) Create(title, deck string) (string, error) {
 // ponytail: O(rooms) scan, only while full; keep rooms ordered by idle time if creation then slows.
 func (s *Store) removeLongestEmpty() bool {
 	var oldest string
+
 	for code, r := range s.rooms {
 		if r.emptySince.IsZero() || r.sockets > 0 {
 			continue
 		}
+
 		if oldest == "" || r.emptySince.Before(s.rooms[oldest].emptySince) {
 			oldest = code
 		}
 	}
+
 	if oldest == "" {
 		return false
 	}
+
 	delete(s.rooms, oldest)
 	s.save(oldest, nil)
+
 	return true
 }
 
@@ -259,24 +288,30 @@ func (s *Store) removeLongestEmpty() bool {
 func (s *Store) Info(code, secret string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	r := s.rooms[code]
 	if r == nil {
 		return "", ErrNotFound
 	}
+
 	if r.sockets >= maxSockets {
 		return r.title, ErrBusy
 	}
+
 	for _, p := range r.participants {
 		if p.secret == secret {
 			if len(p.connections) >= maxTabs {
 				return r.title, ErrTooManyTabs
 			}
+
 			return r.title, nil
 		}
 	}
+
 	if len(r.participants) >= MaxParticipants {
 		return r.title, ErrFull
 	}
+
 	return r.title, nil
 }
 
@@ -284,13 +319,16 @@ func (s *Store) Info(code, secret string) (string, error) {
 func (s *Store) Reserve(code string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	r := s.rooms[code]
 	if r == nil {
 		return ErrNotFound
 	}
+
 	if r.sockets >= maxSockets {
 		return ErrBusy
 	}
+
 	r.sockets++
 	return nil
 }
@@ -298,6 +336,7 @@ func (s *Store) Reserve(code string) error {
 func (s *Store) Release(code string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	if r := s.rooms[code]; r != nil {
 		r.sockets--
 	}
@@ -309,15 +348,19 @@ func (s *Store) Join(code, secret, name string, spectator bool) (*Subscription, 
 	if err != nil {
 		return nil, err
 	}
+
 	if !validSecret(secret) {
 		return nil, errors.New("Invalid participant identity.")
 	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	r := s.rooms[code]
 	if r == nil {
 		return nil, ErrNotFound
 	}
+
 	var p *member
 	for _, existing := range r.participants {
 		if existing.secret == secret {
@@ -325,26 +368,32 @@ func (s *Store) Join(code, secret, name string, spectator bool) (*Subscription, 
 			break
 		}
 	}
+
 	if p == nil {
 		if len(r.participants) >= MaxParticipants {
 			return nil, ErrFull
 		}
+
 		p = &member{id: rand.Text(), secret: secret, name: name, spectator: spectator, connections: make(map[*Subscription]bool)}
 		r.participants = append(r.participants, p)
 	}
+
 	if len(p.connections) >= maxTabs {
 		return nil, ErrTooManyTabs
 	}
+
 	// Existing tabs share the first joined name as well as the estimate.
 	sub := &Subscription{Updates: make(chan Snapshot, 1), code: code, member: p}
 	p.connections[sub] = true
 	p.disconnected = time.Time{}
 	p.departed = false
+
 	if !r.joined || !r.emptySince.IsZero() {
 		r.emptySince = time.Time{}
 		r.joined = true
 		s.save(code, r)
 	}
+
 	s.publish(r)
 	return sub, nil
 }
@@ -355,19 +404,23 @@ func (s *Store) Depart(sub *Subscription) { s.disconnect(sub, true) }
 func (s *Store) disconnect(sub *Subscription, departed bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	r := s.rooms[sub.code]
 	if r == nil || !sub.member.connections[sub] {
 		return
 	}
+
 	delete(sub.member.connections, sub)
 	if len(sub.member.connections) == 0 {
 		sub.member.disconnected = s.now()
 		sub.member.departed = departed
 	}
+
 	if !hasConnections(r) {
 		r.emptySince = s.now()
 		s.save(sub.code, r)
 	}
+
 	s.publish(r)
 }
 
@@ -377,37 +430,44 @@ func hasConnections(r *session) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
 func (s *Store) Command(sub *Subscription, command, value string, round uint64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	r := s.rooms[sub.code]
 	if r == nil || !sub.member.connections[sub] {
 		return ErrNotFound
 	}
+
 	// Only estimating belongs to a round: renaming or changing role must survive a reset.
 	if round != r.round && (command == "select" || command == "reveal" || command == "reset") {
 		return errors.New("The round changed. Try again.")
 	}
+
 	switch command {
 	case "rename":
 		title, err := ValidateLabel(value, 100)
 		if err != nil {
 			return err
 		}
+
 		r.title = title
 	case "name":
 		name, err := ValidateLabel(value, 40)
 		if err != nil {
 			return err
 		}
+
 		sub.member.name = name
 	case "role":
 		if value != "spectator" && value != "voter" {
 			return errors.New("Unknown role.")
 		}
+
 		sub.member.spectator = value == "spectator"
 		// A revealed vote stays until reset, so the cards under discussion do not change.
 		if !r.revealed {
@@ -417,12 +477,15 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 		if sub.member.spectator {
 			return errors.New("Spectators do not estimate.")
 		}
+
 		if r.revealed {
 			return errors.New("Wait for reset before selecting.")
 		}
+
 		if !slices.Contains(Decks[r.deck], value) {
 			return errors.New("Invalid estimate.")
 		}
+
 		if sub.member.estimate == value {
 			sub.member.estimate = ""
 		} else {
@@ -434,6 +497,7 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 		if !r.revealed {
 			return errors.New("Reveal before resetting.")
 		}
+
 		r.revealed = false
 		r.round++
 		for _, p := range r.participants {
@@ -442,10 +506,12 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 	default:
 		return errors.New("Unknown command.")
 	}
+
 	// Names, roles and estimates live only in memory, so only the room's own fields are saved.
 	if command == "rename" || command == "reveal" || command == "reset" {
 		s.save(sub.code, r)
 	}
+
 	s.publish(r)
 	return nil
 }
@@ -457,22 +523,28 @@ func (s *Store) publish(r *session) {
 		if len(viewer.connections) == 0 {
 			continue
 		}
+
 		snapshot := Snapshot{Type: "snapshot", Title: r.title, Round: r.round, Deck: Decks[r.deck], Revealed: r.revealed, Self: viewer.id, Participants: make([]Participant, 0, len(r.participants))}
+
 		for _, p := range r.participants {
 			if p.departed {
 				continue
 			}
+
 			card := Participant{ID: p.id, Name: p.name, Connected: len(p.connections) > 0, Selected: p.estimate != "", Spectator: p.spectator}
 			if r.revealed || p == viewer {
 				card.Estimate = p.estimate
 			}
+
 			snapshot.Participants = append(snapshot.Participants, card)
 		}
+
 		for sub := range viewer.connections {
 			select {
 			case <-sub.Updates:
 			default:
 			}
+
 			sub.Updates <- snapshot
 		}
 	}
@@ -484,17 +556,21 @@ func (s *Store) publish(r *session) {
 func (s *Store) Sweep(expireRooms bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	now := s.now()
+
 	for code, r := range s.rooms {
 		ttl := s.ttl
 		if !r.joined {
 			ttl = 10 * time.Minute
 		}
+
 		if expireRooms && !r.emptySince.IsZero() && now.Sub(r.emptySince) >= ttl {
 			delete(s.rooms, code)
 			s.save(code, nil)
 			continue
 		}
+
 		before := len(r.participants)
 		r.participants = slices.DeleteFunc(r.participants, func(p *member) bool {
 			return len(p.connections) == 0 && now.Sub(p.disconnected) >= 30*time.Second

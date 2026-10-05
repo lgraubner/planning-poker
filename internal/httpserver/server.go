@@ -30,11 +30,13 @@ type bucket struct {
 
 func (b *bucket) refill(rate, burst float64) {
 	now := time.Now()
+
 	if b.last.IsZero() {
 		b.tokens = burst
 	} else {
 		b.tokens = min(burst, b.tokens+now.Sub(b.last).Seconds()*rate)
 	}
+
 	b.last = now
 }
 
@@ -43,6 +45,7 @@ func (b *bucket) allow(rate, burst float64) bool {
 	if b.tokens < 1 {
 		return false
 	}
+
 	b.tokens--
 	return true
 }
@@ -62,6 +65,7 @@ func newLimiter(rate, burst float64) *limiter {
 func (l *limiter) allow(ip netip.Addr) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+
 	return l.bucket(ip).allow(l.rate, l.burst)
 }
 
@@ -69,8 +73,10 @@ func (l *limiter) allow(ip netip.Addr) bool {
 func (l *limiter) ready(ip netip.Addr) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+
 	b := l.bucket(ip)
 	b.refill(l.rate, l.burst)
+
 	return b.tokens >= 1
 }
 
@@ -83,15 +89,18 @@ func (l *limiter) bucket(ip netip.Addr) *bucket {
 				delete(l.buckets, key)
 			}
 		}
+
 		if len(l.buckets) >= 10000 {
 			clear(l.buckets)
 		}
 	}
+
 	b := l.buckets[ip]
 	if b == nil {
 		b = &bucket{}
 		l.buckets[ip] = b
 	}
+
 	return b
 }
 
@@ -120,9 +129,11 @@ func New(ctx context.Context, store *room.Store, files fs.FS, ipHeader string, l
 			s.meta = fmt.Appendf(s.meta, `<meta name="%s" content="%s">`, link[0], html.EscapeString(link[1]))
 		}
 	}
+
 	if s.meta != nil {
 		s.meta = append(s.meta, "</head>"...)
 	}
+
 	r := chi.NewRouter()
 	r.Use(headers)
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) { reply(w, 200, map[string]string{"status": "ok"}) })
@@ -131,6 +142,7 @@ func New(ctx context.Context, store *room.Store, files fs.FS, ipHeader string, l
 	r.Get("/api/rooms/{code}/ws", s.socket)
 	r.HandleFunc("/api/*", func(w http.ResponseWriter, r *http.Request) { fail(w, 404, "Not found.") })
 	r.Get("/*", s.spa)
+
 	return r
 }
 
@@ -142,6 +154,7 @@ func headers(next http.Handler) http.Handler {
 		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
 		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
 		w.Header().Set("Cache-Control", "no-cache")
+
 		if origin := r.Header.Get("Origin"); origin != "" {
 			u, err := url.Parse(origin)
 			// TLS may terminate at the proxy; compare the preserved public Host.
@@ -150,10 +163,12 @@ func headers(next http.Handler) http.Handler {
 				return
 			}
 		}
+
 		if r.Header.Get("Sec-Fetch-Site") == "cross-site" && strings.HasPrefix(r.URL.Path, "/api/") {
 			fail(w, http.StatusForbidden, "Cross-origin requests are not allowed.")
 			return
 		}
+
 		next.ServeHTTP(w, r)
 	})
 }
@@ -172,20 +187,24 @@ func fail(w http.ResponseWriter, status int, message string) {
 // clientIP groups IPv6 clients by /64, since one host usually controls a whole prefix.
 func (s *Server) clientIP(r *http.Request) netip.Addr {
 	value := r.RemoteAddr
+
 	if values := r.Header.Values(s.ipHeader); s.ipHeader != "" && len(values) > 0 {
 		// The trusted proxy appends the peer it saw, so only the last entry is reliable.
 		last := values[len(values)-1]
 		value = last[strings.LastIndex(last, ",")+1:]
 	}
+
 	value = strings.TrimSpace(value)
 	addr, err := netip.ParseAddr(value)
 	if err != nil {
 		port, _ := netip.ParseAddrPort(value)
 		addr = port.Addr()
 	}
+
 	if addr = addr.Unmap(); addr.Is6() {
 		addr = netip.PrefixFrom(addr, 64).Masked().Addr()
 	}
+
 	return addr
 }
 
@@ -196,14 +215,17 @@ func (s *Server) create(w http.ResponseWriter, r *http.Request) {
 		allowed = s.creation.allow(10, 20)
 		s.mu.Unlock()
 	}
+
 	if !allowed {
 		fail(w, 429, "Too many rooms created. Try again shortly.")
 		return
 	}
+
 	if strings.Split(r.Header.Get("Content-Type"), ";")[0] != "application/json" {
 		fail(w, 415, "Use application/json.")
 		return
 	}
+
 	r.Body = http.MaxBytesReader(w, r.Body, 4096)
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
@@ -215,19 +237,23 @@ func (s *Server) create(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "Invalid room title or request body.")
 		return
 	}
+
 	if decoder.Decode(new(any)) != io.EOF {
 		fail(w, 400, "Send one JSON object.")
 		return
 	}
+
 	// Clients from before decks send only a title.
 	if body.Deck == "" {
 		body.Deck = "fibonacci"
 	}
+
 	code, err := s.store.Create(body.Title, body.Deck)
 	if err != nil {
 		fail(w, 400, err.Error())
 		return
 	}
+
 	reply(w, 201, map[string]string{"code": code})
 }
 
@@ -238,6 +264,7 @@ func (s *Server) visit(w http.ResponseWriter, r *http.Request) bool {
 	if s.guesses.ready(s.clientIP(r)) {
 		return true
 	}
+
 	fail(w, 429, "Too many requests. Try again shortly.")
 	return false
 }
@@ -248,17 +275,20 @@ func (s *Server) info(w http.ResponseWriter, r *http.Request) {
 	if !s.visit(w, r) {
 		return
 	}
+
 	title, err := s.store.Info(chi.URLParam(r, "code"), r.Header.Get("X-Participant-ID"))
 	if errors.Is(err, room.ErrNotFound) {
 		s.missed(r)
 		fail(w, 404, err.Error())
 		return
 	}
+
 	// A room nobody can join right now still says why.
 	var reason string
 	if err != nil {
 		reason = err.Error()
 	}
+
 	reply(w, 200, struct {
 		Title     string `json:"title"`
 		Available bool   `json:"available"`
@@ -284,6 +314,7 @@ type socketError struct {
 func write(ctx context.Context, conn *websocket.Conn, message any) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
+
 	return wsjson.Write(ctx, conn, message)
 }
 
@@ -291,6 +322,7 @@ func (s *Server) socket(w http.ResponseWriter, r *http.Request) {
 	if !s.visit(w, r) {
 		return
 	}
+
 	code := chi.URLParam(r, "code")
 	if err := s.store.Reserve(code); err != nil {
 		status := 409
@@ -298,20 +330,25 @@ func (s *Server) socket(w http.ResponseWriter, r *http.Request) {
 			s.missed(r)
 			status = 404
 		}
+
 		fail(w, status, err.Error())
 		return
 	}
 	defer s.store.Release(code)
+
 	conn, err := websocket.Accept(w, r, nil)
 	if err != nil {
 		return
 	}
 	defer conn.CloseNow()
+
 	conn.SetReadLimit(1024)
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
+
 	stop := context.AfterFunc(ctx, func() { conn.CloseNow() })
 	defer stop()
+
 	joinCtx, joinCancel := context.WithTimeout(ctx, 10*time.Second)
 	var join command
 	err = wsjson.Read(joinCtx, conn, &join)
@@ -319,22 +356,27 @@ func (s *Server) socket(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
+
 	if join.Type != "join" {
 		_ = write(ctx, conn, socketError{"error", "Join before sending commands.", true})
 		return
 	}
+
 	sub, err := s.store.Join(code, join.ID, join.Name, join.Spectator)
 	if err != nil {
 		_ = write(ctx, conn, socketError{"error", err.Error(), true})
 		return
 	}
 	defer s.store.Leave(sub)
+
 	writerDone := make(chan struct{})
 	go func() {
 		defer close(writerDone)
 		defer cancel()
+
 		tick := time.NewTicker(20 * time.Second)
 		defer tick.Stop()
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -354,20 +396,25 @@ func (s *Server) socket(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 	defer func() { cancel(); <-writerDone }()
+
 	var commands bucket
+
 	for {
 		var cmd command
 		if wsjson.Read(ctx, conn, &cmd) != nil {
 			return
 		}
+
 		if !commands.allow(20, 20) {
 			_ = write(ctx, conn, socketError{"error", "Too many commands. Rejoin to continue.", true})
 			return
 		}
+
 		if cmd.Type == "leave" {
 			s.store.Depart(sub)
 			return
 		}
+
 		if err := s.store.Command(sub, cmd.Type, cmd.Value, cmd.Round); err != nil {
 			if write(ctx, conn, socketError{"error", err.Error(), false}) != nil {
 				return
@@ -383,23 +430,28 @@ func (s *Server) spa(w http.ResponseWriter, r *http.Request) {
 			http.NotFound(w, r)
 			return
 		}
+
 		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 		http.FileServerFS(s.files).ServeHTTP(w, r)
 		return
 	}
+
 	status := http.StatusOK
 	// Any other page still gets the app, which says it is not found, under a 404.
 	if path != "" && (len(path) != 8 || strings.Contains(path, "/")) {
 		status = http.StatusNotFound
 	}
+
 	index, err := fs.ReadFile(s.files, "index.html")
 	if err != nil {
 		fail(w, 503, "Frontend build is missing.")
 		return
 	}
+
 	if s.meta != nil {
 		index = bytes.Replace(index, []byte("</head>"), s.meta, 1)
 	}
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
 	_, _ = w.Write(index)

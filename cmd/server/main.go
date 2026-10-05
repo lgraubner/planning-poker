@@ -23,11 +23,13 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
+
 	n, err := strconv.Atoi(port)
 	if err != nil || n < 1 || n > 65535 {
 		slog.Error("PORT must be between 1 and 65535")
 		os.Exit(1)
 	}
+
 	links := httpserver.Links{LegalNotice: os.Getenv("LEGAL_NOTICE_URL"), PrivacyPolicy: os.Getenv("PRIVACY_POLICY_URL")}
 	for name, value := range map[string]string{"LEGAL_NOTICE_URL": links.LegalNotice, "PRIVACY_POLICY_URL": links.PrivacyPolicy} {
 		if u, err := url.Parse(value); value != "" && (err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "") {
@@ -35,8 +37,10 @@ func main() {
 			os.Exit(1)
 		}
 	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
 	store := room.New()
 	if path := os.Getenv("DATABASE_PATH"); path != "" {
 		if store, err = room.Open(path); err != nil {
@@ -44,10 +48,12 @@ func main() {
 			os.Exit(1)
 		}
 	}
+
 	server := &http.Server{Addr: ":" + port, Handler: httpserver.New(ctx, store, webui.Files(), os.Getenv("CLIENT_IP_HEADER"), links), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 8192}
 	go func() {
 		tick := time.NewTicker(time.Second)
 		defer tick.Stop()
+
 		seconds := 0
 		for {
 			select {
@@ -59,21 +65,26 @@ func main() {
 			}
 		}
 	}()
+
 	shutdownDone := make(chan struct{})
 	go func() {
 		<-ctx.Done()
 		defer close(shutdownDone)
+
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
+
 		if err := server.Shutdown(shutdownCtx); err != nil {
 			slog.Error("shutdown timed out")
 		}
 	}()
+
 	slog.Info("server started", "port", n)
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		slog.Error("server failed to listen")
 		os.Exit(1)
 	}
+
 	<-shutdownDone
 	slog.Info("server stopped")
 }

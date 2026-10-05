@@ -19,13 +19,16 @@ import (
 func TestHTTPAndWebSocketFlow(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
 	store := room.New()
 	server := httptest.NewServer(New(ctx, store, fstest.MapFS{"index.html": {Data: []byte("<html>poker</html>")}, "assets/main-a1.js": {Data: []byte("export {}")}}, "", Links{}))
 	defer server.Close()
+
 	response, err := http.Post(server.URL+"/api/rooms", "application/json", strings.NewReader(`{"title":"Sprint"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	var created struct {
 		Code string `json:"code"`
 	}
@@ -34,22 +37,27 @@ func TestHTTPAndWebSocketFlow(t *testing.T) {
 	if err != nil || response.StatusCode != 201 {
 		t.Fatalf("create: %v %d", err, response.StatusCode)
 	}
+
 	for _, path := range []string{"/", "/" + created.Code, "/healthz", "/api/rooms/" + created.Code, "/assets/main-a1.js"} {
 		resp, err := http.Get(server.URL + path)
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		resp.Body.Close()
 		if resp.StatusCode != 200 {
 			t.Fatalf("%s: %d", path, resp.StatusCode)
 		}
+
 		if resp.Header.Get("X-Content-Type-Options") != "nosniff" {
 			t.Fatal("security headers missing")
 		}
+
 		if strings.HasPrefix(path, "/assets/") && !strings.Contains(resp.Header.Get("Cache-Control"), "immutable") {
 			t.Fatal("asset caching missing")
 		}
 	}
+
 	wsURL := "ws" + strings.TrimPrefix(server.URL, "http") + "/api/rooms/" + created.Code + "/ws"
 	dial := func(id string) *websocket.Conn {
 		t.Helper()
@@ -57,24 +65,30 @@ func TestHTTPAndWebSocketFlow(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		t.Cleanup(func() { conn.CloseNow() })
 		if err := wsjson.Write(ctx, conn, command{Type: "join", ID: id, Name: "Alex"}); err != nil {
 			t.Fatal(err)
 		}
+
 		return conn
 	}
+
 	read := func(conn *websocket.Conn, match func(room.Snapshot) bool) room.Snapshot {
 		t.Helper()
+
 		for {
 			var snapshot room.Snapshot
 			if err := wsjson.Read(ctx, conn, &snapshot); err != nil {
 				t.Fatal(err)
 			}
+
 			if match(snapshot) {
 				return snapshot
 			}
 		}
 	}
+
 	a := dial("00000000-0000-4000-8000-000000000001")
 	b := dial("00000000-0000-4000-8000-000000000002")
 	read(a, func(s room.Snapshot) bool { return len(s.Participants) == 2 })
@@ -82,40 +96,50 @@ func TestHTTPAndWebSocketFlow(t *testing.T) {
 	if err := wsjson.Write(ctx, a, command{Type: "select", Value: "13", Round: 1}); err != nil {
 		t.Fatal(err)
 	}
+
 	hidden := read(b, func(s room.Snapshot) bool { return s.Participants[0].Selected })
 	if hidden.Participants[0].Estimate != "" {
 		t.Fatal("wire leaked concealed estimate")
 	}
+
 	if err := wsjson.Write(ctx, b, command{Type: "reveal", Round: 1}); err != nil {
 		t.Fatal(err)
 	}
+
 	revealed := read(b, func(s room.Snapshot) bool { return s.Revealed })
 	if revealed.Participants[0].Estimate != "13" {
 		t.Fatal("reveal not broadcast")
 	}
+
 	if err := wsjson.Write(ctx, a, command{Type: "reset", Round: 1}); err != nil {
 		t.Fatal(err)
 	}
+
 	reset := read(b, func(s room.Snapshot) bool { return s.Round == 2 })
 	if reset.Revealed || reset.Participants[0].Selected {
 		t.Fatal("reset not broadcast")
 	}
+
 	if err := wsjson.Write(ctx, a, command{Type: "leave"}); err != nil {
 		t.Fatal(err)
 	}
+
 	read(b, func(s room.Snapshot) bool { return len(s.Participants) == 1 })
+
 	if conn, response, err := websocket.Dial(ctx, wsURL, &websocket.DialOptions{HTTPHeader: http.Header{"Origin": []string{"https://evil.example"}}}); err == nil {
 		conn.CloseNow()
 		t.Fatal("cross-origin socket accepted")
 	} else if response == nil || response.StatusCode != 403 {
 		t.Fatal("unexpected origin rejection")
 	}
+
 	request, _ := http.NewRequest("POST", server.URL+"/api/rooms", strings.NewReader(`{"title":"x"}`))
 	request.Header.Set("Origin", "https://evil.example")
 	resp, err := http.DefaultClient.Do(request)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	resp.Body.Close()
 	if resp.StatusCode != 403 {
 		t.Fatal("cross-origin create accepted")
@@ -125,44 +149,53 @@ func TestHTTPAndWebSocketFlow(t *testing.T) {
 func TestInvalidHTTPAndPreJoinCommands(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+
 	store := room.New()
 	code, _ := store.Create("Test", "fibonacci")
 	files := fstest.MapFS{"index.html": {Data: []byte("<!doctype html>")}}
 	server := httptest.NewServer(New(ctx, store, files, "", Links{}))
 	defer server.Close()
+
 	for _, body := range []string{`{"title":""}`, `{"title":"x","extra":1}`, `{"title":"x"} {}`, `{"title":"x","deck":"nope"}`, `{"title":"` + strings.Repeat("x", 4096) + `"}`} {
 		resp, err := http.Post(server.URL+"/api/rooms", "application/json", strings.NewReader(body))
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		resp.Body.Close()
 		if resp.StatusCode != 400 {
 			t.Fatalf("invalid body status: %d", resp.StatusCode)
 		}
 	}
+
 	for _, path := range []string{"/api/rooms/missing", "/assets/missing.js", "/api/missing", "/rooms/abcdefgh"} {
 		resp, err := http.Get(server.URL + path)
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		io.Copy(io.Discard, resp.Body)
 		resp.Body.Close()
 		if resp.StatusCode != 404 {
 			t.Fatalf("missing resource: %d", resp.StatusCode)
 		}
 	}
+
 	conn, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(server.URL, "http")+"/api/rooms/"+code+"/ws", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer conn.CloseNow()
+
 	if err := wsjson.Write(ctx, conn, command{Type: "reveal", Round: 1}); err != nil {
 		t.Fatal(err)
 	}
+
 	var result socketError
 	if err := wsjson.Read(ctx, conn, &result); err != nil {
 		t.Fatal(err)
 	}
+
 	if !result.Fatal {
 		t.Fatal("command before join accepted")
 	}
@@ -177,6 +210,7 @@ func TestPerClientRateLimits(t *testing.T) {
 		r.Header.Set("X-Forwarded-For", forwarded)
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, r)
+
 		return w.Code
 	}
 	for i := 0; i < 5; i++ {
@@ -184,26 +218,33 @@ func TestPerClientRateLimits(t *testing.T) {
 			t.Fatalf("create %d: %d", i, status)
 		}
 	}
+
 	if request("POST", "/api/rooms", "198.51.100.2, 203.0.113.1") != 429 {
 		t.Fatal("per-client creation limit missing or spoofable via the first forwarded entry")
 	}
+
 	if request("POST", "/api/rooms", "203.0.113.2") != 201 {
 		t.Fatal("another client was limited")
 	}
+
 	for i := 0; i < 60; i++ {
 		if status := request("GET", "/api/rooms/missing1", "2001:db8::1"); status != 404 {
 			t.Fatalf("lookup %d: %d", i, status)
 		}
 	}
+
 	if request("GET", "/api/rooms/missing1", "2001:db8::2") != 429 {
 		t.Fatal("lookup limit missing or not grouped by IPv6 /64")
 	}
+
 	if request("GET", "/api/rooms/missing1/ws", "2001:db8::3") != 429 {
 		t.Fatal("socket limit missing")
 	}
+
 	if request("GET", "/api/rooms/missing1", "2001:db8:0:1::1") != 404 {
 		t.Fatal("another IPv6 prefix was limited")
 	}
+
 	// A team behind one office address reconnects at once after a deploy: only guesses count.
 	code, _ := store.Create("Sprint", "fibonacci")
 	for i := 0; i < 200; i++ {
@@ -211,8 +252,10 @@ func TestPerClientRateLimits(t *testing.T) {
 			t.Fatalf("lookup of an existing room %d: %d", i, status)
 		}
 	}
+
 	for request("GET", "/api/rooms/missing1", "192.0.2.1") == 404 {
 	}
+
 	if request("GET", "/api/rooms/"+code, "192.0.2.1") != 429 {
 		t.Fatal("a client out of guesses could still find which codes exist")
 	}
@@ -223,15 +266,18 @@ func TestLegalLinksReachThePage(t *testing.T) {
 	page := func(links Links) string {
 		recorder := httptest.NewRecorder()
 		New(context.Background(), room.New(), files, "", links).ServeHTTP(recorder, httptest.NewRequest("GET", "/", nil))
+
 		return recorder.Body.String()
 	}
 	if got := page(Links{}); got != string(files["index.html"].Data) {
 		t.Fatalf("page without links changed: %s", got)
 	}
+
 	got := page(Links{PrivacyPolicy: "https://example.com/privacy"})
 	if !strings.Contains(got, `<meta name="privacy-policy" content="https://example.com/privacy"></head>`) || strings.Contains(got, "legal-notice") {
 		t.Fatalf("only the privacy policy belongs in the head: %s", got)
 	}
+
 	got = page(Links{LegalNotice: `https://example.com/"><script>x</script>`, PrivacyPolicy: "https://example.com/privacy"})
 	if strings.Contains(got, "<script>") || !strings.Contains(got, `content="https://example.com/&#34;&gt;&lt;script&gt;x&lt;/script&gt;"`) {
 		t.Fatalf("link not escaped: %s", got)
