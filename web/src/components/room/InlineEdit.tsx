@@ -32,6 +32,7 @@ export function InlineEdit({
       onCommit(next);
       setPending({ from: value, to: next });
     }
+
     setDraft(null);
   }
 
@@ -79,6 +80,7 @@ export function InlineEdit({
         if (event.key === 'Enter') {
           event.currentTarget.blur();
         }
+
         if (event.key === 'Escape') {
           setDraft(null);
         }

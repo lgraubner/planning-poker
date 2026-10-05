@@ -43,6 +43,7 @@ async function joinOthers(page: Page, count: number) {
       .replace(/^http/, 'ws')
       .replace(/\/([a-z0-9]{8})$/, '/api/rooms/$1/ws')}`,
   );
+
   const ip = `10.${Math.floor(Math.random() * 254) + 1}.0.1`;
   return Promise.all(
     Array.from({ length: count }, (_, i) => {
@@ -56,6 +57,7 @@ async function joinOthers(page: Page, count: number) {
           if (message.type !== 'snapshot') {
             return reject(new Error(message.message));
           }
+
           socket.onmessage = null;
           // Every other one picks a card, so the table shows both states
           if (i % 2 === 0) {
@@ -67,6 +69,7 @@ async function joinOthers(page: Page, count: number) {
               }),
             );
           }
+
           resolve(socket);
         };
         socket.onerror = () => reject(new Error(`${names[i]} could not connect`));
@@ -105,6 +108,7 @@ async function expectSound(page: Page) {
           const left = Math.max(text.left, box.left);
           const right = Math.min(text.right, box.right);
           const card = element.firstElementChild!.getBoundingClientRect();
+
           return [
             { x: card.x, y: card.y, width: card.width, height: card.height },
             { x: left, y: text.y, width: right - left, height: text.height },
@@ -118,6 +122,7 @@ async function expectSound(page: Page) {
       if (a.seat === b.seat) {
         continue;
       }
+
       const apart =
         a.x + a.width <= b.x ||
         b.x + b.width <= a.x ||
@@ -126,20 +131,24 @@ async function expectSound(page: Page) {
       expect(apart, `${a.seat} overlaps ${b.seat}`).toBe(true);
     }
   }
+
   for (const seat of seats) {
     // Others' names show in full on hover; your own is yours to know
     for (const name of await seat.getByRole('paragraph').all()) {
       await expect(name).toHaveAttribute('title', /.+/);
     }
+
     expect(await lines(seat.locator('p, button'))).toBe(1);
     await seat.scrollIntoViewIfNeeded();
     await expect(seat).toBeInViewport();
   }
+
   // Back to where people start, for the next screenshot
   await page.evaluate(() => {
     for (const element of document.querySelectorAll('*')) {
       element.scrollLeft = 0;
     }
+
     scrollTo(0, 0);
   });
 }
@@ -151,6 +160,7 @@ async function wholePage(page: Page) {
   await page.setViewportSize({ ...size, height });
   const shot = await page.screenshot();
   await page.setViewportSize(size);
+
   return shot;
 }
 
@@ -158,6 +168,7 @@ test('a full room turns the thirty-first person away', async ({ page, newPartici
   const url = await createRoom(page);
   await join(page, url, you);
   const others = await joinOthers(page, 29);
+
   try {
     await expect(joinOthers(page, 1)).rejects.toThrow('This room is full.');
     // In the browser, they learn why before they get to the name form
@@ -166,6 +177,7 @@ test('a full room turns the thirty-first person away', async ({ page, newPartici
     await expect(
       latecomer.getByRole('heading', { name: 'This room is full', exact: true }),
     ).toBeVisible();
+
     await expect(latecomer.getByLabel('Name', { exact: true })).toBeHidden();
     // A new room is no answer to a full one
     await expect(latecomer.getByRole('link', { name: 'Start a new room' })).toBeHidden();
@@ -194,11 +206,14 @@ function seating(page: Page) {
     const mine = articles.find((article) =>
       article.getAttribute('aria-label')!.startsWith(`${you}:`),
     )!;
+
     const centre = (element: Element) => {
       const { left, width } = element.getBoundingClientRect();
       return left + width / 2;
     };
+
     const counts = [0, 0, 0, 0];
+
     for (const article of articles) {
       const group = article.parentElement!;
       if (group === mine.parentElement) {
@@ -209,6 +224,7 @@ function seating(page: Page) {
         counts[centre(group) < centre(mine) ? 1 : 2]++;
       }
     }
+
     return counts;
   }, you);
 }
@@ -242,6 +258,7 @@ for (const [index, expected] of expectedSeating.entries()) {
     const url = await createRoom(page);
     await join(page, url, you);
     const others = await joinOthers(page, total - 1);
+
     try {
       await expect(page.getByRole('article')).toHaveCount(total);
       expect(await seating(page)).toEqual(expected);
@@ -252,6 +269,7 @@ for (const [index, expected] of expectedSeating.entries()) {
         body: await wholePage(page),
         contentType: 'image/png',
       });
+
       await expectSound(page);
 
       await page.getByRole('button', { name: 'Reveal cards' }).click();
@@ -261,6 +279,7 @@ for (const [index, expected] of expectedSeating.entries()) {
         body: await wholePage(page),
         contentType: 'image/png',
       });
+
       await expectSound(page);
     } finally {
       for (const socket of others) {
@@ -302,9 +321,11 @@ test('phones give the room title a line of its own', async ({ page, isMobile }) 
   } else {
     expect(title.y).toBeLessThan(menu.y + menu.height);
   }
+
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(
     'Friday sprint planning session',
   );
+
   // Not cut short with an ellipsis
   const text = page.getByRole('heading', { level: 1 }).getByText('Friday sprint planning session');
   expect(await text.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);

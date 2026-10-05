@@ -82,6 +82,7 @@ export function useCopyLink() {
     if (!result) {
       return;
     }
+
     const timer = setTimeout(() => setResult(null), 3000);
     return () => clearTimeout(timer);
   }, [result]);

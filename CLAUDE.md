@@ -10,13 +10,13 @@ Playwright E2E tests in `web/e2e/` are the proof that a feature works; they driv
 - Finish E2E work with the HTML report as the **artifact**: `npx --prefix web playwright test -c web/playwright.config.ts --reporter=html` writes `web/playwright-report/`. CI uploads the same report.
 - Test in isolation (Go `*_test.go`, Vitest `web/src/**/*.test.{ts,tsx}`) only what E2E reaches poorly: limits, validation edge cases, timing. Work test-first: list every way the unit could fail, write a test per failure mode, then the code.
 
-## Go style
+## Blank lines
 
-gofmt never adds blank lines, so write Go function bodies in **paragraphs**, one per logical step, separated by a blank line:
+gofmt and oxfmt never add blank lines, so write Go and TypeScript function bodies in **paragraphs**, one per logical step, separated by a blank line:
 
 - A statement and the check on its result form one paragraph: `x, err := f()` sits directly above `if err != nil`, and `mu.Lock()` directly above `defer mu.Unlock()`.
 - A blank line follows each closing `}` and each run of `defer`s when more statements follow.
-- A blank line precedes an `if`, `for`, `switch` or `select` that starts a new step, and the final `return` of a function with several steps.
+- A blank line precedes an `if`, `for`, `switch`, `select` or `try` that starts a new step, and the final `return` of a function with several steps.
 
 ## Comments
 

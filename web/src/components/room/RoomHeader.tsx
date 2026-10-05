@@ -98,6 +98,7 @@ export function SpectatorList({
     count === 0
       ? 'Spectators'
       : `${count} ${count === 1 ? 'spectator' : 'spectators'}${watching ? ', including you' : ''}`;
+
   return (
     <Popover.Root>
       <Popover.Trigger
@@ -248,6 +249,7 @@ function LeaveRoomDialog() {
     enableBeforeUnload: false,
     withResolver: true,
   });
+
   return (
     <AlertDialog.Root open={status === 'blocked'} onOpenChange={(open) => !open && reset?.()}>
       <AlertDialog.Portal>

@@ -7,11 +7,13 @@ export function useDelayed(active: boolean, ms = 300) {
     if (!active) {
       return;
     }
+
     const timer = setTimeout(() => setElapsed(true), ms);
     return () => {
       clearTimeout(timer);
       setElapsed(false);
     };
   }, [active, ms]);
+
   return active && elapsed;
 }

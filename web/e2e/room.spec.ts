@@ -15,6 +15,7 @@ test('participants estimate privately, reveal together, and vote again', async (
       if (message.type !== 'snapshot' || message.revealed) {
         return;
       }
+
       for (const other of message.participants) {
         if (other.id !== message.self && other.estimate) {
           leaked.push(other.name);
@@ -30,6 +31,7 @@ test('participants estimate privately, reveal together, and vote again', async (
     'aria-pressed',
     'true',
   );
+
   await expect(card(bob, 'Alice')).toHaveAccessibleName('Alice: selected');
   await expect(card(bob, 'Alice')).not.toContainText('8');
   expect(leaked).toEqual([]);
@@ -39,6 +41,7 @@ test('participants estimate privately, reveal together, and vote again', async (
   await expect(card(bob, 'Alice')).toHaveAccessibleName('Alice: 8');
   // The deck and "Vote again" differ in height, which must not move the table
   expect(await card(bob, 'Alice').boundingBox()).toEqual(tableBefore);
+
   for (const viewer of [page, bob]) {
     await expect(card(viewer, 'Alice')).toHaveAccessibleName('Alice: 8');
     await expect(card(viewer, 'Bob')).toHaveAccessibleName('Bob: no estimate');
@@ -55,6 +58,7 @@ test('participants estimate privately, reveal together, and vote again', async (
     await expect(card(viewer, 'Alice')).not.toContainText('8');
     await expect(card(viewer, 'Bob').getByText('×')).toBeHidden();
   }
+
   await expect(page.getByRole('button', { name: '8', exact: true })).toHaveAttribute(
     'aria-pressed',
     'false',
@@ -89,6 +93,7 @@ test('a room estimates with the deck it was created with', async ({ page, newPar
   await expect(bob.getByRole('status').filter({ hasText: 'Proposed estimate' })).toHaveText(
     'Proposed estimate M',
   );
+
   const revealed = snapshots.filter((snapshot) => snapshot.revealed).at(-1);
   expect(revealed?.deck).toEqual(['XS', 'S', 'M', 'L', 'XL', 'XXL', '?', '☕']);
   expect(revealed?.participants[0].estimate).toBe('M');
@@ -115,6 +120,7 @@ test('a room estimates with modified Fibonacci unless told otherwise', async ({
   await expect(bob.getByRole('group', { name: 'Choose your card' }).getByRole('button')).toHaveText(
     fibonacci,
   );
+
   expect(decks.at(-1)).toEqual(fibonacci);
 });
 
@@ -159,6 +165,7 @@ test('a saved name rejoins automatically and tabs share one card', async ({
     'aria-pressed',
     'true',
   );
+
   await expect(page.getByRole('article')).toHaveCount(1);
 
   const visitor = await newParticipant();
@@ -240,6 +247,7 @@ test('a reconnect rejoins with your current name and role', async ({ page }) => 
       if (parsed.type === 'snapshot') {
         confirmed = parsed.participants.find((p: { id: string }) => p.id === parsed.self);
       }
+
       socket.send(message);
     });
     socket.onMessage((message) => {
@@ -247,6 +255,7 @@ test('a reconnect rejoins with your current name and role', async ({ page }) => 
       if (parsed.type === 'join') {
         joins.push(parsed);
       }
+
       server.send(message);
     });
     sockets.push({
@@ -261,6 +270,7 @@ test('a reconnect rejoins with your current name and role', async ({ page }) => 
     .getByRole('dialog', { name: 'Spectators' })
     .getByRole('button', { name: 'Alice' })
     .click();
+
   await page.getByLabel('Your name').fill('Alicia');
   await page.getByLabel('Your name').press('Enter');
   // The list shows a rename before the server has it, so wait for the server's word
@@ -322,6 +332,7 @@ test('buttons give way when pressed and centre their content', async ({ page }) 
     await expect.poll(() => scale(name)).toBe('0.97');
     await page.mouse.up();
   };
+
   // Names edit in place: pressing one opens a field rather than giving way
   await page.getByRole('button', { name: 'Alice', exact: true }).hover();
   await page.mouse.down();
@@ -335,6 +346,7 @@ test('buttons give way when pressed and centre their content', async ({ page }) 
     'user-select',
     'none',
   );
+
   // Releasing clicks, so this one reveals the cards
   await press('Reveal cards');
   // Measure once the results have faded in, not mid-scale
@@ -564,6 +576,7 @@ test('revealed cards show how many voted for each value', async ({ page, newPart
   await expect(page.getByRole('list', { name: 'Results' })).toBeHidden();
 
   await page.getByRole('button', { name: 'Reveal cards' }).click();
+
   for (const viewer of [page, bob, carol]) {
     // In deck order, with only the values someone chose
     const results = viewer.getByRole('list', { name: 'Results' }).getByRole('listitem');
@@ -574,10 +587,12 @@ test('revealed cards show how many voted for each value', async ({ page, newPart
     await expect(viewer.getByRole('status').filter({ hasText: 'Proposed estimate' })).toHaveText(
       'Proposed estimate 5 Agreement 67%',
     );
+
     await expect(viewer.getByTestId('confetti')).toHaveCount(0);
   }
 
   await bob.getByRole('button', { name: 'Vote again' }).click();
+
   for (const viewer of [page, bob, carol]) {
     await expect(viewer.getByRole('list', { name: 'Results' })).toBeHidden();
   }
@@ -587,6 +602,7 @@ test('revealed cards show how many voted for each value', async ({ page, newPart
   await bob.getByRole('button', { name: '13', exact: true }).click();
   await expect(card(page, 'Bob')).toHaveAccessibleName('Bob: selected');
   await page.getByRole('button', { name: 'Reveal cards' }).click();
+
   for (const viewer of [page, bob, carol]) {
     await expect(viewer.getByRole('status').filter({ hasText: 'Discuss!' })).toHaveText('Discuss!');
     // A tie has no leader
@@ -606,10 +622,12 @@ test('full agreement throws confetti for everyone', async ({ page, newParticipan
   await bob.getByRole('button', { name: '5', exact: true }).click();
   await expect(card(page, 'Bob')).toHaveAccessibleName('Bob: selected');
   await page.getByRole('button', { name: 'Reveal cards' }).click();
+
   for (const viewer of [page, bob]) {
     await expect(viewer.getByRole('status').filter({ hasText: 'Proposed estimate' })).toHaveText(
       'Proposed estimate 5 Agreement 100%',
     );
+
     await expect(viewer.getByTestId('confetti')).toBeAttached();
   }
 
@@ -743,6 +761,7 @@ test('the deck and the results fade into each other', async ({ page }) => {
     const frames = page.evaluate(async () => {
       const region = (name: string) =>
         document.querySelector<HTMLElement>(`section[aria-label="${name}"]`)!;
+
       const frames: { deck: number; round: number; bars: number }[] = [];
       const end = performance.now() + 1000;
       while (performance.now() < end) {
@@ -753,11 +772,14 @@ test('the deck and the results fade into each other', async ({ page }) => {
           bars: region('Round controls').querySelectorAll('li').length,
         });
       }
+
       return frames;
     });
+
     await page.getByRole('button', { name: button }).click();
     return frames;
   };
+
   const between = (value: number) => value > 0 && value < 1;
 
   const reveal = await fade('Reveal cards');
@@ -779,12 +801,14 @@ test('the legal pages the server names are linked from every page but the room',
       'href',
       'https://example.com/legal-notice',
     );
+
     // The query survives the trip through the page's head
     await expect(page.getByRole('link', { name: 'Privacy policy' })).toHaveAttribute(
       'href',
       'https://example.com/privacy?lang=en&v=2',
     );
   };
+
   await page.goto('/');
   await linked();
   // Centred under the home page's column
@@ -818,6 +842,7 @@ test('the room menu links to the project, its issues and the legal pages', async
     ...(isMobile ? ['Copy room link'] : []),
     ...Object.keys(links),
   ]);
+
   for (const [name, href] of Object.entries(links)) {
     const item = page.getByRole('menuitem', { name });
     await expect(item).toHaveAttribute('href', href);
@@ -850,6 +875,7 @@ test('spectators watch from beside the table and can switch to voting', async ({
     viewer.evaluate(() =>
       Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))),
     );
+
   const aliceBefore = await card(page, 'Alice').boundingBox();
 
   const bob = await newParticipant();
@@ -863,9 +889,11 @@ test('spectators watch from beside the table and can switch to voting', async ({
     await expect(
       viewer.getByRole('dialog', { name: 'Spectators' }).getByRole('listitem'),
     ).toHaveText(['Bob']);
+
     await viewer.keyboard.press('Escape');
     await expect(card(viewer, 'Bob')).toBeHidden();
   }
+
   await expect.poll(() => bobFrame).toEqual(expect.objectContaining({ spectator: true }));
   // Only Bob is told he is among them
   await expect(bob.getByRole('button', { name: '1 spectator, including you' })).toBeVisible();
@@ -895,6 +923,7 @@ test('spectators watch from beside the table and can switch to voting', async ({
   await expect(page.getByRole('dialog', { name: 'Spectators' }).getByRole('list')).toHaveText(
     'Robert',
   );
+
   await page.keyboard.press('Escape');
   await expect.poll(() => bobFrame?.name).toBe('Robert');
 
@@ -950,10 +979,12 @@ test('watching after the reveal keeps your vote in the results', async ({
   await expect
     .poll(() => bobFrame)
     .toEqual(expect.objectContaining({ spectator: true, estimate: '5' }));
+
   await expect(card(page, 'Bob')).toBeHidden();
   await expect(
     page.getByRole('list', { name: 'Results' }).getByRole('listitem', { name: /^5:/ }),
   ).toHaveAccessibleName('5: 1 vote');
+
   await expect(proposal).toHaveText('Proposed estimate 5 Agreement 50%');
 
   // The next round starts without it

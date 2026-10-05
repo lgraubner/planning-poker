@@ -40,6 +40,7 @@ function CreateRoomForm() {
     defaultValues: { title: '', deck: 'fibonacci' },
     onSubmit: async ({ value }) => {
       setError('');
+
       try {
         const response = await fetch('/api/rooms', {
           method: 'POST',
@@ -50,6 +51,7 @@ function CreateRoomForm() {
         if (!response.ok) {
           throw new Error(result.error || 'Could not create room');
         }
+
         await navigate({ to: '/$code', params: { code: result.code } });
       } catch (cause) {
         // Form errors end without a full stop, the server's included

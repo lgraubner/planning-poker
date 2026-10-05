@@ -67,6 +67,7 @@ export function identity(name: string, spectator: boolean): Identity {
   localStorage.setItem('poker.id', id);
   localStorage.setItem('poker.name', name);
   localStorage.setItem('poker.spectator', String(spectator));
+
   return { id, name, spectator };
 }
 
@@ -95,6 +96,7 @@ export function useRoom(code: string, participant: Identity) {
       if (disposed || terminal) {
         return;
       }
+
       timer = setTimeout(reconnect, delay);
       delay = Math.min(delay * 2, 10000);
     }
@@ -103,6 +105,7 @@ export function useRoom(code: string, participant: Identity) {
       if (disposed || terminal) {
         return;
       }
+
       try {
         const response = await fetch(`/api/rooms/${encodeURIComponent(code)}`, {
           signal: abort.signal,
@@ -114,6 +117,7 @@ export function useRoom(code: string, participant: Identity) {
           setError('Room not found. It may have expired or the server restarted.');
           return;
         }
+
         const data = response.ok ? await response.json() : null;
         if (data && !data.available) {
           setError(`${data.reason} Retrying…`);
@@ -123,9 +127,11 @@ export function useRoom(code: string, participant: Identity) {
       } catch {
         /* Network failure: keep retrying until the connection returns. */
       }
+
       if (disposed) {
         return;
       }
+
       connect();
     }
 
@@ -139,6 +145,7 @@ export function useRoom(code: string, participant: Identity) {
         if (disposed) {
           return;
         }
+
         try {
           const message: Message = JSON.parse(event.data);
           if (message.type === 'snapshot') {
@@ -146,12 +153,14 @@ export function useRoom(code: string, participant: Identity) {
             if (own) {
               self = { ...self, name: own.name, spectator: own.spectator };
             }
+
             setSnapshot(message);
             setConnected(true);
             setError('');
             delay = 500;
           } else if (message.type === 'error') {
             setError(message.message);
+
             if (message.fatal) {
               terminal = true;
               setFatal(true);
@@ -171,6 +180,7 @@ export function useRoom(code: string, participant: Identity) {
         if (disposed) {
           return;
         }
+
         setConnected(false);
         scheduleReconnect();
       };
@@ -184,6 +194,7 @@ export function useRoom(code: string, participant: Identity) {
 
     window.addEventListener('pagehide', leave);
     connect();
+
     return () => {
       disposed = true;
       window.removeEventListener('pagehide', leave);
@@ -200,6 +211,7 @@ export function useRoom(code: string, participant: Identity) {
     if (!connected || !snapshot || socket.current?.readyState !== WebSocket.OPEN) {
       return;
     }
+
     setError('');
     socket.current.send(JSON.stringify({ type, value, round: snapshot.round }));
   }

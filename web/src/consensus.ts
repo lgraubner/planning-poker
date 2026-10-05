@@ -29,8 +29,10 @@ export function consensus(estimates: string[], deck: string[]) {
       if (a >= 0 && b >= 0) {
         total += Math.max(0, 1 - Math.abs(a - b) / 2);
       }
+
       pairs++;
     }
   }
+
   return { value, agreement: total / pairs, discuss };
 }

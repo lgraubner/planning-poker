@@ -51,6 +51,7 @@ describe('consensus', () => {
       agreement: 0.5,
       discuss: false,
     });
+
     expect(consensus(['5', '5', '8'], fibonacci)?.agreement).toBeCloseTo(2 / 3);
   });
 
@@ -82,6 +83,7 @@ describe('consensus', () => {
       agreement: 2 / 3,
       discuss: false,
     });
+
     expect(consensus(['XS', 'L'], tshirt)?.discuss).toBe(true);
     expect(consensus(['XL', 'XXL', 'XXL'], tshirt)?.value).toBe('XXL');
   });

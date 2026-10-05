@@ -32,6 +32,7 @@ export function PokerTable({
   const hasVotes = participants.some((participant) => participant.selected);
   const allVoted =
     participants.length > 0 && participants.every((participant) => participant.selected);
+
   const current = participants.find((participant) => participant.id === self);
   const result = revealed ? consensus(estimates, deck) : null;
   // A reveal that happened before you arrived is already over: no confetti for it
@@ -39,6 +40,7 @@ export function PokerTable({
   if (arrivedRevealed && !revealed) {
     setArrivedRevealed(false);
   }
+
   const others = participants.filter((participant) => participant.id !== self);
   // One seat a side from four others, two from nine: a full table of 12 sits 4, 2, 4, 2.
   // Past 12, long rows would reach the side seats, so everyone sits above or below.
@@ -142,6 +144,7 @@ function Confetti() {
       resize: true,
       disableForReducedMotion: true,
     });
+
     const number = canvas.current!.parentElement!.getBoundingClientRect();
     void burst({
       particleCount: 60,
@@ -152,6 +155,7 @@ function Confetti() {
         y: (number.top + number.height / 2) / innerHeight,
       },
     });
+
     return () => burst.reset();
   }, []);
 
@@ -180,6 +184,7 @@ function SideSeats({
   if (participants.length === 0) {
     return null;
   }
+
   return (
     <div className={clsx('row-span-3 row-start-1 flex flex-col gap-6', right ? 'col-3' : 'col-1')}>
       {participants.map((participant) => (
@@ -266,12 +271,14 @@ function ParticipantCard({
   if (face && face !== shown) {
     setShown(face);
   }
+
   const unflipping = !face && !!shown;
   // A reveal that happened before you arrived is already over: show the face without turning it
   const [arrivedRevealed, setArrivedRevealed] = useState(!!face);
   if (arrivedRevealed && !face) {
     setArrivedRevealed(false);
   }
+
   const reconnecting = useDelayed(!participant.connected);
 
   return (

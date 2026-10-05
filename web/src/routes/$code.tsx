@@ -39,6 +39,7 @@ function RoomEntry({ code }: { code: string }) {
     available: boolean;
     reason?: string;
   } | null>(null);
+
   const [error, setError] = useState('');
   // Only a room that does not exist makes a new one the way on
   const [missing, setMissing] = useState(false);
@@ -61,14 +62,17 @@ function RoomEntry({ code }: { code: string }) {
           setMissing(response.status === 404);
           throw new Error(data.error || 'Could not load room.');
         }
+
         // A reload can arrive before the old tab's socket has finished closing
         if (!data.available && id && attempt < 3) {
           retry = setTimeout(() => void lookup(attempt + 1), 500);
           return;
         }
+
         if (abort.signal.aborted) {
           return;
         }
+
         setInfo(data);
         const savedName = rememberedName().trim();
         if (data.available && savedName) {
@@ -93,6 +97,7 @@ function RoomEntry({ code }: { code: string }) {
       setJoinError('Use 1–40 characters without control characters');
       return;
     }
+
     try {
       setParticipant(identity(name.trim(), spectator));
     } catch {
@@ -103,6 +108,7 @@ function RoomEntry({ code }: { code: string }) {
   if (participant) {
     return <Room code={code} participant={participant} />;
   }
+
   if (error || info?.available === false) {
     return (
       <UnavailableRoom
@@ -111,9 +117,11 @@ function RoomEntry({ code }: { code: string }) {
       />
     );
   }
+
   if (!info) {
     return <RoomLoading>Loading room…</RoomLoading>;
   }
+
   return <JoinRoom title={info.title} error={joinError} onJoin={join} />;
 }
 
@@ -222,6 +230,7 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
   if (fatal) {
     return <ErrorPage title="Unable to join" description={error} failed />;
   }
+
   if (!snapshot) {
     return <RoomLoading>Connecting to room…{error}</RoomLoading>;
   }
@@ -229,17 +238,21 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
   const own = snapshot.participants.find((participant) => participant.id === snapshot.self);
   const spectating = !!own?.spectator;
   const spectators = snapshot.participants.filter((participant) => participant.spectator);
+
   if (snapshot.revealed) {
     results.current = snapshot.participants;
   }
+
   function renameSelf(name: string) {
     send('name', name);
     rememberName(name);
   }
+
   function spectate(spectator: boolean) {
     send('role', spectator ? 'spectator' : 'voter');
     rememberSpectator(spectator);
   }
+
   return (
     <section className="flex grow flex-col">
       <title>{`${snapshot.title} | Planning Poker`}</title>

@@ -28,8 +28,10 @@ export const test = base.extend<{ newParticipant: () => Promise<Page> }>({
         extraHTTPHeaders: { 'X-Forwarded-For': clientIP() },
       });
       contexts.push(context);
+
       return context.newPage();
     });
+
     await Promise.all(contexts.map((context) => context.close()));
   },
 });
@@ -44,8 +46,10 @@ export async function createRoom(page: Page, title = 'Sprint planning', deck?: s
     await page.getByRole('option', { name: deck }).click();
     await expect(select).toContainText(deck);
   }
+
   await page.getByRole('button', { name: 'Create room' }).click();
   await expect(page).toHaveURL(/\/[a-z0-9]{8}$/);
+
   return page.url();
 }
 

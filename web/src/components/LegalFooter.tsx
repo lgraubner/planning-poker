@@ -5,6 +5,7 @@ export function LegalFooter() {
   if (legalLinks.length === 0) {
     return null;
   }
+
   return (
     <footer className="mt-auto flex justify-center gap-4 pt-6 pb-4 text-sm text-zinc-500">
       {legalLinks.map(({ href, label }) => (
