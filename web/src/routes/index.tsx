@@ -47,7 +47,9 @@ function CreateRoomForm() {
           body: JSON.stringify(value),
         });
         const result = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(result.error || 'Could not create room');
+        if (!response.ok) {
+          throw new Error(result.error || 'Could not create room');
+        }
         await navigate({ to: '/$code', params: { code: result.code } });
       } catch (cause) {
         // Form errors end without a full stop, the server's included

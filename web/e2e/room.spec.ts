@@ -12,9 +12,13 @@ test('participants estimate privately, reveal together, and vote again', async (
   bob.on('websocket', (socket) =>
     socket.on('framereceived', ({ payload }) => {
       const message = JSON.parse(String(payload));
-      if (message.type !== 'snapshot' || message.revealed) return;
+      if (message.type !== 'snapshot' || message.revealed) {
+        return;
+      }
       for (const other of message.participants) {
-        if (other.id !== message.self && other.estimate) leaked.push(other.name);
+        if (other.id !== message.self && other.estimate) {
+          leaked.push(other.name);
+        }
       }
     }),
   );
@@ -69,7 +73,9 @@ test('a room estimates with the deck it was created with', async ({ page, newPar
   bob.on('websocket', (socket) =>
     socket.on('framereceived', ({ payload }) => {
       const message = JSON.parse(String(payload));
-      if (message.type === 'snapshot') snapshots.push(message);
+      if (message.type === 'snapshot') {
+        snapshots.push(message);
+      }
     }),
   );
   await join(bob, url, 'Bob');
@@ -100,7 +106,9 @@ test('a room estimates with modified Fibonacci unless told otherwise', async ({
   bob.on('websocket', (socket) =>
     socket.on('framereceived', ({ payload }) => {
       const message = JSON.parse(String(payload));
-      if (message.type === 'snapshot') decks.push(message.deck);
+      if (message.type === 'snapshot') {
+        decks.push(message.deck);
+      }
     }),
   );
   await join(bob, url, 'Bob');
@@ -229,13 +237,16 @@ test('a reconnect rejoins with your current name and role', async ({ page }) => 
     const server = socket.connectToServer();
     server.onMessage((message) => {
       const parsed = JSON.parse(String(message));
-      if (parsed.type === 'snapshot')
+      if (parsed.type === 'snapshot') {
         confirmed = parsed.participants.find((p: { id: string }) => p.id === parsed.self);
+      }
       socket.send(message);
     });
     socket.onMessage((message) => {
       const parsed = JSON.parse(String(message));
-      if (parsed.type === 'join') joins.push(parsed);
+      if (parsed.type === 'join') {
+        joins.push(parsed);
+      }
       server.send(message);
     });
     sockets.push({
@@ -457,8 +468,9 @@ test('the title field opens exactly over the title', async ({ page }) => {
   const before = (await title.boundingBox())!;
   await title.click();
   const after = (await page.getByRole('textbox', { name: 'Room title' }).boundingBox())!;
-  for (const side of ['x', 'y', 'width', 'height'] as const)
+  for (const side of ['x', 'y', 'width', 'height'] as const) {
     expect(after[side], side).toBeCloseTo(before[side], 0);
+  }
 });
 
 test('anyone can rename the room for everyone', async ({ page, newParticipant }) => {
@@ -507,8 +519,9 @@ test('leaving a room by link or back button asks first', async ({ page, newParti
   bob.on('websocket', (socket) =>
     socket.on('framereceived', ({ payload }) => {
       const message = JSON.parse(String(payload));
-      if (message.type === 'snapshot')
+      if (message.type === 'snapshot') {
         seen.push(message.participants.map((p: { name: string }) => p.name));
+      }
     }),
   );
   await join(bob, url, 'Bob');
@@ -824,8 +837,9 @@ test('spectators watch from beside the table and can switch to voting', async ({
   page.on('websocket', (socket) =>
     socket.on('framereceived', ({ payload }) => {
       const message = JSON.parse(String(payload));
-      if (message.type === 'snapshot')
+      if (message.type === 'snapshot') {
         bobFrame = message.participants.find((p: { name: string }) => p.name !== 'Alice');
+      }
     }),
   );
   // Alice's socket opened before the listener; a reload lets it see the frames
@@ -915,8 +929,9 @@ test('watching after the reveal keeps your vote in the results', async ({
   page.on('websocket', (socket) =>
     socket.on('framereceived', ({ payload }) => {
       const message = JSON.parse(String(payload));
-      if (message.type === 'snapshot')
+      if (message.type === 'snapshot') {
         bobFrame = message.participants.find((p: { name: string }) => p.name === 'Bob');
+      }
     }),
   );
   // Alice's socket opened before the listener; a reload lets it see the frames

@@ -66,13 +66,18 @@ function RoomEntry({ code }: { code: string }) {
           retry = setTimeout(() => void lookup(attempt + 1), 500);
           return;
         }
-        if (abort.signal.aborted) return;
+        if (abort.signal.aborted) {
+          return;
+        }
         setInfo(data);
         const savedName = rememberedName().trim();
-        if (data.available && savedName) join(savedName, rememberedSpectator());
+        if (data.available && savedName) {
+          join(savedName, rememberedSpectator());
+        }
       } catch (cause) {
-        if (!abort.signal.aborted)
+        if (!abort.signal.aborted) {
           setError(cause instanceof Error ? cause.message : 'Could not load room.');
+        }
       }
     }
 
@@ -95,15 +100,20 @@ function RoomEntry({ code }: { code: string }) {
     }
   }
 
-  if (participant) return <Room code={code} participant={participant} />;
-  if (error || info?.available === false)
+  if (participant) {
+    return <Room code={code} participant={participant} />;
+  }
+  if (error || info?.available === false) {
     return (
       <UnavailableRoom
         message={error || info?.reason || 'You cannot join this room right now.'}
         missing={missing}
       />
     );
-  if (!info) return <RoomLoading>Loading room…</RoomLoading>;
+  }
+  if (!info) {
+    return <RoomLoading>Loading room…</RoomLoading>;
+  }
   return <JoinRoom title={info.title} error={joinError} onJoin={join} />;
 }
 
@@ -209,13 +219,19 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
   // The last revealed round, so the results can fade out after the votes are cleared
   const results = useRef<Participant[]>([]);
 
-  if (fatal) return <ErrorPage title="Unable to join" description={error} failed />;
-  if (!snapshot) return <RoomLoading>Connecting to room…{error}</RoomLoading>;
+  if (fatal) {
+    return <ErrorPage title="Unable to join" description={error} failed />;
+  }
+  if (!snapshot) {
+    return <RoomLoading>Connecting to room…{error}</RoomLoading>;
+  }
 
   const own = snapshot.participants.find((participant) => participant.id === snapshot.self);
   const spectating = !!own?.spectator;
   const spectators = snapshot.participants.filter((participant) => participant.spectator);
-  if (snapshot.revealed) results.current = snapshot.participants;
+  if (snapshot.revealed) {
+    results.current = snapshot.participants;
+  }
   function renameSelf(name: string) {
     send('name', name);
     rememberName(name);

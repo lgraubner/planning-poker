@@ -53,10 +53,12 @@ async function joinOthers(page: Page, count: number) {
           socket.send(JSON.stringify({ type: 'join', id: crypto.randomUUID(), name: names[i] }));
         socket.onmessage = (event) => {
           const message = JSON.parse(String(event.data));
-          if (message.type !== 'snapshot') return reject(new Error(message.message));
+          if (message.type !== 'snapshot') {
+            return reject(new Error(message.message));
+          }
           socket.onmessage = null;
           // Every other one picks a card, so the table shows both states
-          if (i % 2 === 0)
+          if (i % 2 === 0) {
             socket.send(
               JSON.stringify({
                 type: 'select',
@@ -64,6 +66,7 @@ async function joinOthers(page: Page, count: number) {
                 round: message.round,
               }),
             );
+          }
           resolve(socket);
         };
         socket.onerror = () => reject(new Error(`${names[i]} could not connect`));
@@ -112,7 +115,9 @@ async function expectSound(page: Page) {
   ).flat();
   for (const [i, a] of parts.entries()) {
     for (const b of parts.slice(i + 1)) {
-      if (a.seat === b.seat) continue;
+      if (a.seat === b.seat) {
+        continue;
+      }
       const apart =
         a.x + a.width <= b.x ||
         b.x + b.width <= a.x ||
@@ -123,15 +128,18 @@ async function expectSound(page: Page) {
   }
   for (const seat of seats) {
     // Others' names show in full on hover; your own is yours to know
-    for (const name of await seat.getByRole('paragraph').all())
+    for (const name of await seat.getByRole('paragraph').all()) {
       await expect(name).toHaveAttribute('title', /.+/);
+    }
     expect(await lines(seat.locator('p, button'))).toBe(1);
     await seat.scrollIntoViewIfNeeded();
     await expect(seat).toBeInViewport();
   }
   // Back to where people start, for the next screenshot
   await page.evaluate(() => {
-    for (const element of document.querySelectorAll('*')) element.scrollLeft = 0;
+    for (const element of document.querySelectorAll('*')) {
+      element.scrollLeft = 0;
+    }
     scrollTo(0, 0);
   });
 }
@@ -166,7 +174,9 @@ test('a full room turns the thirty-first person away', async ({ page, newPartici
       contentType: 'image/png',
     });
   } finally {
-    for (const socket of others) socket.close();
+    for (const socket of others) {
+      socket.close();
+    }
   }
 });
 
@@ -191,9 +201,13 @@ function seating(page: Page) {
     const counts = [0, 0, 0, 0];
     for (const article of articles) {
       const group = article.parentElement!;
-      if (group === mine.parentElement) counts[3]++;
-      else if (group.getBoundingClientRect().width > 200) counts[0]++;
-      else counts[centre(group) < centre(mine) ? 1 : 2]++;
+      if (group === mine.parentElement) {
+        counts[3]++;
+      } else if (group.getBoundingClientRect().width > 200) {
+        counts[0]++;
+      } else {
+        counts[centre(group) < centre(mine) ? 1 : 2]++;
+      }
     }
     return counts;
   }, you);
@@ -249,7 +263,9 @@ for (const [index, expected] of expectedSeating.entries()) {
       });
       await expectSound(page);
     } finally {
-      for (const socket of others) socket.close();
+      for (const socket of others) {
+        socket.close();
+      }
     }
   });
 }
@@ -281,8 +297,11 @@ test('phones give the room title a line of its own', async ({ page, isMobile }) 
   await join(page, url, you);
   const title = (await page.getByRole('heading', { level: 1 }).boundingBox())!;
   const menu = (await page.getByRole('button', { name: 'Menu' }).boundingBox())!;
-  if (isMobile) expect(title.y).toBeGreaterThanOrEqual(menu.y + menu.height);
-  else expect(title.y).toBeLessThan(menu.y + menu.height);
+  if (isMobile) {
+    expect(title.y).toBeGreaterThanOrEqual(menu.y + menu.height);
+  } else {
+    expect(title.y).toBeLessThan(menu.y + menu.height);
+  }
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(
     'Friday sprint planning session',
   );

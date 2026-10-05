@@ -1,5 +1,10 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "categories": { "correctness": "error" },
-  "ignorePatterns": ["src/routeTree.gen.ts", ".tanstack/**"]
+  "categories": {
+    "correctness": "error"
+  },
+  "ignorePatterns": ["src/routeTree.gen.ts", ".tanstack/**"],
+  "rules": {
+    "curly": ["error", "all"]
+  }
 }

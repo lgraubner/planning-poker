@@ -36,7 +36,9 @@ export function PokerTable({
   const result = revealed ? consensus(estimates, deck) : null;
   // A reveal that happened before you arrived is already over: no confetti for it
   const [arrivedRevealed, setArrivedRevealed] = useState(revealed);
-  if (arrivedRevealed && !revealed) setArrivedRevealed(false);
+  if (arrivedRevealed && !revealed) {
+    setArrivedRevealed(false);
+  }
   const others = participants.filter((participant) => participant.id !== self);
   // One seat a side from four others, two from nine: a full table of 12 sits 4, 2, 4, 2.
   // Past 12, long rows would reach the side seats, so everyone sits above or below.
@@ -175,7 +177,9 @@ function SideSeats({
   revealed: boolean;
   right?: boolean;
 }) {
-  if (participants.length === 0) return null;
+  if (participants.length === 0) {
+    return null;
+  }
   return (
     <div className={clsx('row-span-3 row-start-1 flex flex-col gap-6', right ? 'col-3' : 'col-1')}>
       {participants.map((participant) => (
@@ -259,11 +263,15 @@ function ParticipantCard({
   // "Vote again" clears the estimate at once, so keep the face until the card has turned back
   const face = revealed && participant.selected ? participant.estimate || '' : '';
   const [shown, setShown] = useState(face);
-  if (face && face !== shown) setShown(face);
+  if (face && face !== shown) {
+    setShown(face);
+  }
   const unflipping = !face && !!shown;
   // A reveal that happened before you arrived is already over: show the face without turning it
   const [arrivedRevealed, setArrivedRevealed] = useState(!!face);
-  if (arrivedRevealed && !face) setArrivedRevealed(false);
+  if (arrivedRevealed && !face) {
+    setArrivedRevealed(false);
+  }
   const reconnecting = useDelayed(!participant.connected);
 
   return (

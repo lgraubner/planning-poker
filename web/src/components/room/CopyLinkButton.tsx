@@ -79,7 +79,9 @@ export function useCopyLink() {
   const [result, setResult] = useState<'copied' | 'failed' | null>(null);
 
   useEffect(() => {
-    if (!result) return;
+    if (!result) {
+      return;
+    }
     const timer = setTimeout(() => setResult(null), 3000);
     return () => clearTimeout(timer);
   }, [result]);

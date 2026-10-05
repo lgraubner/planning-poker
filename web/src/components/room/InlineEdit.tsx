@@ -76,8 +76,12 @@ export function InlineEdit({
       onChange={(event) => setDraft(event.target.value)}
       onBlur={commit}
       onKeyDown={(event) => {
-        if (event.key === 'Enter') event.currentTarget.blur();
-        if (event.key === 'Escape') setDraft(null);
+        if (event.key === 'Enter') {
+          event.currentTarget.blur();
+        }
+        if (event.key === 'Escape') {
+          setDraft(null);
+        }
       }}
       className={clsx(
         'rounded-md border border-zinc-700 bg-zinc-900 outline-none focus:border-indigo-400',

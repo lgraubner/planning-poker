@@ -92,13 +92,17 @@ export function useRoom(code: string, participant: Identity) {
     setConnected(false);
 
     function scheduleReconnect() {
-      if (disposed || terminal) return;
+      if (disposed || terminal) {
+        return;
+      }
       timer = setTimeout(reconnect, delay);
       delay = Math.min(delay * 2, 10000);
     }
 
     async function reconnect() {
-      if (disposed || terminal) return;
+      if (disposed || terminal) {
+        return;
+      }
       try {
         const response = await fetch(`/api/rooms/${encodeURIComponent(code)}`, {
           signal: abort.signal,
@@ -119,7 +123,9 @@ export function useRoom(code: string, participant: Identity) {
       } catch {
         /* Network failure: keep retrying until the connection returns. */
       }
-      if (disposed) return;
+      if (disposed) {
+        return;
+      }
       connect();
     }
 
@@ -130,12 +136,16 @@ export function useRoom(code: string, participant: Identity) {
       socket.current = ws;
       ws.onopen = () => ws.send(JSON.stringify({ type: 'join', ...self }));
       ws.onmessage = (event) => {
-        if (disposed) return;
+        if (disposed) {
+          return;
+        }
         try {
           const message: Message = JSON.parse(event.data);
           if (message.type === 'snapshot') {
             const own = message.participants.find((p) => p.id === message.self);
-            if (own) self = { ...self, name: own.name, spectator: own.spectator };
+            if (own) {
+              self = { ...self, name: own.name, spectator: own.spectator };
+            }
             setSnapshot(message);
             setConnected(true);
             setError('');
@@ -158,7 +168,9 @@ export function useRoom(code: string, participant: Identity) {
         }
       };
       ws.onclose = () => {
-        if (disposed) return;
+        if (disposed) {
+          return;
+        }
         setConnected(false);
         scheduleReconnect();
       };
@@ -185,7 +197,9 @@ export function useRoom(code: string, participant: Identity) {
   }, [code, participant]);
 
   function send(type: 'select' | 'reveal' | 'reset' | 'rename' | 'name' | 'role', value?: string) {
-    if (!connected || !snapshot || socket.current?.readyState !== WebSocket.OPEN) return;
+    if (!connected || !snapshot || socket.current?.readyState !== WebSocket.OPEN) {
+      return;
+    }
     setError('');
     socket.current.send(JSON.stringify({ type, value, round: snapshot.round }));
   }
