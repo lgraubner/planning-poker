@@ -4,11 +4,11 @@ import { Popover } from '@base-ui/react/popover';
 import { useBlocker } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 import clsx from 'clsx';
-import { legalLinks } from '../../legal-links';
-import type { Participant } from '../../room-connection';
-import { Button } from '../Button';
-import { HomeLink } from '../HomeLink';
-import { Icon } from '../Icon';
+import { legalLinks } from '../legal-links';
+import type { Participant } from '../room-connection';
+import { Button } from './Button';
+import { HomeLink } from './HomeLink';
+import { Icon } from './Icon';
 import { CopyLinkButton, useCopyLink } from './CopyLinkButton';
 import { InlineEdit } from './InlineEdit';
 

@@ -10,8 +10,8 @@ import { HomeLink } from '../components/HomeLink';
 import { Icon } from '../components/Icon';
 import { EstimateCard } from '../components/EstimateCard';
 import { Form } from '../components/Form';
-import { PokerTable } from '../components/room/PokerTable';
-import { RoomHeader, SpectatorList } from '../components/room/RoomHeader';
+import { PokerTable } from '../components/PokerTable';
+import { RoomHeader, SpectatorList } from '../components/RoomHeader';
 import { TextField } from '../components/TextField';
 import {
   identity,

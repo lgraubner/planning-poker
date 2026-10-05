@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import confetti from 'canvas-confetti';
 import clsx from 'clsx';
-import { consensus } from '../../consensus';
-import type { Participant } from '../../room-connection';
-import { useDelayed } from '../../hooks/useDelayed';
-import { Button } from '../Button';
+import { consensus } from '../consensus';
+import type { Participant } from '../room-connection';
+import { useDelayed } from '../hooks/useDelayed';
+import { Button } from './Button';
 import { CopyLinkButton } from './CopyLinkButton';
 import { InlineEdit } from './InlineEdit';
 
