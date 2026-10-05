@@ -23,88 +23,7 @@ import (
 	"github.com/larsgraubner/planning-poker/internal/room"
 )
 
-type bucket struct {
-	tokens float64
-	last   time.Time
-}
-
-func (b *bucket) refill(rate, burst float64) {
-	now := time.Now()
-
-	if b.last.IsZero() {
-		b.tokens = burst
-	} else {
-		b.tokens = min(burst, b.tokens+now.Sub(b.last).Seconds()*rate)
-	}
-
-	b.last = now
-}
-
-func (b *bucket) allow(rate, burst float64) bool {
-	b.refill(rate, burst)
-	if b.tokens < 1 {
-		return false
-	}
-
-	b.tokens--
-	return true
-}
-
-// limiter keeps one token bucket per client address.
-type limiter struct {
-	mu          sync.Mutex
-	buckets     map[netip.Addr]*bucket
-	rate, burst float64
-}
-
-func newLimiter(rate, burst float64) *limiter {
-	return &limiter{buckets: make(map[netip.Addr]*bucket), rate: rate, burst: burst}
-}
-
-// allow spends one of the client's tokens, if it has one left.
-func (l *limiter) allow(ip netip.Addr) bool {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	return l.bucket(ip).allow(l.rate, l.burst)
-}
-
-// ready reports whether the client has a token left, without spending it.
-func (l *limiter) ready(ip netip.Addr) bool {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	b := l.bucket(ip)
-	b.refill(l.rate, l.burst)
-
-	return b.tokens >= 1
-}
-
-// bucket returns the client's bucket. The caller holds l.mu.
-func (l *limiter) bucket(ip netip.Addr) *bucket {
-	if len(l.buckets) >= 10000 {
-		// ponytail: O(n) prune, and a reset when a wide flood keeps it full; use an LRU if that shows up.
-		for key, b := range l.buckets {
-			if time.Since(b.last) > time.Minute {
-				delete(l.buckets, key)
-			}
-		}
-
-		if len(l.buckets) >= 10000 {
-			clear(l.buckets)
-		}
-	}
-
-	b := l.buckets[ip]
-	if b == nil {
-		b = &bucket{}
-		l.buckets[ip] = b
-	}
-
-	return b
-}
-
-type Server struct {
+type server struct {
 	store    *room.Store
 	files    fs.FS
 	ctx      context.Context
@@ -122,7 +41,7 @@ type Links struct{ LegalNotice, PrivacyPolicy string }
 // New serves the API and SPA. ipHeader names a header set by a trusted proxy
 // (e.g. X-Forwarded-For); when empty, the TCP peer address identifies clients.
 func New(ctx context.Context, store *room.Store, files fs.FS, ipHeader string, links Links) http.Handler {
-	s := &Server{store: store, files: files, ctx: ctx, ipHeader: ipHeader, creators: newLimiter(1.0/60, 5), guesses: newLimiter(5, 60)}
+	s := &server{store: store, files: files, ctx: ctx, ipHeader: ipHeader, creators: newLimiter(1.0/60, 5), guesses: newLimiter(5, 60)}
 	// The page reads them from its head, so they show from the first paint.
 	for _, link := range [][2]string{{"legal-notice", links.LegalNotice}, {"privacy-policy", links.PrivacyPolicy}} {
 		if link[1] != "" {
@@ -136,11 +55,13 @@ func New(ctx context.Context, store *room.Store, files fs.FS, ipHeader string, l
 
 	r := chi.NewRouter()
 	r.Use(headers)
-	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) { reply(w, 200, map[string]string{"status": "ok"}) })
+	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		reply(w, http.StatusOK, map[string]string{"status": "ok"})
+	})
 	r.Post("/api/rooms", s.create)
 	r.Get("/api/rooms/{code}", s.info)
 	r.Get("/api/rooms/{code}/ws", s.socket)
-	r.HandleFunc("/api/*", func(w http.ResponseWriter, r *http.Request) { fail(w, 404, "Not found.") })
+	r.HandleFunc("/api/*", func(w http.ResponseWriter, r *http.Request) { fail(w, http.StatusNotFound, "Not found.") })
 	r.Get("/*", s.spa)
 
 	return r
@@ -185,7 +106,7 @@ func fail(w http.ResponseWriter, status int, message string) {
 }
 
 // clientIP groups IPv6 clients by /64, since one host usually controls a whole prefix.
-func (s *Server) clientIP(r *http.Request) netip.Addr {
+func (s *server) clientIP(r *http.Request) netip.Addr {
 	value := r.RemoteAddr
 
 	if values := r.Header.Values(s.ipHeader); s.ipHeader != "" && len(values) > 0 {
@@ -208,7 +129,7 @@ func (s *Server) clientIP(r *http.Request) netip.Addr {
 	return addr
 }
 
-func (s *Server) create(w http.ResponseWriter, r *http.Request) {
+func (s *server) create(w http.ResponseWriter, r *http.Request) {
 	allowed := s.creators.allow(s.clientIP(r))
 	if allowed {
 		s.mu.Lock()
@@ -217,12 +138,12 @@ func (s *Server) create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !allowed {
-		fail(w, 429, "Too many rooms created. Try again shortly.")
+		fail(w, http.StatusTooManyRequests, "Too many rooms created. Try again shortly.")
 		return
 	}
 
 	if strings.Split(r.Header.Get("Content-Type"), ";")[0] != "application/json" {
-		fail(w, 415, "Use application/json.")
+		fail(w, http.StatusUnsupportedMediaType, "Use application/json.")
 		return
 	}
 
@@ -234,12 +155,12 @@ func (s *Server) create(w http.ResponseWriter, r *http.Request) {
 		Deck  string `json:"deck"`
 	}
 	if err := decoder.Decode(&body); err != nil {
-		fail(w, 400, "Invalid room title or request body.")
+		fail(w, http.StatusBadRequest, "Invalid room title or request body.")
 		return
 	}
 
 	if decoder.Decode(new(any)) != io.EOF {
-		fail(w, 400, "Send one JSON object.")
+		fail(w, http.StatusBadRequest, "Send one JSON object.")
 		return
 	}
 
@@ -250,28 +171,28 @@ func (s *Server) create(w http.ResponseWriter, r *http.Request) {
 
 	code, err := s.store.Create(body.Title, body.Deck)
 	if err != nil {
-		fail(w, 400, err.Error())
+		fail(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	reply(w, 201, map[string]string{"code": code})
+	reply(w, http.StatusCreated, map[string]string{"code": code})
 }
 
 // Room codes are the only access control, so a client that keeps asking for rooms that
 // do not exist is stopped from looking up any, which makes guessing codes impractical.
 // Finding a room costs nothing, so a team behind one address can reconnect at once.
-func (s *Server) visit(w http.ResponseWriter, r *http.Request) bool {
+func (s *server) visit(w http.ResponseWriter, r *http.Request) bool {
 	if s.guesses.ready(s.clientIP(r)) {
 		return true
 	}
 
-	fail(w, 429, "Too many requests. Try again shortly.")
+	fail(w, http.StatusTooManyRequests, "Too many requests. Try again shortly.")
 	return false
 }
 
-func (s *Server) missed(r *http.Request) { s.guesses.allow(s.clientIP(r)) }
+func (s *server) missed(r *http.Request) { s.guesses.allow(s.clientIP(r)) }
 
-func (s *Server) info(w http.ResponseWriter, r *http.Request) {
+func (s *server) info(w http.ResponseWriter, r *http.Request) {
 	if !s.visit(w, r) {
 		return
 	}
@@ -279,7 +200,7 @@ func (s *Server) info(w http.ResponseWriter, r *http.Request) {
 	title, err := s.store.Info(chi.URLParam(r, "code"), r.Header.Get("X-Participant-ID"))
 	if errors.Is(err, room.ErrNotFound) {
 		s.missed(r)
-		fail(w, 404, err.Error())
+		fail(w, http.StatusNotFound, err.Error())
 		return
 	}
 
@@ -289,7 +210,7 @@ func (s *Server) info(w http.ResponseWriter, r *http.Request) {
 		reason = err.Error()
 	}
 
-	reply(w, 200, struct {
+	reply(w, http.StatusOK, struct {
 		Title     string `json:"title"`
 		Available bool   `json:"available"`
 		Reason    string `json:"reason,omitempty"`
@@ -318,17 +239,17 @@ func write(ctx context.Context, conn *websocket.Conn, message any) error {
 	return wsjson.Write(ctx, conn, message)
 }
 
-func (s *Server) socket(w http.ResponseWriter, r *http.Request) {
+func (s *server) socket(w http.ResponseWriter, r *http.Request) {
 	if !s.visit(w, r) {
 		return
 	}
 
 	code := chi.URLParam(r, "code")
 	if err := s.store.Reserve(code); err != nil {
-		status := 409
+		status := http.StatusConflict
 		if errors.Is(err, room.ErrNotFound) {
 			s.missed(r)
-			status = 404
+			status = http.StatusNotFound
 		}
 
 		fail(w, status, err.Error())
@@ -423,7 +344,7 @@ func (s *Server) socket(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) spa(w http.ResponseWriter, r *http.Request) {
+func (s *server) spa(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/")
 	if strings.HasPrefix(path, "assets/") {
 		if _, err := fs.Stat(s.files, path); err != nil {
@@ -444,7 +365,7 @@ func (s *Server) spa(w http.ResponseWriter, r *http.Request) {
 
 	index, err := fs.ReadFile(s.files, "index.html")
 	if err != nil {
-		fail(w, 503, "Frontend build is missing.")
+		fail(w, http.StatusServiceUnavailable, "Frontend build is missing.")
 		return
 	}
 
