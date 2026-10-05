@@ -170,7 +170,7 @@ test('a full room turns the thirty-first person away', async ({ page, newPartici
   const others = await joinOthers(page, 29);
 
   try {
-    await expect(joinOthers(page, 1)).rejects.toThrow('This room is full.');
+    await expect(joinOthers(page, 1)).rejects.toThrow('This room is full');
     // In the browser, they learn why before they get to the name form
     const latecomer = await newParticipant();
     await latecomer.goto(url);

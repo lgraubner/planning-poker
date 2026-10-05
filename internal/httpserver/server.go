@@ -60,7 +60,7 @@ func New(ctx context.Context, store *room.Store, files fs.FS, ipHeader string, l
 	r.Post("/api/rooms", s.create)
 	r.Get("/api/rooms/{code}", s.info)
 	r.Get("/api/rooms/{code}/ws", s.socket)
-	r.HandleFunc("/api/*", func(w http.ResponseWriter, r *http.Request) { fail(w, http.StatusNotFound, "Not found.") })
+	r.HandleFunc("/api/*", func(w http.ResponseWriter, r *http.Request) { fail(w, http.StatusNotFound, "Not found") })
 	r.Get("/*", s.spa)
 
 	return r
@@ -79,13 +79,13 @@ func headers(next http.Handler) http.Handler {
 			u, err := url.Parse(origin)
 			// TLS may terminate at the proxy; compare the preserved public Host
 			if err != nil || (u.Scheme != "http" && u.Scheme != "https") || !strings.EqualFold(u.Host, r.Host) || u.User != nil || u.Path != "" || u.RawQuery != "" || u.Fragment != "" {
-				fail(w, http.StatusForbidden, "Cross-origin requests are not allowed.")
+				fail(w, http.StatusForbidden, "Cross-origin requests are not allowed")
 				return
 			}
 		}
 
 		if r.Header.Get("Sec-Fetch-Site") == "cross-site" && strings.HasPrefix(r.URL.Path, "/api/") {
-			fail(w, http.StatusForbidden, "Cross-origin requests are not allowed.")
+			fail(w, http.StatusForbidden, "Cross-origin requests are not allowed")
 			return
 		}
 
@@ -137,12 +137,12 @@ func (s *server) create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !allowed {
-		fail(w, http.StatusTooManyRequests, "Too many rooms created. Try again shortly.")
+		fail(w, http.StatusTooManyRequests, "Too many rooms created. Try again shortly")
 		return
 	}
 
 	if strings.Split(r.Header.Get("Content-Type"), ";")[0] != "application/json" {
-		fail(w, http.StatusUnsupportedMediaType, "Use application/json.")
+		fail(w, http.StatusUnsupportedMediaType, "Use application/json")
 		return
 	}
 
@@ -154,12 +154,12 @@ func (s *server) create(w http.ResponseWriter, r *http.Request) {
 		Deck  string `json:"deck"`
 	}
 	if err := decoder.Decode(&body); err != nil {
-		fail(w, http.StatusBadRequest, "Invalid room title or request body.")
+		fail(w, http.StatusBadRequest, "Invalid room title or request body")
 		return
 	}
 
 	if decoder.Decode(new(any)) != io.EOF {
-		fail(w, http.StatusBadRequest, "Send one JSON object.")
+		fail(w, http.StatusBadRequest, "Send one JSON object")
 		return
 	}
 
@@ -185,7 +185,7 @@ func (s *server) visit(w http.ResponseWriter, r *http.Request) bool {
 		return true
 	}
 
-	fail(w, http.StatusTooManyRequests, "Too many requests. Try again shortly.")
+	fail(w, http.StatusTooManyRequests, "Too many requests. Try again shortly")
 	return false
 }
 
@@ -278,7 +278,7 @@ func (s *server) socket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if join.Type != "join" {
-		_ = write(ctx, conn, socketError{"error", "Join before sending commands.", true})
+		_ = write(ctx, conn, socketError{"error", "Join before sending commands", true})
 		return
 	}
 
@@ -326,7 +326,7 @@ func (s *server) socket(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if !commands.allow(20, 20) {
-			_ = write(ctx, conn, socketError{"error", "Too many commands. Rejoin to continue.", true})
+			_ = write(ctx, conn, socketError{"error", "Too many commands. Rejoin to continue", true})
 			return
 		}
 
@@ -364,7 +364,7 @@ func (s *server) spa(w http.ResponseWriter, r *http.Request) {
 
 	index, err := fs.ReadFile(s.files, "index.html")
 	if err != nil {
-		fail(w, http.StatusServiceUnavailable, "Frontend build is missing.")
+		fail(w, http.StatusServiceUnavailable, "Frontend build is missing")
 		return
 	}
 

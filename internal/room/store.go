@@ -30,10 +30,10 @@ var Decks = map[string][]string{
 }
 
 var (
-	ErrNotFound    = errors.New("Room not found.")
-	ErrFull        = errors.New("This room is full.")
-	ErrTooManyTabs = errors.New("You have this room open in too many tabs. Close one and try again.")
-	ErrBusy        = errors.New("This room has too many connections right now. Try again shortly.")
+	ErrNotFound    = errors.New("Room not found")
+	ErrFull        = errors.New("This room is full")
+	ErrTooManyTabs = errors.New("You have this room open in too many tabs. Close one and try again")
+	ErrBusy        = errors.New("This room has too many connections right now. Try again shortly")
 )
 
 type Participant struct {
@@ -96,12 +96,12 @@ func New() *Store {
 
 func ValidateLabel(value string, max int) (string, error) {
 	if !utf8.ValidString(value) || strings.ContainsFunc(value, unicode.IsControl) {
-		return "", errors.New("Use text without control characters.")
+		return "", errors.New("Use text without control characters")
 	}
 
 	value = strings.TrimSpace(value)
 	if n := utf8.RuneCountInString(value); n == 0 || n > max {
-		return "", errors.New("Text is empty or too long.")
+		return "", errors.New("Text is empty or too long")
 	}
 
 	return value, nil
@@ -123,14 +123,14 @@ func (s *Store) Create(title, deck string) (string, error) {
 	}
 
 	if Decks[deck] == nil {
-		return "", errors.New("Unknown deck.")
+		return "", errors.New("Unknown deck")
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if len(s.rooms) >= s.maxRooms && !s.removeLongestEmpty() {
-		return "", errors.New("Room limit reached. Try again later.")
+		return "", errors.New("Room limit reached. Try again later")
 	}
 
 	for {
@@ -138,7 +138,7 @@ func (s *Store) Create(title, deck string) (string, error) {
 		for i := range code {
 			n, err := rand.Int(rand.Reader, big.NewInt(int64(len(alphabet))))
 			if err != nil {
-				return "", errors.New("Could not create room.")
+				return "", errors.New("Could not create room")
 			}
 
 			code[i] = alphabet[n.Int64()]
@@ -150,7 +150,7 @@ func (s *Store) Create(title, deck string) (string, error) {
 
 		r := &session{title: title, deck: deck, round: 1, emptySince: s.now()}
 		if s.save(string(code), r) != nil {
-			return "", errors.New("Could not create room.")
+			return "", errors.New("Could not create room")
 		}
 
 		s.rooms[string(code)] = r
@@ -250,7 +250,7 @@ func (s *Store) Join(code, secret, name string, spectator bool) (*Subscription, 
 	}
 
 	if !validSecret(secret) {
-		return nil, errors.New("Invalid participant identity.")
+		return nil, errors.New("Invalid participant identity")
 	}
 
 	s.mu.Lock()
@@ -345,7 +345,7 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 
 	// Only estimating belongs to a round: renaming or changing role must survive a reset
 	if round != r.round && (command == "select" || command == "reveal" || command == "reset") {
-		return errors.New("The round changed. Try again.")
+		return errors.New("The round changed. Try again")
 	}
 
 	switch command {
@@ -365,7 +365,7 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 		sub.member.name = name
 	case "role":
 		if value != "spectator" && value != "voter" {
-			return errors.New("Unknown role.")
+			return errors.New("Unknown role")
 		}
 
 		sub.member.spectator = value == "spectator"
@@ -375,15 +375,15 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 		}
 	case "select":
 		if sub.member.spectator {
-			return errors.New("Spectators do not estimate.")
+			return errors.New("Spectators do not estimate")
 		}
 
 		if r.revealed {
-			return errors.New("Wait for reset before selecting.")
+			return errors.New("Wait for reset before selecting")
 		}
 
 		if !slices.Contains(Decks[r.deck], value) {
-			return errors.New("Invalid estimate.")
+			return errors.New("Invalid estimate")
 		}
 
 		if sub.member.estimate == value {
@@ -395,7 +395,7 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 		r.revealed = true
 	case "reset":
 		if !r.revealed {
-			return errors.New("Reveal before resetting.")
+			return errors.New("Reveal before resetting")
 		}
 
 		r.revealed = false
@@ -404,7 +404,7 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 			p.estimate = ""
 		}
 	default:
-		return errors.New("Unknown command.")
+		return errors.New("Unknown command")
 	}
 
 	// Names, roles and estimates live only in memory, so only the room's own fields are saved

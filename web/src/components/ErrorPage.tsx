@@ -2,9 +2,6 @@ import { Link } from '@tanstack/react-router';
 import { HomeLink } from './HomeLink';
 import { LegalFooter } from './LegalFooter';
 
-// Headings and the line under them read without a closing full stop
-const bare = (text: string) => text.replace(/\.$/, '');
-
 export function ErrorPage({
   title,
   description,
@@ -40,12 +37,10 @@ export function ErrorPage({
           )}
         </div>
         <h1 className="max-w-md text-3xl font-semibold tracking-tight text-balance wrap-anywhere">
-          {bare(title)}
+          {title}
         </h1>
         {description && (
-          <p className="mt-3 max-w-md leading-relaxed text-balance text-zinc-400">
-            {bare(description)}
-          </p>
+          <p className="mt-3 max-w-md leading-relaxed text-balance text-zinc-400">{description}</p>
         )}
         {home && (
           <Link

@@ -46,7 +46,7 @@ function RoomEntry({ code }: { code: string }) {
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
           setMissing(response.status === 404);
-          throw new Error(data.error || 'Could not load room.');
+          throw new Error(data.error || 'Could not load room');
         }
 
         // A reload can arrive before the old tab's socket has finished closing
@@ -66,7 +66,7 @@ function RoomEntry({ code }: { code: string }) {
         }
       } catch (cause) {
         if (!abort.signal.aborted) {
-          setError(cause instanceof Error ? cause.message : 'Could not load room.');
+          setError(cause instanceof Error ? cause.message : 'Could not load room');
         }
       }
     }
@@ -98,7 +98,7 @@ function RoomEntry({ code }: { code: string }) {
   if (error || info?.available === false) {
     return (
       <UnavailableRoom
-        message={error || info?.reason || 'You cannot join this room right now.'}
+        message={error || info?.reason || 'You cannot join this room right now'}
         missing={missing}
       />
     );
@@ -113,11 +113,11 @@ function RoomEntry({ code }: { code: string }) {
 
 function UnavailableRoom({ message, missing }: { message: string; missing: boolean }) {
   // The server's messages are sentences: the first heads the page, the rest explain it
-  const [headline, ...rest] = message.split(/(?<=\.)\s+/);
+  const [headline, ...rest] = message.split(/\.\s+/);
   return (
     <ErrorPage
       title={headline}
-      description={rest.join(' ')}
+      description={rest.join('. ')}
       home={missing ? 'Start a new room' : undefined}
       failed={!missing}
     />

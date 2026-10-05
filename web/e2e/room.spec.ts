@@ -438,16 +438,17 @@ test('phones copy the room link from the menu', async ({ page, context, isMobile
 });
 
 test("the server's errors show without a full stop", async ({ page }) => {
-  await page.route('**/api/rooms', (route) =>
-    route.fulfill({
-      status: 429,
-      json: { error: 'Room limit reached. Try again later.' },
-    }),
-  );
+  // A client may create five rooms in a row, so the sixth meets the server's own message
+  for (let i = 0; i < 5; i++) {
+    expect((await page.request.post('/api/rooms', { data: { title: 'Sprint' } })).status()).toBe(
+      201,
+    );
+  }
+
   await page.goto('/');
   await page.getByLabel('Room title').fill('Sprint planning');
   await page.getByRole('button', { name: 'Create room' }).click();
-  await expect(page.getByRole('alert')).toHaveText('Room limit reached. Try again later');
+  await expect(page.getByRole('alert')).toHaveText('Too many rooms created. Try again shortly');
 });
 
 test('a room needs a title before it is created', async ({ page }) => {

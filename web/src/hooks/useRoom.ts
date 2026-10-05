@@ -63,13 +63,13 @@ export function useRoom(code: string, participant: Identity) {
         if (response.status === 404) {
           terminal = true;
           setFatal(true);
-          setError('Room not found. It may have expired or the server restarted.');
+          setError('Room not found. It may have expired or the server restarted');
           return;
         }
 
         const data = response.ok ? await response.json() : null;
         if (data && !data.available) {
-          setError(`${data.reason} Retrying…`);
+          setError(`${data.reason}. Retrying…`);
           scheduleReconnect();
           return;
         }
@@ -121,7 +121,7 @@ export function useRoom(code: string, participant: Identity) {
           terminal = true;
           setFatal(true);
           setConnected(false);
-          setError('Invalid server response. Reload to rejoin.');
+          setError('Invalid server response. Reload to rejoin');
           ws.close();
         }
       };
