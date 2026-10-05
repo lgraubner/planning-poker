@@ -24,6 +24,10 @@ A comment in Go or TypeScript records the **why** the code cannot show: an edge 
 
 A `//` comment starts with a capital letter, except a Go doc comment, which starts with the name it documents (`// clientIP groups …`). A one-line `//` comment holding a single sentence ends without a full stop; one with several sentences, or spanning several lines, ends each sentence with one.
 
+## Styling
+
+Share styling through components. A class string stays inside the component that renders it and is never exported; where two places need the same look and no component fits, duplicate the classes.
+
 ## Commits
 
 Write every commit message as a Conventional Commit: `type(scope)!: subject`, with a lowercase subject. Pull request titles follow the same format. The `commit-msg` hook and CI on pull requests enforce it with commitlint (`web/commitlint.config.mjs`); when commitlint rejects a message, rewrite the message and commit again.

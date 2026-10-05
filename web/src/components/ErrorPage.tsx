@@ -1,13 +1,6 @@
 import { Link } from '@tanstack/react-router';
-import clsx from 'clsx';
-import { buttonClassName } from './Button';
 import { HomeLink } from './HomeLink';
 import { LegalFooter } from './LegalFooter';
-
-const homeClassName = clsx(
-  buttonClassName,
-  'mt-6 no-underline transition-[scale] duration-150 ease-out active:scale-[0.97] motion-reduce:transition-none',
-);
 
 // Headings and the line under them read without a closing full stop
 const bare = (text: string) => text.replace(/\.$/, '');
@@ -55,7 +48,10 @@ export function ErrorPage({
           </p>
         )}
         {home && (
-          <Link to="/" className={homeClassName}>
+          <Link
+            to="/"
+            className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-indigo-400 bg-indigo-400 px-3.5 py-2 text-sm font-semibold text-zinc-950 not-disabled:hover:border-indigo-300 not-disabled:hover:bg-indigo-300 mt-6 no-underline transition-[scale] duration-150 ease-out active:scale-[0.97] motion-reduce:transition-none"
+          >
             {home}
           </Link>
         )}
