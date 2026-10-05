@@ -32,7 +32,7 @@ export function SelectField({ label, items, value, onValueChange }: SelectFieldP
         <Select.Portal>
           {/* Overlapping the trigger needs an inline <style>, which the CSP blocks. */}
           <Select.Positioner alignItemWithTrigger={false} sideOffset={4} className="z-10">
-            <Select.Popup className="w-(--anchor-width) origin-(--transform-origin) rounded-lg border border-zinc-700 bg-zinc-900 p-1 shadow-lg shadow-black/40 outline-none transition-[opacity,scale] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] data-ending-style:opacity-0 data-starting-style:opacity-0 motion-safe:data-ending-style:scale-95 motion-safe:data-starting-style:scale-95">
+            <Select.Popup className="w-(--anchor-width) origin-(--transform-origin) rounded-lg border border-border bg-surface p-1 shadow-lg shadow-black/40 outline-none transition-[opacity,scale] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] data-ending-style:opacity-0 data-starting-style:opacity-0 motion-safe:data-ending-style:scale-95 motion-safe:data-starting-style:scale-95">
               <Select.List>
                 {items.map((item) => (
                   <Select.Item

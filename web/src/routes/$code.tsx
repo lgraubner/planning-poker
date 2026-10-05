@@ -221,7 +221,7 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
       <p
         role="status"
         className={clsx(
-          'fixed top-4 left-1/2 z-30 flex w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-3 rounded-full border border-amber-400/40 bg-zinc-900 px-4 py-2 text-sm text-zinc-100 shadow-lg shadow-black/40 transition-[opacity,filter,scale,translate,visibility] duration-300',
+          'fixed top-4 left-1/2 z-30 flex w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-3 rounded-full border border-amber-400/40 bg-surface px-4 py-2 text-sm text-zinc-100 shadow-lg shadow-black/40 transition-[opacity,filter,scale,translate,visibility] duration-300',
           // Enters with a slide and scale but leaves with only a fade: scale and translate wait
           // out the fade (delays follow the property order above), then reset unseen.
           // The fade eases in and out; a strong ease-out would spend it in the first frames.
@@ -361,7 +361,7 @@ function RoomMenu() {
       </Menu.Trigger>
       <Menu.Portal>
         <Menu.Positioner align="end" sideOffset={4} className="z-30">
-          <Menu.Popup className="min-w-44 origin-(--transform-origin) rounded-lg border border-zinc-700 bg-zinc-900 p-1 shadow-lg shadow-black/40 outline-none transition-[opacity,scale] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] data-ending-style:opacity-0 data-starting-style:opacity-0 motion-safe:data-ending-style:scale-95 motion-safe:data-starting-style:scale-95">
+          <Menu.Popup className="min-w-44 origin-(--transform-origin) rounded-lg border border-border bg-surface p-1 shadow-lg shadow-black/40 outline-none transition-[opacity,scale] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] data-ending-style:opacity-0 data-starting-style:opacity-0 motion-safe:data-ending-style:scale-95 motion-safe:data-starting-style:scale-95">
             {/* Stays open, so the item can confirm the copy. */}
             <Menu.Item
               closeOnClick={false}
