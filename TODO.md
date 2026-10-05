@@ -1,8 +1,6 @@
 # Todo
 
-- check code
-  - split big components
-  - avoid useEffect
+-
 
 ## Ideas
 
