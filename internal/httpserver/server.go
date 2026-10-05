@@ -28,7 +28,7 @@ type bucket struct {
 	last   time.Time
 }
 
-func (b *bucket) allow(rate, burst float64) bool {
+func (b *bucket) refill(rate, burst float64) {
 	now := time.Now()
 	if b.last.IsZero() {
 		b.tokens = burst
@@ -36,6 +36,10 @@ func (b *bucket) allow(rate, burst float64) bool {
 		b.tokens = min(burst, b.tokens+now.Sub(b.last).Seconds()*rate)
 	}
 	b.last = now
+}
+
+func (b *bucket) allow(rate, burst float64) bool {
+	b.refill(rate, burst)
 	if b.tokens < 1 {
 		return false
 	}
@@ -54,9 +58,24 @@ func newLimiter(rate, burst float64) *limiter {
 	return &limiter{buckets: make(map[netip.Addr]*bucket), rate: rate, burst: burst}
 }
 
+// allow spends one of the client's tokens, if it has one left.
 func (l *limiter) allow(ip netip.Addr) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	return l.bucket(ip).allow(l.rate, l.burst)
+}
+
+// ready reports whether the client has a token left, without spending it.
+func (l *limiter) ready(ip netip.Addr) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	b := l.bucket(ip)
+	b.refill(l.rate, l.burst)
+	return b.tokens >= 1
+}
+
+// bucket returns the client's bucket. The caller holds l.mu.
+func (l *limiter) bucket(ip netip.Addr) *bucket {
 	if len(l.buckets) >= 10000 {
 		// ponytail: O(n) prune, and a reset when a wide flood keeps it full; use an LRU if that shows up.
 		for key, b := range l.buckets {
@@ -73,7 +92,7 @@ func (l *limiter) allow(ip netip.Addr) bool {
 		b = &bucket{}
 		l.buckets[ip] = b
 	}
-	return b.allow(l.rate, l.burst)
+	return b
 }
 
 type Server struct {
@@ -84,7 +103,7 @@ type Server struct {
 	mu       sync.Mutex
 	creation bucket
 	creators *limiter
-	visitors *limiter
+	guesses  *limiter
 	meta     []byte
 }
 
@@ -94,7 +113,7 @@ type Links struct{ LegalNotice, PrivacyPolicy string }
 // New serves the API and SPA. ipHeader names a header set by a trusted proxy
 // (e.g. X-Forwarded-For); when empty, the TCP peer address identifies clients.
 func New(ctx context.Context, store *room.Store, files fs.FS, ipHeader string, links Links) http.Handler {
-	s := &Server{store: store, files: files, ctx: ctx, ipHeader: ipHeader, creators: newLimiter(1.0/60, 5), visitors: newLimiter(5, 60)}
+	s := &Server{store: store, files: files, ctx: ctx, ipHeader: ipHeader, creators: newLimiter(1.0/60, 5), guesses: newLimiter(5, 60)}
 	// The page reads them from its head, so they show from the first paint.
 	for _, link := range [][2]string{{"legal-notice", links.LegalNotice}, {"privacy-policy", links.PrivacyPolicy}} {
 		if link[1] != "" {
@@ -212,15 +231,18 @@ func (s *Server) create(w http.ResponseWriter, r *http.Request) {
 	reply(w, 201, map[string]string{"code": code})
 }
 
-// Room codes are the only access control, so lookups and sockets are rate limited
-// per client to make guessing codes impractical.
+// Room codes are the only access control, so a client that keeps asking for rooms that
+// do not exist is stopped from looking up any, which makes guessing codes impractical.
+// Finding a room costs nothing, so a team behind one address can reconnect at once.
 func (s *Server) visit(w http.ResponseWriter, r *http.Request) bool {
-	if s.visitors.allow(s.clientIP(r)) {
+	if s.guesses.ready(s.clientIP(r)) {
 		return true
 	}
 	fail(w, 429, "Too many requests. Try again shortly.")
 	return false
 }
+
+func (s *Server) missed(r *http.Request) { s.guesses.allow(s.clientIP(r)) }
 
 func (s *Server) info(w http.ResponseWriter, r *http.Request) {
 	if !s.visit(w, r) {
@@ -228,6 +250,7 @@ func (s *Server) info(w http.ResponseWriter, r *http.Request) {
 	}
 	title, err := s.store.Info(chi.URLParam(r, "code"), r.Header.Get("X-Participant-ID"))
 	if errors.Is(err, room.ErrNotFound) {
+		s.missed(r)
 		fail(w, 404, err.Error())
 		return
 	}
@@ -272,6 +295,7 @@ func (s *Server) socket(w http.ResponseWriter, r *http.Request) {
 	if err := s.store.Reserve(code); err != nil {
 		status := 409
 		if errors.Is(err, room.ErrNotFound) {
+			s.missed(r)
 			status = 404
 		}
 		fail(w, status, err.Error())

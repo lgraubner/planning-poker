@@ -204,6 +204,18 @@ func TestPerClientRateLimits(t *testing.T) {
 	if request("GET", "/api/rooms/missing1", "2001:db8:0:1::1") != 404 {
 		t.Fatal("another IPv6 prefix was limited")
 	}
+	// A team behind one office address reconnects at once after a deploy: only guesses count.
+	code, _ := store.Create("Sprint", "fibonacci")
+	for i := 0; i < 200; i++ {
+		if status := request("GET", "/api/rooms/"+code, "192.0.2.1"); status != 200 {
+			t.Fatalf("lookup of an existing room %d: %d", i, status)
+		}
+	}
+	for request("GET", "/api/rooms/missing1", "192.0.2.1") == 404 {
+	}
+	if request("GET", "/api/rooms/"+code, "192.0.2.1") != 429 {
+		t.Fatal("a client out of guesses could still find which codes exist")
+	}
 }
 
 func TestLegalLinksReachThePage(t *testing.T) {
