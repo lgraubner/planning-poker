@@ -267,6 +267,8 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
       <ErrorMessage>{error}</ErrorMessage>
       <PokerTable
         participants={snapshot.participants.filter((participant) => !participant.spectator)}
+        // A voter who turns spectator after the reveal still counts until the next round.
+        estimates={snapshot.participants.flatMap((participant) => participant.estimate ?? [])}
         deck={snapshot.deck}
         self={snapshot.self}
         connected={connected}

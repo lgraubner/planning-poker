@@ -123,7 +123,7 @@ func Open(path string) (*Store, error) {
 		}
 	}
 	s := New()
-	// Rooms held for 30 days need more room slots, or a flood could lock out creation for a month.
+	// Rooms held for 30 days need more room slots, or a full store would remove idle rooms long before then.
 	s.db, s.ttl, s.maxRooms = db, 30*24*time.Hour, 100_000
 	rows, err := db.Query(`SELECT code, title, deck, round, revealed, joined, empty_since FROM rooms`)
 	if err != nil {
@@ -138,6 +138,11 @@ func Open(path string) (*Store, error) {
 		if err := rows.Scan(&code, &r.title, &r.deck, &r.round, &r.revealed, &r.joined, &emptySince); err != nil {
 			db.Close()
 			return nil, err
+		}
+		// The votes of a revealed round were in memory, so the room comes back ready for the next.
+		if r.revealed {
+			r.revealed = false
+			r.round++
 		}
 		// Rooms occupied at shutdown start their idle clock now.
 		r.emptySince = s.now()
@@ -205,7 +210,7 @@ func (s *Store) Create(title, deck string) (string, error) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if len(s.rooms) >= s.maxRooms {
+	if len(s.rooms) >= s.maxRooms && !s.removeLongestEmpty() {
 		return "", errors.New("Room limit reached. Try again later.")
 	}
 	for {
@@ -227,6 +232,27 @@ func (s *Store) Create(title, deck string) (string, error) {
 		s.rooms[string(code)] = r
 		return string(code), nil
 	}
+}
+
+// removeLongestEmpty makes space in a full store, so a flood of rooms cannot lock out
+// creation until they expire. Rooms in use, or with someone joining, are kept.
+// ponytail: O(rooms) scan, only while full; keep rooms ordered by idle time if creation then slows.
+func (s *Store) removeLongestEmpty() bool {
+	var oldest string
+	for code, r := range s.rooms {
+		if r.emptySince.IsZero() || r.sockets > 0 {
+			continue
+		}
+		if oldest == "" || r.emptySince.Before(s.rooms[oldest].emptySince) {
+			oldest = code
+		}
+	}
+	if oldest == "" {
+		return false
+	}
+	delete(s.rooms, oldest)
+	s.save(oldest, nil)
+	return true
 }
 
 // Info returns the room's title, and the error a join would meet right now.
@@ -361,41 +387,32 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 	if r == nil || !sub.member.connections[sub] {
 		return ErrNotFound
 	}
-	// Renaming the room or yourself does not depend on the round, so a reset must not reject it.
-	if command == "rename" {
+	// Only estimating belongs to a round: renaming or changing role must survive a reset.
+	if round != r.round && (command == "select" || command == "reveal" || command == "reset") {
+		return errors.New("The round changed. Try again.")
+	}
+	switch command {
+	case "rename":
 		title, err := ValidateLabel(value, 100)
 		if err != nil {
 			return err
 		}
 		r.title = title
-		s.save(sub.code, r)
-		s.publish(r)
-		return nil
-	}
-	// Names live only in memory, so there is nothing to save.
-	if command == "name" {
+	case "name":
 		name, err := ValidateLabel(value, 40)
 		if err != nil {
 			return err
 		}
 		sub.member.name = name
-		s.publish(r)
-		return nil
-	}
-	// Spectators hold no estimate, so changing role is not tied to a round either.
-	if command == "role" {
+	case "role":
 		if value != "spectator" && value != "voter" {
 			return errors.New("Unknown role.")
 		}
 		sub.member.spectator = value == "spectator"
-		sub.member.estimate = ""
-		s.publish(r)
-		return nil
-	}
-	if round != r.round {
-		return errors.New("The round changed. Try again.")
-	}
-	switch command {
+		// A revealed vote stays until reset, so the cards under discussion do not change.
+		if !r.revealed {
+			sub.member.estimate = ""
+		}
 	case "select":
 		if sub.member.spectator {
 			return errors.New("Spectators do not estimate.")
@@ -425,7 +442,8 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 	default:
 		return errors.New("Unknown command.")
 	}
-	if command != "select" {
+	// Names, roles and estimates live only in memory, so only the room's own fields are saved.
+	if command == "rename" || command == "reveal" || command == "reset" {
 		s.save(sub.code, r)
 	}
 	s.publish(r)

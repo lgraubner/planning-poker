@@ -10,6 +10,7 @@ import { InlineEdit } from './InlineEdit';
 
 export function PokerTable({
   participants,
+  estimates,
   deck,
   self,
   connected,
@@ -19,6 +20,7 @@ export function PokerTable({
   onRenameSelf,
 }: {
   participants: Participant[];
+  estimates: string[];
   deck: string[];
   self: string;
   connected: boolean;
@@ -31,12 +33,7 @@ export function PokerTable({
   const allVoted =
     participants.length > 0 && participants.every((participant) => participant.selected);
   const current = participants.find((participant) => participant.id === self);
-  const result = revealed
-    ? consensus(
-        participants.flatMap((participant) => participant.estimate ?? []),
-        deck,
-      )
-    : null;
+  const result = revealed ? consensus(estimates, deck) : null;
   // A reveal that happened before you arrived is already over: no confetti for it.
   const [arrivedRevealed, setArrivedRevealed] = useState(revealed);
   if (arrivedRevealed && !revealed) setArrivedRevealed(false);

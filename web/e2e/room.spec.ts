@@ -905,3 +905,45 @@ test('spectators watch from beside the table and can switch to voting', async ({
   await settled(bob);
   expect(await card(bob, 'Alice').boundingBox()).toEqual(aliceSeat);
 });
+
+test('watching after the reveal keeps your vote in the results', async ({
+  page,
+  newParticipant,
+}) => {
+  const url = await createRoom(page);
+  await join(page, url, 'Alice');
+  // What reaches Alice proves the server kept the vote, not only Bob's view.
+  let bobFrame: { estimate?: string; spectator: boolean } | undefined;
+  page.on('websocket', (socket) =>
+    socket.on('framereceived', ({ payload }) => {
+      const message = JSON.parse(String(payload));
+      if (message.type === 'snapshot')
+        bobFrame = message.participants.find((p: { name: string }) => p.name === 'Bob');
+    }),
+  );
+  // Alice's socket opened before the listener; a reload lets it see the frames.
+  await page.reload();
+  const bob = await newParticipant();
+  await join(bob, url, 'Bob');
+  await page.getByRole('button', { name: '3', exact: true }).click();
+  await bob.getByRole('button', { name: '5', exact: true }).click();
+  await page.getByRole('button', { name: 'Reveal cards' }).click();
+  const proposal = page.getByRole('status').filter({ hasText: 'Proposed estimate' });
+  await expect(proposal).toHaveText('Proposed estimate 5 Agreement 50%');
+
+  // The team is still discussing these cards, so they must not change under it.
+  await bob.getByRole('button', { name: 'Spectators', exact: true }).click();
+  await bob.getByRole('button', { name: 'Watch as spectator' }).click();
+  await expect
+    .poll(() => bobFrame)
+    .toEqual(expect.objectContaining({ spectator: true, estimate: '5' }));
+  await expect(card(page, 'Bob')).toBeHidden();
+  await expect(
+    page.getByRole('list', { name: 'Results' }).getByRole('listitem', { name: /^5:/ }),
+  ).toHaveAccessibleName('5: 1 vote');
+  await expect(proposal).toHaveText('Proposed estimate 5 Agreement 50%');
+
+  // The next round starts without it.
+  await page.getByRole('button', { name: 'Vote again' }).click();
+  await expect.poll(() => bobFrame?.estimate).toBeUndefined();
+});

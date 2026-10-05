@@ -290,6 +290,31 @@ func TestSpectatorsHoldNoEstimate(t *testing.T) {
 	}
 }
 
+func TestWatchingAfterTheRevealKeepsTheVote(t *testing.T) {
+	s := New()
+	code, _ := s.Create("Test", "fibonacci")
+	alice, _ := s.Join(code, aliceID, "Alice", false)
+	bob, _ := s.Join(code, bobID, "Bob", false)
+	for _, c := range []struct {
+		sub            *Subscription
+		command, value string
+	}{{alice, "select", "3"}, {bob, "select", "8"}, {alice, "reveal", ""}, {bob, "role", "spectator"}} {
+		if err := s.Command(c.sub, c.command, c.value, 1); err != nil {
+			t.Fatal(c.command, err)
+		}
+	}
+	// The team is still discussing the revealed cards, so they must not change under it.
+	if snapshot := <-alice.Updates; snapshot.Participants[1].Estimate != "8" || !snapshot.Participants[1].Spectator {
+		t.Fatalf("revealed vote changed: %+v", snapshot.Participants[1])
+	}
+	if err := s.Command(alice, "reset", "", 1); err != nil {
+		t.Fatal(err)
+	}
+	if snapshot := <-alice.Updates; snapshot.Participants[1].Selected {
+		t.Fatal("a spectator kept a vote into the next round")
+	}
+}
+
 func TestSQLitePersistsRoomsAcrossRestarts(t *testing.T) {
 	path := t.TempDir() + "/rooms.db"
 	s, err := Open(path)
@@ -330,7 +355,8 @@ func TestSQLitePersistsRoomsAcrossRestarts(t *testing.T) {
 	if err != nil {
 		t.Fatal("room lost on restart:", err)
 	}
-	if snapshot := <-bob.Updates; snapshot.Title != "Retro" || snapshot.Deck[0] != "XS" || snapshot.Round != 2 || !snapshot.Revealed {
+	// The votes of a revealed round stay in memory, so the room comes back ready for the next round.
+	if snapshot := <-bob.Updates; snapshot.Title != "Retro" || snapshot.Deck[0] != "XS" || snapshot.Round != 3 || snapshot.Revealed {
 		t.Fatalf("room state lost on restart: %+v", snapshot)
 	}
 	s.Leave(bob)
@@ -408,8 +434,8 @@ func TestRoomLimitDependsOnPersistence(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if _, err := memory.Create("Room", "fibonacci"); err == nil {
-		t.Fatal("in-memory store exceeded 1,000 rooms")
+	if _, err := memory.Create("Room", "fibonacci"); err != nil || len(memory.rooms) != 1000 {
+		t.Fatalf("in-memory store did not stay at 1,000 rooms: %d, %v", len(memory.rooms), err)
 	}
 	s, err := Open(t.TempDir() + "/rooms.db")
 	if err != nil {
@@ -419,6 +445,39 @@ func TestRoomLimitDependsOnPersistence(t *testing.T) {
 		if _, err := s.Create("Room", "fibonacci"); err != nil {
 			t.Fatal("database store stopped at the in-memory room limit:", err)
 		}
+	}
+}
+
+func TestFullStoreMakesRoomFromTheLongestEmpty(t *testing.T) {
+	s := New()
+	s.maxRooms = 3
+	now := time.Now()
+	s.now = func() time.Time { return now }
+	codes := make([]string, 3)
+	for i := range codes {
+		codes[i], _ = s.Create("Room", "fibonacci")
+		now = now.Add(time.Minute)
+	}
+	// Someone is joining the oldest room, so it must survive.
+	if err := s.Reserve(codes[0]); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Create("New", "fibonacci"); err != nil {
+		t.Fatal("full store refused a room while some stood empty:", err)
+	}
+	if _, err := s.Info(codes[1], ""); err != ErrNotFound {
+		t.Fatal("did not remove the room empty the longest")
+	}
+	if _, err := s.Info(codes[0], ""); err != nil {
+		t.Fatal("removed a room someone was joining")
+	}
+	for code := range s.rooms {
+		if _, err := s.Join(code, aliceID, "Alice", false); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := s.Create("Extra", "fibonacci"); err == nil {
+		t.Fatal("removed an occupied room")
 	}
 }
 
