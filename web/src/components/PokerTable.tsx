@@ -99,12 +99,26 @@ export function PokerTable({
               )}
             >
               {result.agreement === 1 && !arrivedRevealed && <Confetti />}
-              <span className="relative">{result.discuss ? 'Discuss!' : result.value}</span>
+              {/* The text fades in, not its parent: an animated filter or scale there would
+                  trap the fixed confetti canvas in its box. */}
+              <span
+                className={clsx(
+                  'relative inline-block',
+                  !arrivedRevealed && 'motion-safe:animate-result-in',
+                )}
+              >
+                {result.discuss ? 'Discuss!' : result.value}
+              </span>
             </span>
             {!result.discuss && result.agreement !== null && (
               <>
                 {' '}
-                <span className="mt-2 block text-sm text-zinc-400">
+                <span
+                  className={clsx(
+                    'mt-2 block text-sm text-zinc-400',
+                    !arrivedRevealed && 'motion-safe:animate-result-in',
+                  )}
+                >
                   Agreement {Math.round(result.agreement * 100)}%
                 </span>
               </>
@@ -148,18 +162,24 @@ function Confetti() {
 // Lives outside Confetti, so a re-render keeps the same ref and does not burst again
 function burst(canvas: HTMLCanvasElement) {
   const fire = confetti.create(canvas, { resize: true, disableForReducedMotion: true });
-  const number = canvas.parentElement!.getBoundingClientRect();
-  void fire({
-    particleCount: 60,
-    spread: 360,
-    startVelocity: 25,
-    origin: {
-      x: (number.left + number.width / 2) / innerWidth,
-      y: (number.top + number.height / 2) / innerHeight,
-    },
-  });
+  // Bursts with the number, once the 600ms card flip is over
+  const timer = setTimeout(() => {
+    const number = canvas.parentElement!.getBoundingClientRect();
+    void fire({
+      particleCount: 60,
+      spread: 360,
+      startVelocity: 25,
+      origin: {
+        x: (number.left + number.width / 2) / innerWidth,
+        y: (number.top + number.height / 2) / innerHeight,
+      },
+    });
+  }, 600);
 
-  return () => fire.reset();
+  return () => {
+    clearTimeout(timer);
+    fire.reset();
+  };
 }
 
 // Two stacked seats outgrow the table's height, so a side spans all three rows

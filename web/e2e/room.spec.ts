@@ -632,6 +632,19 @@ test('full agreement throws confetti for everyone', async ({ page, newParticipan
     await expect(viewer.getByTestId('confetti')).toBeAttached();
   }
 
+  // An animated filter or scale on an ancestor would trap the burst in its box
+  await expect(
+    page
+      .getByRole('status')
+      .filter({ hasText: 'Proposed estimate' })
+      .getByText('5', { exact: true }),
+  ).toHaveCSS('opacity', '1');
+  expect(await page.getByTestId('confetti').boundingBox()).toEqual({
+    x: 0,
+    y: 0,
+    ...page.viewportSize(),
+  });
+
   // Someone arriving after the reveal missed the moment
   const carol = await newParticipant();
   await carol.goto(url);
@@ -639,6 +652,47 @@ test('full agreement throws confetti for everyone', async ({ page, newParticipan
   await carol.getByRole('button', { name: 'Join', exact: true }).click();
   await expect(card(carol, 'Alice')).toHaveAccessibleName('Alice: 5');
   await expect(carol.getByTestId('confetti')).toHaveCount(0);
+});
+
+test('the result waits until the cards have turned', async ({ page, newParticipant }) => {
+  const url = await createRoom(page);
+  await join(page, url, 'Alice');
+  const bob = await newParticipant();
+  await join(bob, url, 'Bob');
+  await page.getByRole('button', { name: '5', exact: true }).click();
+  await bob.getByRole('button', { name: '5', exact: true }).click();
+  await expect(card(page, 'Bob')).toHaveAccessibleName('Bob: selected');
+
+  // Bob sees the reveal Alice sends him, sampled each frame from before it arrives
+  const frames = bob.evaluate(async () => {
+    const frames: { flipping: boolean; result: number }[] = [];
+    const end = performance.now() + 1500;
+    while (performance.now() < end) {
+      await new Promise(requestAnimationFrame);
+      // The innermost match: the span around it holds the same text
+      const result = [...document.querySelectorAll('[role="status"] span')]
+        .filter((span) => span.textContent === '5')
+        .at(-1);
+      frames.push({
+        flipping: document
+          .getAnimations()
+          .some(
+            (animation) =>
+              (animation as CSSAnimation).animationName === 'card-flip' &&
+              animation.playState === 'running',
+          ),
+        result: result ? +getComputedStyle(result).opacity : 0,
+      });
+    }
+
+    return frames;
+  });
+  await page.getByRole('button', { name: 'Reveal cards' }).click();
+  const sampled = await frames;
+
+  expect(sampled.some(({ flipping }) => flipping)).toBe(true);
+  expect(sampled.filter(({ flipping }) => flipping).every(({ result }) => result === 0)).toBe(true);
+  expect(sampled.at(-1)?.result).toBe(1);
 });
 
 test('results stay clear of the table on a short screen', async ({ page, newParticipant }) => {
