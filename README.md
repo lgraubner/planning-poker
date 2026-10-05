@@ -2,7 +2,7 @@
 
 Self-hosted planning poker without accounts: create a room, share the link, and start estimating with up to 30 people. It ships as one small container, a single binary with no external services and no analytics. Rooms can optionally be kept in SQLite, and you can link your own legal notice and privacy policy.
 
-**[Try the demo](https://planning-poker.larsgraubner.de)**. Its rooms are open to anyone who has the link.
+**[Try the demo](https://planning-poker.larsgraubner.de)**
 
 ![Five voters revealed their cards: 5 with 80% agreement, while two spectators watch](docs/screenshots/room.png)
 
