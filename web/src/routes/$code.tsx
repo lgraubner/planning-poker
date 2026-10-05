@@ -24,7 +24,7 @@ import {
   type Identity,
   type Participant,
 } from '../room-connection';
-import { useDelayed } from '../use-delayed';
+import { useDelayed } from '../hooks/useDelayed';
 
 export const Route = createFileRoute('/$code')({ component: RoomPage });
 
