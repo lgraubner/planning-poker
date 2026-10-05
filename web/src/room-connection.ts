@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import type { Identity } from './identity';
 
-export type Identity = { id: string; name: string; spectator: boolean };
 export type Participant = {
   id: string;
   name: string;
@@ -19,57 +19,6 @@ export type Snapshot = {
   participants: Participant[];
 };
 type Message = Snapshot | { type: 'error'; message: string; fatal: boolean };
-
-export function rememberedName() {
-  try {
-    return localStorage.getItem('poker.name') || '';
-  } catch {
-    return '';
-  }
-}
-
-export function rememberName(name: string) {
-  try {
-    localStorage.setItem('poker.name', name);
-  } catch {
-    /* The room has the new name; only the next visit misses it. */
-  }
-}
-
-export function rememberedSpectator() {
-  try {
-    return localStorage.getItem('poker.spectator') === 'true';
-  } catch {
-    return false;
-  }
-}
-
-export function rememberSpectator(spectator: boolean) {
-  try {
-    localStorage.setItem('poker.spectator', String(spectator));
-  } catch {
-    /* The room has the new role; only the next visit misses it. */
-  }
-}
-
-export function rememberedID() {
-  try {
-    return localStorage.getItem('poker.id') || '';
-  } catch {
-    return '';
-  }
-}
-
-export function identity(name: string, spectator: boolean): Identity {
-  // Identity must survive refreshes. Surface blocked storage instead of silently
-  // creating duplicate cards that cannot reconnect.
-  const id = localStorage.getItem('poker.id') || crypto.randomUUID();
-  localStorage.setItem('poker.id', id);
-  localStorage.setItem('poker.name', name);
-  localStorage.setItem('poker.spectator', String(spectator));
-
-  return { id, name, spectator };
-}
 
 export function useRoom(code: string, participant: Identity) {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);

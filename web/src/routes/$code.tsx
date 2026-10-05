@@ -1,30 +1,16 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useForm } from '@tanstack/react-form';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
-import { Button } from '../components/Button';
-import { CenteredSection } from '../components/CenteredSection';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { ErrorPage } from '../components/ErrorPage';
-import { HomeLink } from '../components/HomeLink';
-import { Icon } from '../components/Icon';
-import { EstimateCard } from '../components/EstimateCard';
-import { Form } from '../components/Form';
+import { JoinRoom } from '../components/JoinRoom';
 import { PokerTable } from '../components/PokerTable';
-import { RoomHeader, SpectatorList } from '../components/RoomHeader';
-import { TextField } from '../components/TextField';
-import {
-  identity,
-  rememberedID,
-  rememberedName,
-  rememberedSpectator,
-  rememberName,
-  rememberSpectator,
-  useRoom,
-  type Identity,
-  type Participant,
-} from '../room-connection';
+import { RoomFooter } from '../components/RoomFooter';
+import { RoomHeader } from '../components/RoomHeader';
+import { SpectatorList } from '../components/SpectatorList';
 import { useDelayed } from '../hooks/useDelayed';
+import { identity, remember, remembered, type Identity } from '../identity';
+import { useRoom, type Participant } from '../room-connection';
 
 export const Route = createFileRoute('/$code')({ component: RoomPage });
 
@@ -49,7 +35,7 @@ function RoomEntry({ code }: { code: string }) {
   useEffect(() => {
     const abort = new AbortController();
     let retry: ReturnType<typeof setTimeout>;
-    const id = rememberedID();
+    const id = remembered('id');
 
     async function lookup(attempt = 0) {
       try {
@@ -74,9 +60,9 @@ function RoomEntry({ code }: { code: string }) {
         }
 
         setInfo(data);
-        const savedName = rememberedName().trim();
+        const savedName = remembered('name').trim();
         if (data.available && savedName) {
-          join(savedName, rememberedSpectator());
+          join(savedName, remembered('spectator') === 'true');
         }
       } catch (cause) {
         if (!abort.signal.aborted) {
@@ -147,78 +133,6 @@ function RoomLoading({ children }: { children: ReactNode }) {
   );
 }
 
-function JoinRoom({
-  title,
-  error,
-  onJoin,
-}: {
-  title: string;
-  error: string;
-  onJoin: (name: string, spectator: boolean) => void;
-}) {
-  const form = useForm({
-    defaultValues: { name: rememberedName() },
-    onSubmitMeta: { spectator: false },
-    onSubmit: ({ value, meta }) => onJoin(value.name, meta.spectator),
-  });
-
-  return (
-    <CenteredSection header={<HomeLink />}>
-      <title>{`${title} | Planning Poker`}</title>
-      <h1 className="text-3xl font-semibold tracking-tight wrap-anywhere select-text">
-        Join {title}
-      </h1>
-      <p className="mt-2 leading-relaxed text-zinc-400 select-text">
-        Choose a name so your team knows it's you.
-      </p>
-      <Form
-        onSubmit={(event) => {
-          event.preventDefault();
-          // Enter submits with the first button, so it joins to vote
-          const submitter = (event.nativeEvent as SubmitEvent).submitter;
-          void form.handleSubmit({
-            spectator: submitter?.getAttribute('value') === 'spectator',
-          });
-        }}
-      >
-        <form.Field
-          name="name"
-          validators={{
-            onSubmit: ({ value }) => (value.trim() ? undefined : 'Enter your name'),
-          }}
-        >
-          {(field) => (
-            <TextField
-              id="name"
-              label="Name"
-              name={field.name}
-              error={field.state.meta.errors[0]}
-              autoComplete="given-name"
-              autoFocus
-              value={field.state.value}
-              onBlur={field.handleBlur}
-              onChange={(event) => field.handleChange(event.target.value)}
-            />
-          )}
-        </form.Field>
-        <div className="flex flex-col gap-3">
-          <Button>Join</Button>
-          <p className="text-center text-sm text-zinc-400">
-            or{' '}
-            <button
-              value="spectator"
-              className="py-1 font-semibold text-indigo-400 hover:text-indigo-300"
-            >
-              watch as spectator
-            </button>
-          </p>
-        </div>
-        <ErrorMessage>{error}</ErrorMessage>
-      </Form>
-    </CenteredSection>
-  );
-}
-
 function Room({ code, participant }: { code: string; participant: Identity }) {
   const { snapshot, connected, error, fatal, send } = useRoom(code, participant);
   const reconnecting = useDelayed(!connected);
@@ -243,12 +157,12 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
 
   function renameSelf(name: string) {
     send('name', name);
-    rememberName(name);
+    remember('name', name);
   }
 
   function spectate(spectator: boolean) {
     send('role', spectator ? 'spectator' : 'voter');
-    rememberSpectator(spectator);
+    remember('spectator', String(spectator));
   }
 
   return (
@@ -278,7 +192,7 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
           // The fade eases in and out; a strong ease-out would spend it in the first frames.
           reconnecting
             ? 'ease-[cubic-bezier(0.23,1,0.32,1)]'
-            : 'invisible opacity-0 blur-xs ease-in-out [transition-delay:0s,0s,300ms,300ms,0s] motion-safe:-translate-y-3 motion-safe:scale-95',
+            : 'invisible opacity-0 blur-xs ease-in-out delay-[0s,0s,300ms,300ms,0s] motion-safe:-translate-y-3 motion-safe:scale-95',
         )}
       >
         {/* Spins only while shown: an endless animation on a hidden toast never settles. */}
@@ -304,117 +218,15 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
         onReveal={() => send('reveal')}
         onRenameSelf={renameSelf}
       />
-      {/* Both bars share one cell, so the footer keeps its height and the table stays put.
-          The results sit inside the sticky footer, so a scrolled table passes under them. */}
-      <div className="sticky bottom-0 z-10 grid w-full max-w-7xl grid-cols-1 self-center bg-background text-center">
-        <section
-          aria-label="Round controls"
-          className={clsx(
-            'col-start-1 row-start-1 transition-[opacity,filter,scale,visibility] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] flex w-full max-w-xl min-w-0 flex-col items-center justify-self-center self-end',
-            !snapshot.revealed && 'invisible opacity-0 blur-xs motion-safe:scale-95',
-          )}
-        >
-          {/* Holds the results' height before the reveal, so the table stays put. */}
-          <div className="flex min-h-26 max-w-full items-end pb-4">
-            {results.current.length > 0 && (
-              <Results participants={results.current} deck={snapshot.deck} />
-            )}
-          </div>
-          <div className="w-full border-t border-zinc-700 py-4">
-            <Button disabled={!connected} onClick={() => send('reset')}>
-              <Icon>
-                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                <path d="M3 3v5h5" />
-              </Icon>
-              Vote again
-            </Button>
-          </div>
-        </section>
-        <EstimateControls
-          deck={snapshot.deck}
-          connected={connected}
-          estimate={own?.estimate}
-          hidden={snapshot.revealed || spectating}
-          send={send}
-        />
-      </div>
-    </section>
-  );
-}
-
-function Results({ participants, deck }: { participants: Participant[]; deck: string[] }) {
-  const counts = deck
-    .map((value) => ({
-      value,
-      count: participants.filter((participant) => participant.estimate === value).length,
-    }))
-    .filter(({ count }) => count > 0);
-  const max = Math.max(...counts.map(({ count }) => count));
-  // A tie has no leader to point out
-  const lead = counts.filter(({ count }) => count === max).length === 1 ? max : null;
-
-  return (
-    <ul
-      aria-label="Results"
-      className="flex max-w-full min-w-0 items-end gap-1.5 overflow-x-auto px-1"
-    >
-      {counts.map(({ value, count }) => (
-        <li
-          key={value}
-          aria-label={`${value}: ${count} ${count === 1 ? 'vote' : 'votes'}${count === lead ? ', most votes' : ''}`}
-          className="flex w-8 flex-none flex-col items-center"
-        >
-          <span className="text-xs text-zinc-400 tabular-nums">{count}</span>
-          <div
-            className={clsx(
-              'mt-1 w-6 rounded-t-md',
-              count === lead ? 'bg-indigo-400' : 'bg-indigo-400/30',
-            )}
-            style={{ height: `${(count / max) * 40}px` }}
-          />
-          <span className="mt-1.5 text-sm font-semibold text-zinc-100">{value}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function EstimateControls({
-  deck,
-  connected,
-  estimate,
-  hidden,
-  send,
-}: {
-  deck: string[];
-  connected: boolean;
-  estimate?: string;
-  hidden: boolean;
-  send: ReturnType<typeof useRoom>['send'];
-}) {
-  return (
-    <section
-      aria-label="Estimate controls"
-      className={clsx(
-        'col-start-1 row-start-1 transition-[opacity,filter,scale,visibility] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] self-end pt-3.5 pb-2.5',
-        hidden && 'invisible opacity-0 blur-xs motion-safe:scale-95',
-      )}
-    >
-      <div
-        role="group"
-        aria-label="Choose your card"
-        className="flex justify-center-safe gap-2.5 overflow-x-auto px-1 pt-4 pb-2"
-      >
-        {deck.map((value) => (
-          <EstimateCard
-            key={value}
-            value={value}
-            selected={estimate === value}
-            disabled={!connected}
-            onClick={() => send('select', value)}
-          />
-        ))}
-      </div>
+      <RoomFooter
+        deck={snapshot.deck}
+        results={results.current}
+        revealed={snapshot.revealed}
+        spectating={spectating}
+        estimate={own?.estimate}
+        connected={connected}
+        send={send}
+      />
     </section>
   );
 }
