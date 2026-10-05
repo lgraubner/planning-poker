@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Identity } from './identity';
+import type { Identity } from '../identity';
 
 export type Participant = {
   id: string;

@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import type { Participant, useRoom } from '../room-connection';
+import type { Participant, useRoom } from '../hooks/useRoom';
 import { Button } from './Button';
 import { EstimateCard } from './EstimateCard';
 import { Icon } from './Icon';

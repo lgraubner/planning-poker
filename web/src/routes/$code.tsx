@@ -10,7 +10,7 @@ import { RoomHeader } from '../components/RoomHeader';
 import { SpectatorList } from '../components/SpectatorList';
 import { useDelayed } from '../hooks/useDelayed';
 import { identity, remember, remembered, type Identity } from '../identity';
-import { useRoom, type Participant } from '../room-connection';
+import { useRoom, type Participant } from '../hooks/useRoom';
 
 export const Route = createFileRoute('/$code')({ component: RoomPage });
 

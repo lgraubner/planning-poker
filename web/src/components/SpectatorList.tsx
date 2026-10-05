@@ -1,6 +1,6 @@
 import { Popover } from '@base-ui/react/popover';
 import clsx from 'clsx';
-import type { Participant } from '../room-connection';
+import type { Participant } from '../hooks/useRoom';
 import { Icon } from './Icon';
 import { InlineEdit } from './InlineEdit';
 
