@@ -9,8 +9,8 @@
   --animate-card-flip: card-flip 600ms both;
   /* Its own name: changing only the direction would not restart a finished flip. */
   --animate-card-unflip: card-unflip 600ms both;
-  /* Waits out the card flip, so the result lands once the faces show. */
-  --animate-result-in: result-in 200ms cubic-bezier(0.23, 1, 0.32, 1) 600ms both;
+  /* Fades in over the card flip's last 200ms, so the result lands as the faces show. */
+  --animate-result-in: result-in 200ms cubic-bezier(0.23, 1, 0.32, 1) 400ms both;
 
   @keyframes card-flip {
     from {

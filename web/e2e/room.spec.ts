@@ -654,7 +654,7 @@ test('full agreement throws confetti for everyone', async ({ page, newParticipan
   await expect(carol.getByTestId('confetti')).toHaveCount(0);
 });
 
-test('the result waits until the cards have turned', async ({ page, newParticipant }) => {
+test('the result lands as the cards finish turning', async ({ page, newParticipant }) => {
   const url = await createRoom(page);
   await join(page, url, 'Alice');
   const bob = await newParticipant();
@@ -690,9 +690,10 @@ test('the result waits until the cards have turned', async ({ page, newParticipa
   await page.getByRole('button', { name: 'Reveal cards' }).click();
   const sampled = await frames;
 
-  expect(sampled.some(({ flipping }) => flipping)).toBe(true);
-  expect(sampled.filter(({ flipping }) => flipping).every(({ result }) => result === 0)).toBe(true);
-  expect(sampled.at(-1)?.result).toBe(1);
+  const flipped = sampled.findIndex(({ flipping }, i) => !flipping && sampled[i - 1]?.flipping);
+  expect(flipped).toBeGreaterThan(0);
+  expect(sampled.some(({ flipping, result }) => flipping && result === 0)).toBe(true);
+  expect(sampled[flipped].result).toBe(1);
 });
 
 test('results stay clear of the table on a short screen', async ({ page, newParticipant }) => {
