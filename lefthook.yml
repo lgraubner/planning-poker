@@ -1,5 +1,3 @@
-# Formats staged files before each commit. CI still checks formatting for
-# commits made without the hook. Install once: npx --prefix web lefthook install
 pre-commit:
   parallel: true
   jobs:

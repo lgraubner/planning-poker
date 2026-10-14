@@ -24,7 +24,6 @@ export function CopyLinkButton({
           buttonClassName,
         )}
       >
-        {/* Both labels share one cell, so the button keeps the wider one's width. */}
         <span className="grid justify-items-center">
           <span
             className={clsx(

@@ -4,8 +4,6 @@ import { test } from '../../../../web/e2e/fixtures';
 
 export type Frame = { dir: 'sent' | 'received'; message: Record<string, unknown> };
 
-// The UI hides unrevealed estimates anyway, so a proof keeps what crossed the socket.
-// Call before the page opens its socket, or the frames of that connection are missed.
 export function recordFrames(page: Page) {
   const frames: Frame[] = [];
   page.on('websocket', (socket) => {
@@ -23,9 +21,6 @@ export function recordFrames(page: Page) {
 export const snapshots = (frames: Frame[]) =>
   frames.filter((f) => f.dir === 'received' && f.message.type === 'snapshot').map((f) => f.message);
 
-// Named files in the results folder, so a reader finds them without opening the report.
-// The card flip outlasts the accessible name's change, so a shot waits for it to land.
-// A looping animation, like the reconnecting spinner, never finishes and is skipped.
 export async function shot(page: Page, name: string) {
   const path = test.info().outputPath(`${name}.png`);
   await page.evaluate(() =>

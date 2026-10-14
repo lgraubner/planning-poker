@@ -2,7 +2,6 @@ import { useState } from 'react';
 import clsx from 'clsx';
 import { Icon } from './Icon';
 
-// Text that turns into a field when clicked, for a value anyone may change at any time
 export function InlineEdit({
   value,
   label,
@@ -20,9 +19,7 @@ export function InlineEdit({
   className: string;
   inputClassName: string;
 }) {
-  // Only an open editor holds a draft, so changes by others show until you click
   const [draft, setDraft] = useState<string | null>(null);
-  // Shows a sent change until the server's value moves off the one it replaced.
   // ponytail: a change lost to a dropped socket shows until the value next changes.
   const [pending, setPending] = useState<{ from: string; to: string } | null>(null);
   const shown = pending?.from === value ? pending.to : value;

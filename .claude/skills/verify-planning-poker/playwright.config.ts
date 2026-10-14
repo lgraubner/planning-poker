@@ -3,7 +3,6 @@ import { defineConfig, devices } from '../../../web/node_modules/@playwright/tes
 
 const out = process.env.VERIFY_OUT!;
 
-// Drives the instance verify.sh launched; never starts a server of its own
 export default defineConfig({
   testDir: process.env.VERIFY_TESTDIR,
   testMatch: '*.spec.ts',

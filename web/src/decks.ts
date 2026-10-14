@@ -1,4 +1,3 @@
-// The server's deck names, with the cards each one holds
 export const decks = [
   {
     value: 'fibonacci',

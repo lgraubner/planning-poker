@@ -1,7 +1,5 @@
 #!/bin/sh
-# Launch, check, drive and tear down an isolated Planning Poker instance for verification.
 # Usage: verify.sh launch|doctor|drive <journey.spec.ts> [playwright args]|cleanup
-# RUN names the instance (default "default"); each run owns $BASE/$RUN/{state,evidence}.
 set -eu
 
 repo=$(cd "$(dirname "$0")/../../.." && pwd)
@@ -29,7 +27,6 @@ launch() {
 
   port=$(node -e "const s=require('net').createServer().listen(0,'127.0.0.1',()=>{console.log(s.address().port);s.close()})")
   url="http://127.0.0.1:$port"
-  # Same env as web/playwright.config.ts: per-context X-Forwarded-For keeps rate limits apart
   PORT=$port DATABASE_PATH="$state/rooms.db" CLIENT_IP_HEADER=X-Forwarded-For \
     LEGAL_NOTICE_URL=https://example.com/legal-notice \
     PRIVACY_POLICY_URL='https://example.com/privacy?lang=en&v=2' \
@@ -49,7 +46,6 @@ launch() {
     sleep 0.2
   done
 
-  # Usable, not just up: the SPA is embedded and a room can be created and read back
   curl -fs "$url/" | grep -q '<title>Planning Poker</title>'
   code=$(curl -fs -H 'Content-Type: application/json' -d '{"title":"Launch probe"}' "$url/api/rooms" | sed -n 's/.*"code":"\([^"]*\)".*/\1/p')
   curl -fs "$url/api/rooms/$code" | grep -q '"available":true'
@@ -71,7 +67,6 @@ doctor() {
   ps -p "$pid" -o command= | grep -q "^$state/planning-poker" && say OK "pid $pid is our binary" || say FAIL "pid $pid is not $state/planning-poker"
   lsof -nP -a -p "$pid" -iTCP:"$port" -sTCP:LISTEN >/dev/null && say OK "pid $pid owns port $port" || say FAIL "port $port not owned by pid $pid"
   curl -fs "$url/healthz" | grep -q '"ok"' && say OK "$url/healthz" || say FAIL "$url/healthz"
-  # The served page must be the build on disk, or a rebuild happened without a relaunch
   served=$(curl -fs "$url/" | grep -o 'assets/index-[^"]*\.js' | head -1)
   grep -q "$served" "$repo/internal/webui/dist/index.html" && say OK "serves current dist ($served)" || say STALE "serves $served, dist differs; relaunch"
   newer=$(find "$repo/cmd" "$repo/internal" "$repo/web/src" -type f \( -name '*.go' -o -name '*.ts' -o -name '*.tsx' -o -name '*.css' \) ! -name '*_test.go' ! -name '*.test.ts' ! -name 'routeTree.gen.ts' -newer "$state/planning-poker" | head -3)

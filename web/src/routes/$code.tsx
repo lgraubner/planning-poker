@@ -19,9 +19,7 @@ type RoomInfo =
 
 export const Route = createFileRoute('/$code')({
   loader: ({ params, abortController }) => lookup(params.code, abortController.signal),
-  // A room left and entered again asks the server anew rather than showing a cached answer
   gcTime: 0,
-  // RoomLoading holds back its text itself, so the router shows it at once and for no longer
   pendingMs: 0,
   pendingMinMs: 0,
   pendingComponent: () => <RoomLoading>Loading room…</RoomLoading>,
@@ -32,7 +30,6 @@ async function lookup(code: string, signal: AbortSignal): Promise<RoomInfo> {
   const id = remembered('id');
 
   for (let attempt = 0; ; attempt++) {
-    // A network failure reads like any other failed response
     const response = await fetch(`/api/rooms/${encodeURIComponent(code)}`, {
       signal,
       headers: { 'X-Participant-ID': id },
@@ -40,7 +37,6 @@ async function lookup(code: string, signal: AbortSignal): Promise<RoomInfo> {
     const body: unknown = await response.json().catch(() => null);
     const status = response.ok ? RoomStatusSchema.safeParse(body).data : undefined;
     if (!status) {
-      // Only a room that does not exist makes a new one the way on
       return {
         available: false,
         reason: failure(body, 'Could not load room'),
@@ -48,7 +44,6 @@ async function lookup(code: string, signal: AbortSignal): Promise<RoomInfo> {
       };
     }
 
-    // A reload can arrive before the old tab's socket has finished closing
     if (status.available || !id || attempt === 3) {
       return status.available ? status : { ...status, missing: false };
     }
@@ -62,7 +57,6 @@ function RoomPage() {
   return <RoomEntry key={code} code={code} />;
 }
 
-// The participant who entered, or why they could not
 function enter(name: string, spectator: boolean): Identity | string {
   if (!name.trim() || [...name.trim()].length > 40 || /\p{Cc}/u.test(name)) {
     return 'Use 1–40 characters without control characters';
@@ -100,7 +94,6 @@ function RoomEntry({ code }: { code: string }) {
 }
 
 function UnavailableRoom({ message, missing }: { message: string; missing: boolean }) {
-  // The server's messages are sentences: the first heads the page, the rest explain it
   const [headline = message, ...rest] = message.split(/\.\s+/);
   return (
     <ErrorPage
@@ -123,7 +116,6 @@ function RoomLoading({ children }: { children: ReactNode }) {
 
 function Room({ code, participant }: { code: string; participant: Identity }) {
   const { snapshot, connected, error, fatal, send } = useRoom(code, participant);
-  // The last revealed round, so the results can fade out after the votes are cleared
   const results = useRef<Participant[]>([]);
 
   if (fatal) {
@@ -173,7 +165,6 @@ function Room({ code, participant }: { code: string; participant: Identity }) {
       <ErrorMessage>{error}</ErrorMessage>
       <PokerTable
         participants={snapshot.participants.filter((participant) => !participant.spectator)}
-        // A voter who turns spectator after the reveal still counts until the next round
         estimates={snapshot.participants.flatMap((participant) => participant.estimate ?? [])}
         deck={snapshot.deck}
         self={snapshot.self}

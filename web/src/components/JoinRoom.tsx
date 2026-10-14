@@ -34,7 +34,6 @@ export function JoinRoom({
       <Form
         onSubmit={(event) => {
           event.preventDefault();
-          // Enter submits with the first button, so it joins to vote
           const { nativeEvent } = event;
           const submitter = nativeEvent instanceof SubmitEvent ? nativeEvent.submitter : null;
           void form.handleSubmit({

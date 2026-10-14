@@ -1,7 +1,5 @@
 name: Docker
 
-# The image build is the slowest check and only breaks when its inputs change,
-# so PRs run it only then. CI calls it on every push to main before deploying.
 on:
   workflow_call:
   pull_request:

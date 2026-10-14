@@ -13,14 +13,10 @@ export function remembered(key: Key) {
 export function remember(key: Key, value: string) {
   try {
     localStorage.setItem(`poker.${key}`, value);
-  } catch {
-    /* The room has the change; only the next visit misses it. */
-  }
+  } catch {}
 }
 
 export function identity(name: string, spectator: boolean): Identity {
-  // Identity must survive refreshes. Surface blocked storage instead of silently
-  // creating duplicate cards that cannot reconnect.
   const id = localStorage.getItem('poker.id') || crypto.randomUUID();
   localStorage.setItem('poker.id', id);
   localStorage.setItem('poker.name', name);

@@ -15,9 +15,9 @@ import (
 )
 
 const (
-	MaxParticipants = 30
-	maxSockets      = 4 * MaxParticipants // Per room, including sockets that have not joined yet
-	maxTabs         = 5                   // Connections per participant
+	MaxParticipants       = 30
+	maxSockets            = 4 * MaxParticipants
+	maxTabsPerParticipant = 5
 )
 
 const alphabet = "23456789abcdefghjkmnpqrstuvwxyz"
@@ -81,17 +81,16 @@ type Subscription struct {
 
 type Store struct {
 	// ponytail: one lock for up to 100,000 rooms; use per-room locks if contention becomes measurable.
-	mu    sync.Mutex
-	rooms map[string]*session
-	now   func() time.Time
-	db    *sql.DB       // Nil keeps rooms in memory only
-	ttl   time.Duration // How long a joined room survives without connections
-	// Bounds memory, since every room stays loaded, and the chance of guessing a code
+	mu       sync.Mutex
+	rooms    map[string]*session
+	now      func() time.Time
+	db       *sql.DB
+	idleTTL  time.Duration
 	maxRooms int
 }
 
 func New() *Store {
-	return &Store{rooms: make(map[string]*session), now: time.Now, ttl: time.Hour, maxRooms: 1000}
+	return &Store{rooms: make(map[string]*session), now: time.Now, idleTTL: time.Hour, maxRooms: 1000}
 }
 
 func ValidateLabel(value string, max int) (string, error) {
@@ -158,8 +157,6 @@ func (s *Store) Create(title, deck string) (string, error) {
 	}
 }
 
-// removeLongestEmpty makes space in a full store, so a flood of rooms cannot lock out
-// creation until they expire. Rooms in use, or with someone joining, are kept.
 // ponytail: O(rooms) scan, only while full; keep rooms ordered by idle time if creation then slows.
 func (s *Store) removeLongestEmpty() bool {
 	var oldest string
@@ -200,7 +197,7 @@ func (s *Store) Info(code, secret string) (string, error) {
 
 	for _, p := range r.participants {
 		if p.secret == secret {
-			if len(p.connections) >= maxTabs {
+			if len(p.connections) >= maxTabsPerParticipant {
 				return r.title, ErrTooManyTabs
 			}
 
@@ -278,11 +275,10 @@ func (s *Store) Join(code, secret, name string, spectator bool) (*Subscription, 
 		r.participants = append(r.participants, p)
 	}
 
-	if len(p.connections) >= maxTabs {
+	if len(p.connections) >= maxTabsPerParticipant {
 		return nil, ErrTooManyTabs
 	}
 
-	// Existing tabs share the first joined name as well as the estimate
 	sub := &Subscription{Updates: make(chan Snapshot, 1), code: code, member: p}
 	p.connections[sub] = true
 	p.disconnected = time.Time{}
@@ -343,7 +339,6 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 		return ErrNotFound
 	}
 
-	// Only estimating belongs to a round: renaming or changing role must survive a reset
 	if round != r.round && (command == "select" || command == "reveal" || command == "reset") {
 		return errors.New("The round changed. Try again")
 	}
@@ -369,7 +364,6 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 		}
 
 		sub.member.spectator = value == "spectator"
-		// A revealed vote stays until reset, so the cards under discussion do not change
 		if !r.revealed {
 			sub.member.estimate = ""
 		}
@@ -407,7 +401,6 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 		return errors.New("Unknown command")
 	}
 
-	// Names, roles and estimates live only in memory, so only the room's own fields are saved
 	if command == "rename" || command == "reveal" || command == "reset" {
 		s.save(sub.code, r)
 	}
@@ -416,8 +409,6 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 	return nil
 }
 
-// Queue only the latest snapshot while holding the store lock, preserving mutation
-// order. Socket writers consume outside the lock; slow clients cannot block rooms.
 func (s *Store) publish(r *session) {
 	for _, viewer := range r.participants {
 		if len(viewer.connections) == 0 {
@@ -460,12 +451,12 @@ func (s *Store) Sweep(expireRooms bool) {
 	now := s.now()
 
 	for code, r := range s.rooms {
-		ttl := s.ttl
+		idleTTL := s.idleTTL
 		if !r.joined {
-			ttl = 10 * time.Minute
+			idleTTL = 10 * time.Minute
 		}
 
-		if expireRooms && !r.emptySince.IsZero() && now.Sub(r.emptySince) >= ttl {
+		if expireRooms && !r.emptySince.IsZero() && now.Sub(r.emptySince) >= idleTTL {
 			delete(s.rooms, code)
 			s.save(code, nil)
 			continue

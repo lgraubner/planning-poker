@@ -1,4 +1,3 @@
-# The build stages run natively and cross-compile, so arm64 needs no emulation.
 FROM --platform=$BUILDPLATFORM node:24-bookworm-slim AS frontend
 WORKDIR /app/web
 COPY web/package.json web/package-lock.json ./

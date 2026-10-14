@@ -22,12 +22,10 @@ export function RoomHeader({
   spectators: ReactNode;
 }) {
   return (
-    // Phones give the title a line of its own beneath the bar, so a long one still fits
     <header className="mb-2 grid min-h-11 grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[1fr_minmax(0,auto)_1fr]">
       <HomeLink />
       <LeaveRoomDialog />
       <h1 className="col-span-full row-start-2 min-w-0 text-center sm:col-span-1 sm:col-start-2 sm:row-start-1 text-lg leading-tight font-semibold tracking-tight">
-        {/* Button and field share one box, so the text stays put when editing starts. */}
         <InlineEdit
           value={title}
           label="Room title"
@@ -40,7 +38,6 @@ export function RoomHeader({
       </h1>
       <div className="col-start-2 row-start-1 flex items-center gap-2 justify-self-end sm:col-start-3">
         {spectators}
-        {/* Phones copy from the menu instead, leaving the title room. */}
         <CopyLinkButton
           className="max-sm:hidden"
           buttonClassName="rounded-md border border-indigo-400 px-2.5 text-sm hover:bg-indigo-400/10"
@@ -63,11 +60,9 @@ const menuLinks = [
   ...legalLinks,
 ];
 
-// An icon, where an item has one, leads it muted so the label still reads first
 const menuItemClassName =
   'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm outline-none data-highlighted:bg-surface-raised [&>svg]:text-zinc-400';
 
-// Links that open in a new tab, so following one keeps your seat
 function RoomMenu() {
   const [result, copy] = useCopyLink();
   return (
@@ -81,7 +76,6 @@ function RoomMenu() {
       <Menu.Portal>
         <Menu.Positioner align="end" sideOffset={4} className="z-30">
           <Menu.Popup className={popupClassName}>
-            {/* Stays open, so the item can confirm the copy. */}
             <Menu.Item
               closeOnClick={false}
               onClick={copy}
@@ -115,11 +109,9 @@ function RoomMenu() {
   );
 }
 
-// Asks before any way out of the room, the back button included: leaving drops your seat
 function LeaveRoomDialog() {
   const { status, proceed, reset } = useBlocker({
     shouldBlockFn: ({ current, next }) => current.pathname !== next.pathname,
-    // Reloading rejoins at once, so it needs no prompt
     enableBeforeUnload: false,
     withResolver: true,
   });

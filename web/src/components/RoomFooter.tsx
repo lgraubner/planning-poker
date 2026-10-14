@@ -21,8 +21,6 @@ export function RoomFooter({
   connected: boolean;
   send: ReturnType<typeof useRoom>['send'];
 }) {
-  // Both bars share one cell, so the footer keeps its height and the table stays put.
-  // The results sit inside the sticky footer, so a scrolled table passes under them.
   return (
     <div className="sticky bottom-0 z-10 grid w-full max-w-7xl grid-cols-1 self-center bg-background text-center">
       <section
@@ -32,7 +30,6 @@ export function RoomFooter({
           !revealed && 'invisible opacity-0 blur-xs motion-safe:scale-95',
         )}
       >
-        {/* Holds the results' height before the reveal, so the table stays put. */}
         <div className="flex min-h-26 max-w-full items-end pb-4">
           {results.length > 0 && <Results participants={results} deck={deck} />}
         </div>
@@ -62,7 +59,6 @@ function Results({ participants, deck }: { participants: Participant[]; deck: st
     }))
     .filter(({ count }) => count > 0);
   const max = Math.max(...counts.map(({ count }) => count));
-  // A tie has no leader to point out
   const lead = counts.filter(({ count }) => count === max).length === 1 ? max : null;
 
   return (

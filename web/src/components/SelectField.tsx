@@ -3,7 +3,6 @@ import { Icon } from './Icon';
 
 type SelectFieldProps = {
   label: string;
-  // A description shows under its label in the list, not in the closed field
   items: { value: string; label: string; description?: string }[];
   value: string;
   onValueChange: (value: string) => void;
@@ -25,7 +24,6 @@ export function SelectField({ label, items, value, onValueChange }: SelectFieldP
           </Select.Icon>
         </Select.Trigger>
         <Select.Portal>
-          {/* Overlapping the trigger needs an inline <style>, which the CSP blocks. */}
           <Select.Positioner alignItemWithTrigger={false} sideOffset={4} className="z-10">
             <Select.Popup className="w-(--anchor-width) origin-(--transform-origin) rounded-lg border border-border bg-surface p-1 shadow-lg shadow-black/40 outline-none transition-[opacity,scale] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] data-ending-style:opacity-0 data-starting-style:opacity-0 motion-safe:data-ending-style:scale-95 motion-safe:data-starting-style:scale-95">
               <Select.List>

@@ -7,7 +7,6 @@ test('participants estimate privately, reveal together, and vote again', async (
   const url = await createRoom(page, 'Friday sprint planning');
   await join(page, url, 'Alice');
   const bob = await newParticipant();
-  // The UI hides unrevealed estimates anyway, so check what actually reaches Bob
   const leaked: string[] = [];
   bob.on('websocket', (socket) =>
     socket.on('framereceived', ({ payload }) => {
@@ -39,7 +38,6 @@ test('participants estimate privately, reveal together, and vote again', async (
   const tableBefore = await card(bob, 'Alice').boundingBox();
   await bob.getByRole('button', { name: 'Reveal cards' }).click();
   await expect(card(bob, 'Alice')).toHaveAccessibleName('Alice: 8');
-  // The deck and "Vote again" differ in height, which must not move the table
   expect(await card(bob, 'Alice').boundingBox()).toEqual(tableBefore);
 
   for (const viewer of [page, bob]) {
@@ -49,12 +47,10 @@ test('participants estimate privately, reveal together, and vote again', async (
     await expect(viewer.getByRole('group', { name: 'Choose your card' })).toBeHidden();
   }
 
-  // Reset after the flip has settled, as people do, not while it is still turning
   await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
   await page.getByRole('button', { name: 'Vote again' }).click();
   for (const viewer of [page, bob]) {
     await expect(card(viewer, 'Alice')).toHaveAccessibleName('Alice: not selected');
-    // The card keeps its face only while it turns back
     await expect(card(viewer, 'Alice')).not.toContainText('8');
     await expect(card(viewer, 'Bob').getByText('×')).toBeHidden();
   }
@@ -134,12 +130,10 @@ test('joining a revealed room shows the cards without replaying the flip', async
   await page.getByRole('button', { name: 'Reveal cards' }).click();
 
   const bob = await newParticipant();
-  // Not join(): it waits for the card picker, which a revealed room hides
   await bob.goto(url);
   await bob.getByLabel('Name', { exact: true }).fill('Bob');
   await bob.getByRole('button', { name: 'Join', exact: true }).click();
   await expect(card(bob, 'Alice')).toContainText('8');
-  // A replayed flip would still be turning for another 600ms
   const flips = await bob.evaluate(
     () =>
       document
@@ -181,7 +175,6 @@ test('invalid names are rejected before joining', async ({ page }) => {
   await page.getByRole('button', { name: 'Join', exact: true }).click();
   await expect(page.getByRole('alert')).toHaveText('Enter your name');
   await expect(page.getByLabel('Name', { exact: true })).toHaveAttribute('aria-invalid', 'true');
-  // The field's border takes the error's red
   const red = await page.getByRole('alert').evaluate((alert) => getComputedStyle(alert).color);
   await expect(page.getByLabel('Name', { exact: true })).toHaveCSS('border-top-color', red);
   await page.getByLabel('Name', { exact: true }).fill('x'.repeat(41));
@@ -205,7 +198,6 @@ test('a closed tab leaves the room', async ({ page, newParticipant }) => {
 test('a dropped connection reconnects and keeps the estimate', async ({ page }) => {
   const url = await createRoom(page);
   const sockets: { close: () => Promise<void> }[] = [];
-  // The reconnect's snapshot waits, or it lands before the banner's delay runs out
   let release = () => {};
   const held = new Promise<void>((resolve) => (release = resolve));
   await page.routeWebSocket(/\/ws$/, (socket) => {
@@ -235,8 +227,6 @@ test('a dropped connection reconnects and keeps the estimate', async ({ page }) 
 
 test('a reconnect rejoins with your current name and role', async ({ page }) => {
   const url = await createRoom(page);
-  // The server seats you from the join only once it has forgotten you, 30 seconds away:
-  // too slow to wait out, so check the join the reconnect sends instead.
   const joins: { name: string; spectator?: boolean }[] = [];
   let confirmed: { name: string; spectator: boolean } | undefined;
   const sockets: { close: () => Promise<void> }[] = [];
@@ -273,7 +263,6 @@ test('a reconnect rejoins with your current name and role', async ({ page }) => 
 
   await page.getByLabel('Your name').fill('Alicia');
   await page.getByLabel('Your name').press('Enter');
-  // The list shows a rename before the server has it, so wait for the server's word
   await expect
     .poll(() => confirmed)
     .toEqual(expect.objectContaining({ name: 'Alicia', spectator: true }));
@@ -349,7 +338,6 @@ test('buttons give way when pressed and centre their content', async ({ page }) 
     await page.mouse.up();
   };
 
-  // Names edit in place: pressing one opens a field rather than giving way
   await page.getByRole('button', { name: 'Alice', exact: true }).hover();
   await page.mouse.down();
   await page.waitForTimeout(200);
@@ -363,9 +351,7 @@ test('buttons give way when pressed and centre their content', async ({ page }) 
     'none',
   );
 
-  // Releasing clicks, so this one reveals the cards
   await press('Reveal cards');
-  // Measure once the results have faded in, not mid-scale
   await expect
     .poll(() =>
       page
@@ -427,7 +413,6 @@ test('the room link can be copied', async ({ page, context, browserName, isMobil
   await expect(header.getByRole('button', { name: 'Link copied' })).toBeVisible();
   await expect(header.getByRole('status')).toHaveText('Link copied');
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(url);
-  // Only the clicked button confirms
   await expect(invite.getByRole('button', { name: 'Copy room link' })).toBeVisible();
   await expect(invite.getByRole('status')).toBeEmpty();
 
@@ -444,7 +429,6 @@ test('phones copy the room link from the menu', async ({ page, context, isMobile
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   const url = await createRoom(page);
   await join(page, url, 'Alice');
-  // Leaves the title the header's width
   await expect(page.locator('header').getByRole('button', { name: 'Copy room link' })).toBeHidden();
 
   await page.getByRole('button', { name: 'Menu' }).click();
@@ -454,7 +438,6 @@ test('phones copy the room link from the menu', async ({ page, context, isMobile
 });
 
 test("the server's errors show without a full stop", async ({ page }) => {
-  // A client may create five rooms in a row, so the sixth meets the server's own message
   for (let i = 0; i < 5; i++) {
     expect((await page.request.post('/api/rooms', { data: { title: 'Sprint' } })).status()).toBe(
       201,
@@ -543,7 +526,6 @@ test('leaving a room by link or back button asks first', async ({ page, newParti
   const url = await createRoom(page);
   await join(page, url, 'Alice');
   const bob = await newParticipant();
-  // Check the server's view, as the dialog could hide a dropped connection
   const seen: string[][] = [];
   bob.on('websocket', (socket) =>
     socket.on('framereceived', ({ payload }) => {
@@ -565,7 +547,6 @@ test('leaving a room by link or back button asks first', async ({ page, newParti
   await expect(card(bob, 'Alice')).toHaveAccessibleName('Alice: selected');
   expect(seen.at(-1)).toContain('Alice');
 
-  // The back button asks too. The room was opened from the home page.
   await page.goBack();
   await expect(dialog).toBeVisible();
   await dialog.getByRole('button', { name: 'Stay' }).click();
@@ -595,12 +576,10 @@ test('revealed cards show how many voted for each value', async ({ page, newPart
   await page.getByRole('button', { name: 'Reveal cards' }).click();
 
   for (const viewer of [page, bob, carol]) {
-    // In deck order, with only the values someone chose
     const results = viewer.getByRole('list', { name: 'Results' }).getByRole('listitem');
     await expect(results).toHaveCount(2);
     await expect(results.nth(0)).toHaveAccessibleName('5: 2 votes, most votes');
     await expect(results.nth(1)).toHaveAccessibleName('8: 1 vote');
-    // The median card, with pairs on neighbouring cards counting half
     await expect(viewer.getByRole('status').filter({ hasText: 'Proposed estimate' })).toHaveText(
       'Proposed estimate 5 Agreement 67%',
     );
@@ -614,7 +593,6 @@ test('revealed cards show how many voted for each value', async ({ page, newPart
     await expect(viewer.getByRole('list', { name: 'Results' })).toBeHidden();
   }
 
-  // Estimates more than a card apart need talking through, not a number
   await page.getByRole('button', { name: '3', exact: true }).click();
   await bob.getByRole('button', { name: '13', exact: true }).click();
   await expect(card(page, 'Bob')).toHaveAccessibleName('Bob: selected');
@@ -622,7 +600,6 @@ test('revealed cards show how many voted for each value', async ({ page, newPart
 
   for (const viewer of [page, bob, carol]) {
     await expect(viewer.getByRole('status').filter({ hasText: 'Discuss!' })).toHaveText('Discuss!');
-    // A tie has no leader
     const results = viewer.getByRole('list', { name: 'Results' }).getByRole('listitem');
     await expect(results.nth(0)).toHaveAccessibleName('3: 1 vote');
     await expect(results.nth(1)).toHaveAccessibleName('13: 1 vote');
@@ -661,7 +638,6 @@ test('full agreement throws confetti for everyone', async ({ page, newParticipan
     ...page.viewportSize(),
   });
 
-  // Someone arriving after the reveal missed the moment
   const carol = await newParticipant();
   await carol.goto(url);
   await carol.getByLabel('Name', { exact: true }).fill('Carol');
@@ -679,13 +655,11 @@ test('the result lands as the cards finish turning', async ({ page, newParticipa
   await bob.getByRole('button', { name: '5', exact: true }).click();
   await expect(card(page, 'Bob')).toHaveAccessibleName('Bob: selected');
 
-  // Bob sees the reveal Alice sends him, sampled each frame from before it arrives
   const frames = bob.evaluate(async () => {
     const frames: { flipping: boolean; result: number }[] = [];
     const end = performance.now() + 1500;
     while (performance.now() < end) {
       await new Promise(requestAnimationFrame);
-      // The innermost match: the span around it holds the same text
       const result = [...document.querySelectorAll('[role="status"] span')]
         .filter((span) => span.textContent === '5')
         .at(-1);
@@ -727,7 +701,6 @@ test('results stay clear of the table on a short screen', async ({ page, newPart
   const results = page.getByRole('list', { name: 'Results' });
   await expect(results).toBeVisible();
   expect(await card(page, 'Alice').boundingBox()).toEqual(before);
-  // Inside the sticky footer, whose background hides the table scrolling under it
   const list = (await results.boundingBox())!;
   const footer = (await page.getByRole('region', { name: 'Round controls' }).boundingBox())!;
   expect(list.y).toBeGreaterThanOrEqual(footer.y);
@@ -746,7 +719,6 @@ test('a long name stays on one line and shows in full on hover', async ({
 
   const label = card(page, name).getByText(name);
   await expect(label).toHaveAttribute('title', name);
-  // One line, so every seat keeps the same height around the table
   const lineHeight = await card(page, 'Alice')
     .getByText('Alice')
     .evaluate((e) => e.clientHeight);
@@ -766,7 +738,6 @@ test('your own name stands out from the others', async ({ page, newParticipant }
         const { color, fontWeight } = getComputedStyle(element);
         return { color, fontWeight };
       });
-  // Each viewer sees their own name differently, and the same for everyone else
   for (const [viewer, own, other] of [
     [page, 'Alice', 'Bob'],
     [bob, 'Bob', 'Alice'],
@@ -815,10 +786,8 @@ test('you can change your name for everyone and keep it', async ({ page, newPart
   await page.getByRole('textbox', { name: 'Your name' }).press('Enter');
   await expect(card(bob, 'Alicia')).toBeVisible();
   expect(names).toContainEqual(['Alicia', 'Bob']);
-  // Only your own name is yours to change
   await expect(bob.getByRole('button', { name: 'Alicia', exact: true })).toHaveCount(0);
 
-  // The next room greets you by the new name
   await createRoom(page, 'Retro');
   await expect(card(page, 'Alicia')).toBeVisible();
 });
@@ -828,7 +797,6 @@ test('the deck and the results fade into each other', async ({ page }) => {
   await join(page, url, 'Alice');
   await page.getByRole('button', { name: '5', exact: true }).click();
 
-  // Samples each frame while the click lands: a fade passes between 0 and 1
   const fade = async (button: string) => {
     const frames = page.evaluate(async () => {
       const region = (name: string) =>
@@ -860,7 +828,6 @@ test('the deck and the results fade into each other', async ({ page }) => {
 
   const again = await fade('Vote again');
   expect(again.some(({ deck }) => between(deck))).toBe(true);
-  // The results fade out with their bars, not an empty bar
   expect(again.filter(({ round }) => between(round)).every(({ bars }) => bars === 1)).toBe(true);
   expect(again.some(({ round }) => between(round))).toBe(true);
 });
@@ -874,7 +841,6 @@ test('the legal pages the server names are linked from every page but the room',
       'https://example.com/legal-notice',
     );
 
-    // The query survives the trip through the page's head
     await expect(page.getByRole('link', { name: 'Privacy policy' })).toHaveAttribute(
       'href',
       'https://example.com/privacy?lang=en&v=2',
@@ -883,7 +849,6 @@ test('the legal pages the server names are linked from every page but the room',
 
   await page.goto('/');
   await linked();
-  // Centred under the home page's column
   const first = (await page.getByRole('link', { name: 'Legal notice' }).boundingBox())!;
   const last = (await page.getByRole('link', { name: 'Privacy policy' }).boundingBox())!;
   expect((first.x + last.x + last.width) / 2).toBeCloseTo(page.viewportSize()!.width / 2, 0);
@@ -891,7 +856,6 @@ test('the legal pages the server names are linked from every page but the room',
   await page.goto(url);
   await linked();
   await join(page, url, 'Alice');
-  // The room's menu holds them instead
   await expect(page.getByRole('link', { name: 'Legal notice' })).toHaveCount(0);
   await page.goto('/missing/page');
   await linked();
@@ -918,7 +882,6 @@ test('the room menu links to the project, its issues and the legal pages', async
   for (const [name, href] of Object.entries(links)) {
     const item = page.getByRole('menuitem', { name });
     await expect(item).toHaveAttribute('href', href);
-    // A new tab, so following a link keeps your seat
     await expect(item).toHaveAttribute('target', '_blank');
   }
 });
@@ -929,7 +892,6 @@ test('spectators watch from beside the table and can switch to voting', async ({
 }) => {
   const url = await createRoom(page);
   await join(page, url, 'Alice');
-  // What reaches Alice proves the role lives on the server, not only in Bob's view
   let bobFrame: { name: string; spectator: boolean } | undefined;
   page.on('websocket', (socket) =>
     socket.on('framereceived', ({ payload }) => {
@@ -939,7 +901,6 @@ test('spectators watch from beside the table and can switch to voting', async ({
       }
     }),
   );
-  // Alice's socket opened before the listener; a reload lets it see the frames
   await page.reload();
   await expect(page.getByRole('group', { name: 'Choose your card' })).toBeVisible();
   // A cancelled animation, like a menu closing early, rejects; it has settled all the same
@@ -967,26 +928,21 @@ test('spectators watch from beside the table and can switch to voting', async ({
   }
 
   await expect.poll(() => bobFrame).toEqual(expect.objectContaining({ spectator: true }));
-  // Only Bob is told he is among them
   await expect(bob.getByRole('button', { name: '1 spectator, including you' })).toBeVisible();
   await expect(page.getByRole('button', { name: '1 spectator', exact: true })).toBeVisible();
-  // A spectator arriving must not move the table
   expect(await card(page, 'Alice').boundingBox()).toEqual(aliceBefore);
 
-  // Spectators do not hold up the round, but may reveal it
   await page.getByRole('button', { name: '8', exact: true }).click();
   await bob.getByRole('button', { name: 'Reveal cards' }).click();
   await expect(card(bob, 'Alice')).toHaveAccessibleName('Alice: 8');
   await settled(bob);
   await bob.getByRole('button', { name: 'Vote again' }).click();
 
-  // Spectators keep their name editable from the list
   await bob.getByRole('button', { name: '1 spectator' }).click();
   const list = bob.getByRole('dialog', { name: 'Spectators' });
   await settled(bob);
   const listBefore = await list.boundingBox();
   await list.getByRole('button', { name: 'Bob' }).click();
-  // The field opens in the name's line, so the list keeps its height
   expect((await list.boundingBox())?.height).toBe(listBefore?.height);
   await bob.getByLabel('Your name').fill('Robert');
   await bob.getByLabel('Your name').press('Enter');
@@ -999,7 +955,6 @@ test('spectators watch from beside the table and can switch to voting', async ({
   await page.keyboard.press('Escape');
   await expect.poll(() => bobFrame?.name).toBe('Robert');
 
-  // The list offers each their way: a seat to a spectator, watching to a voter
   await page.getByRole('button', { name: '1 spectator' }).click();
   await expect(page.getByRole('button', { name: 'Take a seat' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Watch as spectator' })).toBeVisible();
@@ -1010,7 +965,6 @@ test('spectators watch from beside the table and can switch to voting', async ({
   await bob.getByRole('button', { name: 'Take a seat' }).click();
   await expect(bob.getByRole('group', { name: 'Choose your card' })).toBeVisible();
   await expect(card(page, 'Robert')).toHaveAccessibleName('Robert: not selected');
-  // With nobody watching, the eye stays, offering the way back
   await page.getByRole('button', { name: 'Spectators', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Spectators' })).toContainText('No spectators yet');
   await page.keyboard.press('Escape');
@@ -1025,7 +979,6 @@ test('watching after the reveal keeps your vote in the results', async ({
 }) => {
   const url = await createRoom(page);
   await join(page, url, 'Alice');
-  // What reaches Alice proves the server kept the vote, not only Bob's view
   let bobFrame: { estimate?: string; spectator: boolean } | undefined;
   page.on('websocket', (socket) =>
     socket.on('framereceived', ({ payload }) => {
@@ -1035,7 +988,6 @@ test('watching after the reveal keeps your vote in the results', async ({
       }
     }),
   );
-  // Alice's socket opened before the listener; a reload lets it see the frames
   await page.reload();
   const bob = await newParticipant();
   await join(bob, url, 'Bob');
@@ -1045,7 +997,6 @@ test('watching after the reveal keeps your vote in the results', async ({
   const proposal = page.getByRole('status').filter({ hasText: 'Proposed estimate' });
   await expect(proposal).toHaveText('Proposed estimate 5 Agreement 50%');
 
-  // The team is still discussing these cards, so they must not change under it
   await bob.getByRole('button', { name: 'Spectators', exact: true }).click();
   await bob.getByRole('button', { name: 'Watch as spectator' }).click();
   await expect
@@ -1059,7 +1010,6 @@ test('watching after the reveal keeps your vote in the results', async ({
 
   await expect(proposal).toHaveText('Proposed estimate 5 Agreement 50%');
 
-  // The next round starts without it
   await page.getByRole('button', { name: 'Vote again' }).click();
   await expect.poll(() => bobFrame?.estimate).toBeUndefined();
 });

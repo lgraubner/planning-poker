@@ -34,19 +34,15 @@ export function PokerTable({
 
   const current = participants.find((participant) => participant.id === self);
   const result = revealed ? consensus(estimates, deck) : null;
-  // A reveal that happened before you arrived is already over: no confetti for it
   const [arrivedRevealed, setArrivedRevealed] = useState(revealed);
   if (arrivedRevealed && !revealed) {
     setArrivedRevealed(false);
   }
 
   const others = participants.filter((participant) => participant.id !== self);
-  // One seat a side from four others, two from nine: a full table of 12 sits 4, 2, 4, 2.
-  // Past 12, long rows would reach the side seats, so everyone sits above or below.
   const sideCount = others.length >= 12 ? 0 : others.length >= 9 ? 4 : others.length >= 4 ? 2 : 0;
   const sides = others.slice(0, sideCount);
   const remaining = others.slice(sideCount);
-  // The rows split evenly with you below, and the spare seat goes on top
   const bottomCount = Math.max(Math.floor((remaining.length + 1) / 2) - 1, 0);
   const top = remaining.slice(0, remaining.length - bottomCount);
   const bottomOthers = remaining.slice(top.length);
@@ -57,7 +53,6 @@ export function PokerTable({
 
   return (
     <div
-      // A crowded room stretches the table under its longest row: 90px a seat, less the sides
       style={
         {
           '--table': `${Math.max(320, Math.max(top.length, bottom.length) * 90 - 180)}px`,
@@ -67,7 +62,6 @@ export function PokerTable({
     >
       {others.length === 0 ? (
         <div className="col-2 row-1 self-end text-center text-sm">
-          {/* Pulled into the button's padding, so label and link read as one. */}
           <p className="-mb-0.5 text-zinc-400">Invite your team</p>
           <CopyLinkButton statusClassName="left-1/2 -translate-x-1/2" />
         </div>
@@ -147,7 +141,6 @@ export function PokerTable({
   );
 }
 
-// A fixed canvas painted before the number, so the burst starts behind it
 function Confetti() {
   return (
     <canvas
@@ -159,10 +152,8 @@ function Confetti() {
   );
 }
 
-// Lives outside Confetti, so a re-render keeps the same ref and does not burst again
 function burst(canvas: HTMLCanvasElement) {
   const fire = confetti.create(canvas, { resize: true, disableForReducedMotion: true });
-  // Bursts with the number, once the 600ms card flip is over
   const timer = setTimeout(() => {
     const number = canvas.parentElement!.getBoundingClientRect();
     void fire({
@@ -182,7 +173,6 @@ function burst(canvas: HTMLCanvasElement) {
   };
 }
 
-// Two stacked seats outgrow the table's height, so a side spans all three rows
 function SideSeats({
   participants,
   self,
@@ -230,7 +220,6 @@ function ParticipantRow({
   return (
     <div
       className={clsx(
-        // Seats flow as inline blocks so a crowded row wraps into lines of even length
         'col-span-full w-full px-2 py-1 text-center text-balance *:mx-[3px] *:my-1.5 *:inline-block *:align-top',
         top ? 'row-1 self-end' : 'row-3 self-start',
       )}
@@ -245,7 +234,6 @@ function ParticipantRow({
           onRename={onRenameSelf}
         />
       ))}
-      {/* A spectator's row stays a seat high, so taking a seat does not move the table. */}
       {participants.length === 0 && (
         <div className="invisible">
           <ParticipantCard

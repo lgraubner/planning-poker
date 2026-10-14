@@ -50,7 +50,6 @@ func (l *limiter) allow(ip netip.Addr) bool {
 	return l.bucket(ip).allow(l.rate, l.burst)
 }
 
-// ready reports whether the client has a token left, without spending it
 func (l *limiter) ready(ip netip.Addr) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -61,7 +60,6 @@ func (l *limiter) ready(ip netip.Addr) bool {
 	return b.tokens >= 1
 }
 
-// bucket returns the client's bucket. The caller holds l.mu.
 func (l *limiter) bucket(ip netip.Addr) *bucket {
 	if len(l.buckets) >= 10000 {
 		// ponytail: O(n) prune, and a reset when a wide flood keeps it full; use an LRU if that shows up.

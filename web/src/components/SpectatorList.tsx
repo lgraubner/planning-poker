@@ -4,10 +4,6 @@ import type { Participant } from '../hooks/useRoom';
 import { Icon } from './Icon';
 import { InlineEdit } from './InlineEdit';
 
-/**
- * Spectators watch without a seat at the table. Usually there are none or one, so the bar
- * shows only how many, and opens their names. It turns your colour while you watch too.
- */
 export function SpectatorList({
   spectators,
   self,
@@ -34,7 +30,6 @@ export function SpectatorList({
         aria-label={label}
         title={label}
         className={clsx(
-          // A ghost button: quieter than the bar's outlined buttons, as it only informs
           'flex h-8 items-center gap-1.5 rounded-md px-2 text-sm tabular-nums hover:bg-surface-raised data-popup-open:bg-surface-raised',
           watching
             ? 'font-semibold text-indigo-300'
@@ -42,7 +37,6 @@ export function SpectatorList({
         )}
       >
         <Icon name="eye" />
-        {/* A zero reads like a broken counter, so an empty room shows the eye alone. */}
         {count > 0 && count}
       </Popover.Trigger>
       <Popover.Portal>
@@ -72,9 +66,7 @@ export function SpectatorList({
                         maxLength={40}
                         disabled={!connected}
                         onCommit={onRenameSelf}
-                        // The padding holds the pencil, which hangs past a name cut short
                         className="block min-w-0 pr-4 text-left font-bold text-indigo-300"
-                        // Looks like the name it edits, in its 20px line so the list keeps its height.
                         // Touch screens get 16px, or phones zoom in on focus. Pulled left by its
                         // padding and border, so the text starts where the name did.
                         inputClassName="-ml-[7px] h-5 field-sizing-content max-w-full min-w-16 px-1.5 leading-none font-bold text-indigo-300 pointer-coarse:text-base"

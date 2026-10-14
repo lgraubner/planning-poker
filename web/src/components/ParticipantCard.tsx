@@ -17,7 +17,6 @@ export function ParticipantCard({
   connected?: boolean;
   onRename?: (name: string) => void;
 }) {
-  // "Vote again" clears the estimate at once, so keep the face until the card has turned back
   const face = revealed && participant.selected ? participant.estimate || '' : '';
   const [shown, setShown] = useState(face);
   if (face && face !== shown) {
@@ -25,7 +24,6 @@ export function ParticipantCard({
   }
 
   const unflipping = !face && !!shown;
-  // A reveal that happened before you arrived is already over: show the face without turning it
   const [arrivedRevealed, setArrivedRevealed] = useState(!!face);
   if (arrivedRevealed && !face) {
     setArrivedRevealed(false);
@@ -70,7 +68,6 @@ export function ParticipantCard({
             <div
               className={clsx(
                 'absolute inset-0 flex items-center justify-center rounded-lg border-2 font-semibold text-indigo-400 backface-hidden rotate-y-180 border-indigo-400 bg-surface',
-                // "XXL" fills the card edge to edge at full size
                 (face || shown).length > 2 ? 'text-base' : 'text-xl',
               )}
             >
@@ -80,7 +77,6 @@ export function ParticipantCard({
         </div>
       </div>
       {own && onRename ? (
-        // Holds the name's line while the field floats over it, so the seats stay put
         <div className="relative mt-2 mb-0.5 h-5 text-sm">
           <InlineEdit
             value={participant.name}
@@ -89,7 +85,6 @@ export function ParticipantCard({
             disabled={!connected}
             onCommit={onRename}
             className="mx-auto block max-w-full font-bold text-indigo-300"
-            // Looks like the name it edits and grows with it past the seat's width. Touch screens
             // get 16px, or phones zoom in on focus.
             inputClassName="absolute top-1/2 left-1/2 z-10 field-sizing-content max-w-72 min-w-16 -translate-1/2 px-2 py-0.5 text-center font-bold text-indigo-300 pointer-coarse:text-base"
           />

@@ -9,8 +9,6 @@ export default defineConfig({
     tanstackRouter({ target: 'react', autoCodeSplitting: true }),
     tailwindcss(),
     react(),
-    // The Go server puts the operator's legal pages in the head. Vite serves the page in
-    // development, so it shows example ones.
     {
       name: 'example-legal-links',
       apply: 'serve',
@@ -22,7 +20,6 @@ export default defineConfig({
     },
   ],
   build: { outDir: '../internal/webui/dist', emptyOutDir: true },
-  // Unit tests live next to the code; Playwright owns e2e/
   test: { include: ['src/**/*.test.{ts,tsx}'] },
   server: {
     proxy: {

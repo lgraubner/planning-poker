@@ -39,8 +39,7 @@ func Open(path string) (*Store, error) {
 	}
 
 	s := New()
-	// Rooms held for 30 days need more room slots, or a full store would remove idle rooms long before then
-	s.db, s.ttl, s.maxRooms = db, 30*24*time.Hour, 100_000
+	s.db, s.idleTTL, s.maxRooms = db, 30*24*time.Hour, 100_000
 	rows, err := db.Query(`SELECT code, title, deck, round, revealed, joined, empty_since FROM rooms`)
 	if err != nil {
 		db.Close()
@@ -57,13 +56,11 @@ func Open(path string) (*Store, error) {
 			return nil, err
 		}
 
-		// The votes of a revealed round were in memory, so the room comes back ready for the next
 		if r.revealed {
 			r.revealed = false
 			r.round++
 		}
 
-		// Rooms occupied at shutdown start their idle clock now
 		r.emptySince = s.now()
 		if emptySince != 0 {
 			r.emptySince = time.Unix(emptySince, 0)
@@ -80,7 +77,6 @@ func Open(path string) (*Store, error) {
 	return s, nil
 }
 
-// save writes the persisted fields of a room; nil deletes it.
 // ponytail: synchronous write under the store lock, fine for a handful of writes per round; batch if it shows in latency.
 func (s *Store) save(code string, r *session) error {
 	if s.db == nil {

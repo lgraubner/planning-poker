@@ -11,7 +11,6 @@ const icons = {
       <path d="M19 18v2" />
     </>
   ),
-  // The copy confirmation draws it in, which needs a known path length
   check: <path d="M4 12.5l5 5L20 6.5" pathLength={1} />,
   'chevrons-up-down': <path d="m7 15 5 5 5-5M7 9l5-5 5 5" />,
   eye: (

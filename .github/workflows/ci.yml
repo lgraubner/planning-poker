@@ -8,7 +8,6 @@ on:
 permissions:
   contents: read
 
-# A newer push to the same PR makes older runs pointless; runs on main always finish.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -59,7 +58,6 @@ jobs:
       - run: go vet ./...
       - run: go test -race ./...
 
-  # The slowest job runs only after the cheap checks pass.
   e2e:
     name: E2E
     needs: [web, go]
@@ -120,7 +118,6 @@ jobs:
           fi
           curl --fail-with-body --silent --show-error --request POST -H "Authorization: Bearer $COOLIFY_TOKEN" "$COOLIFY_WEBHOOK"
 
-  # Every green main is published as latest; sha tags let users pin a build.
   publish:
     name: Publish image
     needs: [e2e, smoke]

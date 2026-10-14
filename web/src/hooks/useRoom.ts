@@ -45,8 +45,6 @@ export function useRoom(code: string, participant: Identity) {
     let terminal = false;
     let delay = 500;
     let timer: ReturnType<typeof setTimeout>;
-    // Who you last were in the room. A server that forgot you, after 30 seconds away,
-    // seats you again from it rather than from the name and role you first joined with.
     let self: Identity = participant;
     const abort = new AbortController();
 
@@ -84,9 +82,7 @@ export function useRoom(code: string, participant: Identity) {
           scheduleReconnect();
           return;
         }
-      } catch {
-        /* Network failure: keep retrying until the connection returns. */
-      }
+      } catch {}
 
       if (disposed) {
         return;
@@ -160,7 +156,6 @@ export function useRoom(code: string, participant: Identity) {
       window.removeEventListener('pagehide', leave);
       clearTimeout(timer);
       abort.abort();
-      // Navigating away is a deliberate exit, not a dropped connection to wait out
       leave();
       socket.current?.close();
       socket.current = null;

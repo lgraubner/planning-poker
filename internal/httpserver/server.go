@@ -41,7 +41,6 @@ type Links struct{ LegalNotice, PrivacyPolicy string }
 // (e.g. X-Forwarded-For); when empty, the TCP peer address identifies clients.
 func New(ctx context.Context, store *room.Store, files fs.FS, ipHeader string, links Links) http.Handler {
 	s := &server{store: store, files: files, ctx: ctx, ipHeader: ipHeader, creators: newLimiter(1.0/60, 5), guesses: newLimiter(5, 60)}
-	// The page reads them from its head, so they show from the first paint
 	for _, link := range [][2]string{{"legal-notice", links.LegalNotice}, {"privacy-policy", links.PrivacyPolicy}} {
 		if link[1] != "" {
 			s.meta = fmt.Appendf(s.meta, `<meta name="%s" content="%s">`, link[0], html.EscapeString(link[1]))
@@ -104,7 +103,6 @@ func fail(w http.ResponseWriter, status int, message string) {
 	reply(w, status, map[string]string{"error": message})
 }
 
-// clientIP groups IPv6 clients by /64, since one host usually controls a whole prefix
 func (s *server) clientIP(r *http.Request) netip.Addr {
 	value := r.RemoteAddr
 
@@ -163,7 +161,6 @@ func (s *server) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Clients from before decks send only a title
 	if body.Deck == "" {
 		body.Deck = "fibonacci"
 	}
@@ -177,9 +174,6 @@ func (s *server) create(w http.ResponseWriter, r *http.Request) {
 	reply(w, http.StatusCreated, map[string]string{"code": code})
 }
 
-// Room codes are the only access control, so a client that keeps asking for rooms that
-// do not exist is stopped from looking up any, which makes guessing codes impractical.
-// Finding a room costs nothing, so a team behind one address can reconnect at once.
 func (s *server) visit(w http.ResponseWriter, r *http.Request) bool {
 	if s.guesses.ready(s.clientIP(r)) {
 		return true
@@ -203,7 +197,6 @@ func (s *server) info(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// A room nobody can join right now still says why
 	var reason string
 	if err != nil {
 		reason = err.Error()
@@ -357,7 +350,6 @@ func (s *server) spa(w http.ResponseWriter, r *http.Request) {
 	}
 
 	status := http.StatusOK
-	// Any other page still gets the app, which says it is not found, under a 404
 	if path != "" && (len(path) != 8 || strings.Contains(path, "/")) {
 		status = http.StatusNotFound
 	}

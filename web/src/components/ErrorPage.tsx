@@ -11,9 +11,7 @@ export function ErrorPage({
 }: {
   title: string;
   description?: string;
-  // Label of a link home, where it is the obvious next step
   home?: string;
-  // Something broke, rather than something is missing: the card shows a cross
   failed?: boolean;
 }) {
   return (
