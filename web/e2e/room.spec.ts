@@ -96,7 +96,7 @@ test('a room estimates with the deck it was created with', async ({ page, newPar
 
   const revealed = snapshots.filter((snapshot) => snapshot.revealed).at(-1);
   expect(revealed?.deck).toEqual(['XS', 'S', 'M', 'L', 'XL', 'XXL', '?', '☕']);
-  expect(revealed?.participants[0].estimate).toBe('M');
+  expect(revealed?.participants[0]?.estimate).toBe('M');
 });
 
 test('a room estimates with modified Fibonacci unless told otherwise', async ({
@@ -222,7 +222,7 @@ test('a dropped connection reconnects and keeps the estimate', async ({ page }) 
   await page.getByRole('button', { name: '3', exact: true }).click();
   await expect(card(page, 'Alice')).toHaveAccessibleName('Alice: selected');
 
-  await sockets[0].close();
+  await sockets[0]!.close();
   await expect(page.getByText('Reconnecting…')).toBeVisible();
   release();
   await expect(page.getByText('Reconnecting…')).toBeHidden();
@@ -278,7 +278,7 @@ test('a reconnect rejoins with your current name and role', async ({ page }) => 
     .poll(() => confirmed)
     .toEqual(expect.objectContaining({ name: 'Alicia', spectator: true }));
 
-  await sockets[0].close();
+  await sockets[0]!.close();
   await expect.poll(() => joins.length).toBe(2);
   expect(joins[1]).toEqual(expect.objectContaining({ name: 'Alicia', spectator: true }));
 });
@@ -299,6 +299,22 @@ test('a rename shows at once, before the server confirms it', async ({ page }) =
   await page.getByRole('textbox', { name: 'Room title' }).press('Enter');
   await expect.poll(() => held.map((frame) => JSON.parse(frame).title)).toContain('Retro');
   await expect(page.getByRole('button', { name: 'Retro', exact: true })).toBeVisible();
+});
+
+test('a server message of the wrong shape stops the room', async ({ page }) => {
+  const url = await createRoom(page);
+  await page.routeWebSocket(/\/ws$/, (socket) => {
+    const server = socket.connectToServer();
+    server.onMessage((message) =>
+      socket.send(JSON.stringify({ ...JSON.parse(String(message)), deck: '0, 1, 2' })),
+    );
+  });
+  await page.goto(url);
+  await page.getByLabel('Name', { exact: true }).fill('Alice');
+  await page.getByRole('button', { name: 'Join', exact: true }).click();
+
+  await expect(page.getByRole('heading', { name: 'Unable to join' })).toBeVisible();
+  await expect(page.getByText('Invalid server response. Reload to rejoin')).toBeVisible();
 });
 
 test('a quick load never flashes the loader', async ({ page }) => {
@@ -693,7 +709,7 @@ test('the result lands as the cards finish turning', async ({ page, newParticipa
   const flipped = sampled.findIndex(({ flipping }, i) => !flipping && sampled[i - 1]?.flipping);
   expect(flipped).toBeGreaterThan(0);
   expect(sampled.some(({ flipping, result }) => flipping && result === 0)).toBe(true);
-  expect(sampled[flipped].result).toBe(1);
+  expect(sampled[flipped]?.result).toBe(1);
 });
 
 test('results stay clear of the table on a short screen', async ({ page, newParticipant }) => {

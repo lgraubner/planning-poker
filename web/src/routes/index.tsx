@@ -7,6 +7,7 @@ import { ErrorMessage } from '../components/ErrorMessage';
 import { Form } from '../components/Form';
 import { SelectField } from '../components/SelectField';
 import { TextField } from '../components/TextField';
+import { CreatedRoomSchema, failure } from '../api';
 import { decks } from '../decks';
 
 export const Route = createFileRoute('/')({ component: Home });
@@ -38,12 +39,13 @@ function CreateRoomForm() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(value),
         });
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(result.error || 'Could not create room');
+        const body: unknown = await response.json().catch(() => null);
+        const created = response.ok ? CreatedRoomSchema.safeParse(body).data : undefined;
+        if (!created) {
+          throw new Error(failure(body, 'Could not create room'));
         }
 
-        await navigate({ to: '/$code', params: { code: result.code } });
+        await navigate({ to: '/$code', params: { code: created.code } });
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'Could not create room');
       }

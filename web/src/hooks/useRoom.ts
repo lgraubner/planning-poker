@@ -1,24 +1,37 @@
 import { useEffect, useRef, useState } from 'react';
+import { z } from 'zod';
+import { RoomStatusSchema } from '../api';
 import type { Identity } from '../identity';
 
-export type Participant = {
-  id: string;
-  name: string;
-  connected: boolean;
-  selected: boolean;
-  spectator: boolean;
-  estimate?: string;
-};
-export type Snapshot = {
-  type: 'snapshot';
-  title: string;
-  round: number;
-  deck: string[];
-  revealed: boolean;
-  self: string;
-  participants: Participant[];
-};
-type Message = Snapshot | { type: 'error'; message: string; fatal: boolean };
+const ParticipantSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  connected: z.boolean(),
+  selected: z.boolean(),
+  spectator: z.boolean(),
+  estimate: z.string().optional(),
+});
+const SnapshotSchema = z.object({
+  type: z.literal('snapshot'),
+  title: z.string(),
+  round: z.number(),
+  deck: z.array(z.string()),
+  revealed: z.boolean(),
+  self: z.string(),
+  participants: z.array(ParticipantSchema),
+});
+const MessageSchema = z.discriminatedUnion('type', [
+  SnapshotSchema,
+  z.object({ type: z.literal('error'), message: z.string(), fatal: z.boolean() }),
+]);
+
+export type Participant = z.infer<typeof ParticipantSchema>;
+export type Snapshot = z.infer<typeof SnapshotSchema>;
+
+type Command =
+  | [type: 'reveal' | 'reset']
+  | [type: 'select' | 'rename' | 'name', value: string]
+  | [type: 'role', value: 'spectator' | 'voter'];
 
 export function useRoom(code: string, participant: Identity) {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
@@ -63,9 +76,11 @@ export function useRoom(code: string, participant: Identity) {
           return;
         }
 
-        const data = response.ok ? await response.json() : null;
-        if (data && !data.available) {
-          setError(`${data.reason}. Retrying…`);
+        const status = response.ok
+          ? RoomStatusSchema.safeParse(await response.json()).data
+          : undefined;
+        if (status && !status.available) {
+          setError(`${status.reason}. Retrying…`);
           scheduleReconnect();
           return;
         }
@@ -92,7 +107,7 @@ export function useRoom(code: string, participant: Identity) {
         }
 
         try {
-          const message: Message = JSON.parse(event.data);
+          const message = MessageSchema.parse(JSON.parse(event.data));
           if (message.type === 'snapshot') {
             const own = message.participants.find((p) => p.id === message.self);
             if (own) {
@@ -103,7 +118,7 @@ export function useRoom(code: string, participant: Identity) {
             setConnected(true);
             setError('');
             delay = 500;
-          } else if (message.type === 'error') {
+          } else {
             setError(message.message);
 
             if (message.fatal) {
@@ -152,7 +167,7 @@ export function useRoom(code: string, participant: Identity) {
     };
   }, [code, participant]);
 
-  function send(type: 'select' | 'reveal' | 'reset' | 'rename' | 'name' | 'role', value?: string) {
+  function send(...[type, value]: Command) {
     if (!connected || !snapshot || socket.current?.readyState !== WebSocket.OPEN) {
       return;
     }

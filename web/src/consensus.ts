@@ -15,17 +15,17 @@ export function consensus(estimates: string[], deck: string[]) {
   }
 
   const sorted = positions.filter((position) => position >= 0).sort((a, b) => a - b);
-  const value = sorted.length ? numbers[sorted[Math.floor(sorted.length / 2)]] : null;
-  const discuss = sorted.length < positions.length || sorted.at(-1)! - sorted[0] > 1;
+  const median = sorted[Math.floor(sorted.length / 2)];
+  const value = median === undefined ? null : (numbers[median] ?? null);
+  const discuss = sorted.length < positions.length || Math.max(...sorted) - Math.min(...sorted) > 1;
   if (positions.length < 2) {
     return { value, agreement: null, discuss };
   }
 
   let total = 0;
   let pairs = 0;
-  for (let i = 0; i < positions.length; i++) {
-    for (let j = i + 1; j < positions.length; j++) {
-      const [a, b] = [positions[i], positions[j]];
+  for (const [i, a] of positions.entries()) {
+    for (const b of positions.slice(i + 1)) {
       if (a >= 0 && b >= 0) {
         total += Math.max(0, 1 - Math.abs(a - b) / 2);
       }

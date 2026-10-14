@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useRef, useState, type ReactNode } from 'react';
+import { failure, RoomStatusSchema } from '../api';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { ErrorPage } from '../components/ErrorPage';
 import { JoinRoom } from '../components/JoinRoom';
@@ -12,7 +13,9 @@ import { useDelayed } from '../hooks/useDelayed';
 import { identity, remember, remembered, type Identity } from '../identity';
 import { useRoom, type Participant } from '../hooks/useRoom';
 
-type RoomInfo = { title: string; available: boolean; reason?: string; missing?: boolean };
+type RoomInfo =
+  | { available: true; title: string }
+  | { available: false; reason: string; missing: boolean };
 
 export const Route = createFileRoute('/$code')({
   loader: ({ params, abortController }) => lookup(params.code, abortController.signal),
@@ -34,20 +37,20 @@ async function lookup(code: string, signal: AbortSignal): Promise<RoomInfo> {
       signal,
       headers: { 'X-Participant-ID': id },
     }).catch(() => Response.error());
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null);
+    const status = response.ok ? RoomStatusSchema.safeParse(body).data : undefined;
+    if (!status) {
       // Only a room that does not exist makes a new one the way on
       return {
-        title: '',
         available: false,
-        reason: data.error || 'Could not load room',
+        reason: failure(body, 'Could not load room'),
         missing: response.status === 404,
       };
     }
 
     // A reload can arrive before the old tab's socket has finished closing
-    if (data.available || !id || attempt === 3) {
-      return data;
+    if (status.available || !id || attempt === 3) {
+      return status.available ? status : { ...status, missing: false };
     }
 
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -84,12 +87,7 @@ function RoomEntry({ code }: { code: string }) {
   }
 
   if (!info.available) {
-    return (
-      <UnavailableRoom
-        message={info.reason || 'You cannot join this room right now'}
-        missing={!!info.missing}
-      />
-    );
+    return <UnavailableRoom message={info.reason} missing={info.missing} />;
   }
 
   return (
@@ -103,7 +101,7 @@ function RoomEntry({ code }: { code: string }) {
 
 function UnavailableRoom({ message, missing }: { message: string; missing: boolean }) {
   // The server's messages are sentences: the first heads the page, the rest explain it
-  const [headline, ...rest] = message.split(/\.\s+/);
+  const [headline = message, ...rest] = message.split(/\.\s+/);
   return (
     <ErrorPage
       title={headline}

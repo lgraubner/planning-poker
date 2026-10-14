@@ -212,7 +212,7 @@ function seating(page: Page) {
       return left + width / 2;
     };
 
-    const counts = [0, 0, 0, 0];
+    const counts: [number, number, number, number] = [0, 0, 0, 0];
 
     for (const article of articles) {
       const group = article.parentElement!;
