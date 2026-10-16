@@ -1,7 +1,11 @@
 import clsx from 'clsx';
 import { useDelayed } from '../hooks/useDelayed';
 
-export function ReconnectingToast({ connected }: { connected: boolean }) {
+interface Props {
+  connected: boolean;
+}
+
+export function ReconnectingToast({ connected }: Props) {
   const reconnecting = useDelayed(!connected);
 
   return (

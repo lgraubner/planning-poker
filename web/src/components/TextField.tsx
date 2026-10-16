@@ -1,12 +1,12 @@
 import type { InputHTMLAttributes } from 'react';
 
-type TextFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> & {
+interface Props extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> {
   id: string;
   label: string;
   error?: string;
-};
+}
 
-export function TextField({ id, label, error, ...props }: TextFieldProps) {
+export function TextField({ id, label, error, ...props }: Props) {
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={id} className="text-sm font-semibold">

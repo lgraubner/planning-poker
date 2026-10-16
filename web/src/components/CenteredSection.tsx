@@ -1,7 +1,11 @@
 import type { PropsWithChildren, ReactNode } from 'react';
 import { LegalFooter } from './LegalFooter';
 
-export function CenteredSection({ header, children }: PropsWithChildren<{ header?: ReactNode }>) {
+interface Props extends PropsWithChildren {
+  header?: ReactNode;
+}
+
+export function CenteredSection({ header, children }: Props) {
   return (
     <>
       {header ? (

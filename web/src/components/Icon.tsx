@@ -41,15 +41,13 @@ const icons = {
   x: <path d="M6 6l12 12M18 6L6 18" />,
 } satisfies Record<string, ReactNode>;
 
-export function Icon({
-  name,
-  className = 'size-4',
-  strokeWidth = 2,
-}: {
+interface Props {
   name: keyof typeof icons;
   className?: string;
   strokeWidth?: number;
-}) {
+}
+
+export function Icon({ name, className = 'size-4', strokeWidth = 2 }: Props) {
   return (
     <svg
       aria-hidden="true"

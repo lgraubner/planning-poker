@@ -2,15 +2,13 @@ import { useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Icon } from './Icon';
 
-export function CopyLinkButton({
-  className = '',
-  buttonClassName = '',
-  statusClassName,
-}: {
+interface Props {
   className?: string;
   buttonClassName?: string;
   statusClassName: string;
-}) {
+}
+
+export function CopyLinkButton({ className = '', buttonClassName = '', statusClassName }: Props) {
   const [result, copy] = useCopyLink();
   const copied = result === 'copied';
 

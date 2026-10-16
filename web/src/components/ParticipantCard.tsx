@@ -4,19 +4,21 @@ import type { Participant } from '../hooks/useRoom';
 import { useDelayed } from '../hooks/useDelayed';
 import { InlineEdit } from './InlineEdit';
 
+interface Props {
+  participant: Participant;
+  own: boolean;
+  revealed: boolean;
+  connected?: boolean;
+  onRename?: (name: string) => void;
+}
+
 export function ParticipantCard({
   participant,
   own,
   revealed,
   connected = false,
   onRename,
-}: {
-  participant: Participant;
-  own: boolean;
-  revealed: boolean;
-  connected?: boolean;
-  onRename?: (name: string) => void;
-}) {
+}: Props) {
   const face = revealed && participant.selected ? participant.estimate || '' : '';
   const [shown, setShown] = useState(face);
   if (face && face !== shown) {

@@ -69,7 +69,11 @@ function enter(name: string, spectator: boolean): Identity | string {
   }
 }
 
-function RoomEntry({ code }: { code: string }) {
+interface RoomEntryProps {
+  code: string;
+}
+
+function RoomEntry({ code }: RoomEntryProps) {
   const info = Route.useLoaderData();
   const [entry, setEntry] = useState(() => {
     const savedName = remembered('name').trim();
@@ -93,7 +97,12 @@ function RoomEntry({ code }: { code: string }) {
   );
 }
 
-function UnavailableRoom({ message, missing }: { message: string; missing: boolean }) {
+interface UnavailableRoomProps {
+  message: string;
+  missing: boolean;
+}
+
+function UnavailableRoom({ message, missing }: UnavailableRoomProps) {
   const [headline = message, ...rest] = message.split(/\.\s+/);
   return (
     <ErrorPage
@@ -105,7 +114,11 @@ function UnavailableRoom({ message, missing }: { message: string; missing: boole
   );
 }
 
-function RoomLoading({ children }: { children: ReactNode }) {
+interface RoomLoadingProps {
+  children: ReactNode;
+}
+
+function RoomLoading({ children }: RoomLoadingProps) {
   const shown = useDelayed(true);
   return (
     <p role="status" className="leading-relaxed text-zinc-400">
@@ -114,7 +127,12 @@ function RoomLoading({ children }: { children: ReactNode }) {
   );
 }
 
-function Room({ code, participant }: { code: string; participant: Identity }) {
+interface RoomProps {
+  code: string;
+  participant: Identity;
+}
+
+function Room({ code, participant }: RoomProps) {
   const { snapshot, connected, error, fatal, send } = useRoom(code, participant);
   const results = useRef<Participant[]>([]);
 

@@ -3,17 +3,14 @@ import { HomeLink } from './HomeLink';
 import { Icon } from './Icon';
 import { LegalFooter } from './LegalFooter';
 
-export function ErrorPage({
-  title,
-  description,
-  home,
-  failed,
-}: {
+interface Props {
   title: string;
   description?: string;
   home?: string;
   failed?: boolean;
-}) {
+}
+
+export function ErrorPage({ title, description, home, failed }: Props) {
   return (
     <>
       <header className="flex min-h-11 items-center">

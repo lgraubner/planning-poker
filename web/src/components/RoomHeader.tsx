@@ -10,17 +10,14 @@ import { Icon } from './Icon';
 import { CopyLinkButton, useCopyLink } from './CopyLinkButton';
 import { InlineEdit } from './InlineEdit';
 
-export function RoomHeader({
-  title,
-  connected,
-  onRename,
-  spectators,
-}: {
+interface Props {
   title: string;
   connected: boolean;
   onRename: (title: string) => void;
   spectators: ReactNode;
-}) {
+}
+
+export function RoomHeader({ title, connected, onRename, spectators }: Props) {
   return (
     <header className="mb-2 grid min-h-11 grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[1fr_minmax(0,auto)_1fr]">
       <HomeLink />

@@ -7,6 +7,18 @@ import { Button } from './Button';
 import { CopyLinkButton } from './CopyLinkButton';
 import { ParticipantCard } from './ParticipantCard';
 
+interface Props {
+  participants: Participant[];
+  estimates: string[];
+  deck: string[];
+  self: string;
+  connected: boolean;
+  revealed: boolean;
+  spectating: boolean;
+  onReveal: () => void;
+  onRenameSelf: (name: string) => void;
+}
+
 export function PokerTable({
   participants,
   estimates,
@@ -17,17 +29,7 @@ export function PokerTable({
   spectating,
   onReveal,
   onRenameSelf,
-}: {
-  participants: Participant[];
-  estimates: string[];
-  deck: string[];
-  self: string;
-  connected: boolean;
-  revealed: boolean;
-  spectating: boolean;
-  onReveal: () => void;
-  onRenameSelf: (name: string) => void;
-}) {
+}: Props) {
   const hasVotes = participants.some((participant) => participant.selected);
   const allVoted =
     participants.length > 0 && participants.every((participant) => participant.selected);
@@ -177,17 +179,14 @@ function burst(canvas: HTMLCanvasElement) {
   };
 }
 
-function SideSeats({
-  participants,
-  self,
-  revealed,
-  right = false,
-}: {
+interface SideSeatsProps {
   participants: Participant[];
   self: string;
   revealed: boolean;
   right?: boolean;
-}) {
+}
+
+function SideSeats({ participants, self, revealed, right = false }: SideSeatsProps) {
   if (participants.length === 0) {
     return null;
   }
@@ -206,6 +205,15 @@ function SideSeats({
   );
 }
 
+interface ParticipantRowProps {
+  participants: Participant[];
+  self: string;
+  revealed: boolean;
+  top?: boolean;
+  connected?: boolean;
+  onRenameSelf?: (name: string) => void;
+}
+
 function ParticipantRow({
   participants,
   self,
@@ -213,14 +221,7 @@ function ParticipantRow({
   top = false,
   connected = false,
   onRenameSelf,
-}: {
-  participants: Participant[];
-  self: string;
-  revealed: boolean;
-  top?: boolean;
-  connected?: boolean;
-  onRenameSelf?: (name: string) => void;
-}) {
+}: ParticipantRowProps) {
   return (
     <div
       className={clsx(

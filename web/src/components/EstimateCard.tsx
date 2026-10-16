@@ -1,13 +1,13 @@
 import clsx from 'clsx';
 
-type EstimateCardProps = {
+interface Props {
   value: string;
   selected: boolean;
   disabled: boolean;
   onClick: () => void;
-};
+}
 
-export function EstimateCard({ value, selected, disabled, onClick }: EstimateCardProps) {
+export function EstimateCard({ value, selected, disabled, onClick }: Props) {
   return (
     <button
       type="button"

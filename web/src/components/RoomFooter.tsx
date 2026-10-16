@@ -4,6 +4,16 @@ import { Button } from './Button';
 import { EstimateCard } from './EstimateCard';
 import { Icon } from './Icon';
 
+interface Props {
+  deck: string[];
+  results: Participant[];
+  revealed: boolean;
+  spectating: boolean;
+  estimate?: string;
+  connected: boolean;
+  send: ReturnType<typeof useRoom>['send'];
+}
+
 export function RoomFooter({
   deck,
   results,
@@ -12,15 +22,7 @@ export function RoomFooter({
   estimate,
   connected,
   send,
-}: {
-  deck: string[];
-  results: Participant[];
-  revealed: boolean;
-  spectating: boolean;
-  estimate?: string;
-  connected: boolean;
-  send: ReturnType<typeof useRoom>['send'];
-}) {
+}: Props) {
   return (
     <div className="sticky bottom-0 z-10 grid w-full max-w-7xl grid-cols-1 self-center bg-background text-center">
       <section
@@ -51,7 +53,12 @@ export function RoomFooter({
   );
 }
 
-function Results({ participants, deck }: { participants: Participant[]; deck: string[] }) {
+interface ResultsProps {
+  participants: Participant[];
+  deck: string[];
+}
+
+function Results({ participants, deck }: ResultsProps) {
   const counts = deck
     .map((value) => ({
       value,
@@ -87,19 +94,15 @@ function Results({ participants, deck }: { participants: Participant[]; deck: st
   );
 }
 
-function EstimateControls({
-  deck,
-  connected,
-  estimate,
-  hidden,
-  send,
-}: {
+interface EstimateControlsProps {
   deck: string[];
   connected: boolean;
   estimate?: string;
   hidden: boolean;
   send: ReturnType<typeof useRoom>['send'];
-}) {
+}
+
+function EstimateControls({ deck, connected, estimate, hidden, send }: EstimateControlsProps) {
   return (
     <section
       aria-label="Estimate controls"

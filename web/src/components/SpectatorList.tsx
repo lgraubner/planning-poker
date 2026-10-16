@@ -4,19 +4,15 @@ import type { Participant } from '../hooks/useRoom';
 import { Icon } from './Icon';
 import { InlineEdit } from './InlineEdit';
 
-export function SpectatorList({
-  spectators,
-  self,
-  connected,
-  onRenameSelf,
-  onSpectate,
-}: {
+interface Props {
   spectators: Participant[];
   self: string;
   connected: boolean;
   onRenameSelf: (name: string) => void;
   onSpectate: (spectator: boolean) => void;
-}) {
+}
+
+export function SpectatorList({ spectators, self, connected, onRenameSelf, onSpectate }: Props) {
   const count = spectators.length;
   const watching = spectators.some((spectator) => spectator.id === self);
   const label =

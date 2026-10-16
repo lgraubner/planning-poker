@@ -7,15 +7,13 @@ import { Form } from './Form';
 import { HomeLink } from './HomeLink';
 import { TextField } from './TextField';
 
-export function JoinRoom({
-  title,
-  error,
-  onJoin,
-}: {
+interface Props {
   title: string;
   error: string;
   onJoin: (name: string, spectator: boolean) => void;
-}) {
+}
+
+export function JoinRoom({ title, error, onJoin }: Props) {
   const form = useForm({
     defaultValues: { name: remembered('name') },
     onSubmitMeta: { spectator: false },

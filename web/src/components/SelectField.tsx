@@ -1,14 +1,14 @@
 import { Select } from '@base-ui/react/select';
 import { Icon } from './Icon';
 
-type SelectFieldProps = {
+interface Props {
   label: string;
   items: { value: string; label: string; description?: string }[];
   value: string;
   onValueChange: (value: string) => void;
-};
+}
 
-export function SelectField({ label, items, value, onValueChange }: SelectFieldProps) {
+export function SelectField({ label, items, value, onValueChange }: Props) {
   return (
     <div className="flex flex-col gap-1.5">
       <Select.Root

@@ -2,6 +2,16 @@ import { useState } from 'react';
 import clsx from 'clsx';
 import { Icon } from './Icon';
 
+interface Props {
+  value: string;
+  label: string;
+  maxLength: number;
+  disabled: boolean;
+  onCommit: (value: string) => void;
+  className: string;
+  inputClassName: string;
+}
+
 export function InlineEdit({
   value,
   label,
@@ -10,15 +20,7 @@ export function InlineEdit({
   onCommit,
   className,
   inputClassName,
-}: {
-  value: string;
-  label: string;
-  maxLength: number;
-  disabled: boolean;
-  onCommit: (value: string) => void;
-  className: string;
-  inputClassName: string;
-}) {
+}: Props) {
   const [draft, setDraft] = useState<string | null>(null);
   // ponytail: a change lost to a dropped socket shows until the value next changes.
   const [pending, setPending] = useState<{ from: string; to: string } | null>(null);
