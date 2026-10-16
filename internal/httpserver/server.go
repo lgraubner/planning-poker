@@ -24,23 +24,21 @@ import (
 )
 
 type server struct {
-	store    *room.Store
-	files    fs.FS
-	ctx      context.Context
-	ipHeader string
-	mu       sync.Mutex
-	creation bucket
-	creators *limiter
-	guesses  *limiter
-	meta     []byte
+	store          *room.Store
+	files          fs.FS
+	ctx            context.Context
+	clientIPHeader string
+	mu             sync.Mutex
+	creation       bucket
+	creators       *limiter
+	guesses        *limiter
+	meta           []byte
 }
 
 type Links struct{ LegalNotice, PrivacyPolicy string }
 
-// New serves the API and SPA. ipHeader names a header set by a trusted proxy
-// (e.g. X-Forwarded-For); when empty, the TCP peer address identifies clients.
-func New(ctx context.Context, store *room.Store, files fs.FS, ipHeader string, links Links) http.Handler {
-	s := &server{store: store, files: files, ctx: ctx, ipHeader: ipHeader, creators: newLimiter(1.0/60, 5), guesses: newLimiter(5, 60)}
+func New(ctx context.Context, store *room.Store, files fs.FS, clientIPHeader string, links Links) http.Handler {
+	s := &server{store: store, files: files, ctx: ctx, clientIPHeader: clientIPHeader, creators: newLimiter(1.0/60, 5), guesses: newLimiter(5, 60)}
 	for _, link := range [][2]string{{"legal-notice", links.LegalNotice}, {"privacy-policy", links.PrivacyPolicy}} {
 		if link[1] != "" {
 			s.meta = fmt.Appendf(s.meta, `<meta name="%s" content="%s">`, link[0], html.EscapeString(link[1]))
@@ -106,7 +104,7 @@ func fail(w http.ResponseWriter, status int, message string) {
 func (s *server) clientIP(r *http.Request) netip.Addr {
 	value := r.RemoteAddr
 
-	if values := r.Header.Values(s.ipHeader); s.ipHeader != "" && len(values) > 0 {
+	if values := r.Header.Values(s.clientIPHeader); s.clientIPHeader != "" && len(values) > 0 {
 		// The trusted proxy appends the peer it saw, so only the last entry is reliable
 		last := values[len(values)-1]
 		value = last[strings.LastIndex(last, ",")+1:]
@@ -237,7 +235,7 @@ func (s *server) socket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code := chi.URLParam(r, "code")
-	if err := s.store.Reserve(code); err != nil {
+	if err := s.store.ReserveSocket(code); err != nil {
 		status := http.StatusConflict
 		if errors.Is(err, room.ErrNotFound) {
 			s.missed(r)
@@ -247,7 +245,7 @@ func (s *server) socket(w http.ResponseWriter, r *http.Request) {
 		fail(w, status, err.Error())
 		return
 	}
-	defer s.store.Release(code)
+	defer s.store.ReleaseSocket(code)
 
 	conn, err := websocket.Accept(w, r, nil)
 	if err != nil {

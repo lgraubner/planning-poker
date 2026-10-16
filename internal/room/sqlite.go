@@ -8,8 +8,6 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// Open keeps rooms in the SQLite database at path, creating it if needed, so
-// they survive restarts. Participants and estimates stay in memory.
 func Open(path string) (*Store, error) {
 	db, err := sql.Open("sqlite", "file:"+path+"?_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)&_pragma=busy_timeout(5000)")
 	if err != nil {
@@ -24,7 +22,7 @@ func Open(path string) (*Store, error) {
 		round INTEGER NOT NULL,
 		revealed INTEGER NOT NULL,
 		joined INTEGER NOT NULL,
-		empty_since INTEGER NOT NULL -- Unix seconds; 0 while participants are connected
+		empty_since INTEGER NOT NULL
 	)`); err != nil {
 		db.Close()
 		return nil, err

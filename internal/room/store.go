@@ -22,8 +22,6 @@ const (
 
 const alphabet = "23456789abcdefghjkmnpqrstuvwxyz"
 
-// Decks are the estimation decks a room can use, by name. The first card values
-// rise in order; "?" and "☕" end every deck.
 var Decks = map[string][]string{
 	"fibonacci": {"0", "1", "2", "3", "5", "8", "13", "20", "40", "100", "?", "☕"},
 	"tshirt":    {"XS", "S", "M", "L", "XL", "XXL", "?", "☕"},
@@ -179,7 +177,6 @@ func (s *Store) removeLongestEmpty() bool {
 	return true
 }
 
-// Info returns the room's title, and the error a join would meet right now
 func (s *Store) Info(code, secret string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -210,8 +207,7 @@ func (s *Store) Info(code, secret string) (string, error) {
 	return r.title, nil
 }
 
-// Reserve bounds sockets even before the client has sent its join message
-func (s *Store) Reserve(code string) error {
+func (s *Store) ReserveSocket(code string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -228,7 +224,7 @@ func (s *Store) Reserve(code string) error {
 	return nil
 }
 
-func (s *Store) Release(code string) {
+func (s *Store) ReleaseSocket(code string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -237,7 +233,6 @@ func (s *Store) Release(code string) {
 	}
 }
 
-// Join seats a new participant as a spectator or voter; a returning one keeps their role
 func (s *Store) Join(code, secret, name string, spectator bool) (*Subscription, error) {
 	name, err := ValidateLabel(name, 40)
 	if err != nil {
@@ -439,9 +434,6 @@ func (s *Store) publish(r *session) {
 	}
 }
 
-// Sweep removes disconnected participants after their grace period. The caller
-// runs it once per second for presence, checking room expiry once per minute.
-// Rooms nobody joined expire sooner so unused rooms cannot hold the room limit.
 func (s *Store) Sweep(expireRooms bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

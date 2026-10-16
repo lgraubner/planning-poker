@@ -63,8 +63,7 @@ export function SpectatorList({ spectators, self, connected, onRenameSelf, onSpe
                         disabled={!connected}
                         onCommit={onRenameSelf}
                         className="block min-w-0 pr-4 text-left font-bold text-indigo-300"
-                        // Touch screens get 16px, or phones zoom in on focus. Pulled left by its
-                        // padding and border, so the text starts where the name did.
+                        // Touch screens get 16px, or phones zoom in on focus.
                         inputClassName="-ml-[7px] h-5 field-sizing-content max-w-full min-w-16 px-1.5 leading-none font-bold text-indigo-300 pointer-coarse:text-base"
                       />
                     ) : (

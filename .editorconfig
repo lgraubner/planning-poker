@@ -1,4 +1,3 @@
-# root stops editors and formatters from inheriting settings above the repo.
 root = true
 
 [*]

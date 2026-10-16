@@ -1,7 +1,7 @@
 name: Commit messages
 
-# Hooks can be skipped, so PRs re-check their commits. A squash merge uses the
-# PR title as the commit message, so the title is checked too, including edits.
+# A squash merge uses the PR title as the commit message, so the title is checked too,
+# including edits.
 on:
   pull_request:
     types: [opened, edited, synchronize, reopened]

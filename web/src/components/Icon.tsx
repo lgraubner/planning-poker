@@ -1,7 +1,6 @@
 import clsx from 'clsx';
 import type { ReactNode } from 'react';
 
-// Lucide's 24px line icons, pasted as the children of their <svg>
 const icons = {
   armchair: (
     <>

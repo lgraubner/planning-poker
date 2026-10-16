@@ -175,12 +175,12 @@ func TestValidationAndLimits(t *testing.T) {
 	}
 
 	for i := 0; i < maxSockets; i++ {
-		if err := s.Reserve(code); err != nil {
+		if err := s.ReserveSocket(code); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	if err := s.Reserve(code); err != ErrBusy {
+	if err := s.ReserveSocket(code); err != ErrBusy {
 		t.Fatalf("socket cap missing: %v", err)
 	}
 
@@ -188,8 +188,8 @@ func TestValidationAndLimits(t *testing.T) {
 		t.Fatalf("socket cap missing from availability: %v", err)
 	}
 
-	s.Release(code)
-	if err := s.Reserve(code); err != nil {
+	s.ReleaseSocket(code)
+	if err := s.ReserveSocket(code); err != nil {
 		t.Fatal("socket not released")
 	}
 }
@@ -531,7 +531,7 @@ func TestFullStoreMakesRoomFromTheLongestEmpty(t *testing.T) {
 		now = now.Add(time.Minute)
 	}
 
-	if err := s.Reserve(codes[0]); err != nil {
+	if err := s.ReserveSocket(codes[0]); err != nil {
 		t.Fatal(err)
 	}
 
