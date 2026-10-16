@@ -10,6 +10,10 @@ export function remembered(key: Key) {
   }
 }
 
+export function rememberedSpectator() {
+  return remembered('spectator') === 'true';
+}
+
 export function remember(key: Key, value: string) {
   try {
     localStorage.setItem(`poker.${key}`, value);

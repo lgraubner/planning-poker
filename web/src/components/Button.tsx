@@ -1,6 +1,8 @@
 import type { ButtonHTMLAttributes } from 'react';
 
-export function Button(props: ButtonHTMLAttributes<HTMLButtonElement>) {
+interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {}
+
+export function Button(props: Props) {
   return (
     <button
       {...props}

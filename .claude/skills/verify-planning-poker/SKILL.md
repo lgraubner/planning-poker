@@ -65,7 +65,7 @@ import {
 - `recordFrames(page)` collects every WebSocket frame that page sends and receives; call it before `join`. `snapshots(frames)` returns the received room snapshots (`{title, round, deck, revealed, self, participants[{id,name,connected,selected,spectator,estimate?}]}`).
 - `shot(page, name)` waits for animations to finish, then saves `<name>.png`. `saveFrames(name, frames)` saves `<name>.frames.json`.
 
-Stable handles: ARIA roles and names as in `web/e2e/*.spec.ts` (`getByRole('button', { name: '5', exact: true })` for a card in the deck, `Reveal cards`, `Vote again`, `status` filtered by `Proposed estimate` or `Discuss!`, `list` named `Results`). Use `exact: true` for deck buttons: `1` otherwise matches `13` and `100`. The feature files list the handles per feature.
+Stable handles: ARIA roles and names as in `web/e2e/*.spec.ts` (`getByRole('button', { name: '5', exact: true })` for a card in the deck, `Reveal cards`, `Reset round`, `status` filtered by `Proposed estimate` or `Discuss!`, `list` named `Results`). Use `exact: true` for deck buttons: `1` otherwise matches `13` and `100`. The feature files list the handles per feature.
 
 ## Evidence
 
@@ -81,7 +81,7 @@ Proof standards:
 - Capture each step's action and resulting state (`shot` after each step), not just the last screen.
 - Read the PNGs before you claim a visual result. An accessible name updates before the card flip finishes; `shot` waits for animations for that reason.
 - Room persistence across a restart is out of reach here, because cleanup deletes `state/rooms.db`. `make smoke` proves it against the Docker image.
-- No mocks. `page.routeWebSocket` is fine to hold or drop frames when proving reconnect behaviour, as `web/e2e/room.spec.ts` does, but never to fake the server's answer.
+- No mocks. `page.routeWebSocket` is fine to hold or drop frames when proving reconnect behaviour, as `web/e2e/presence.spec.ts` does, but never to fake the server's answer.
 
 ## Cleanup
 

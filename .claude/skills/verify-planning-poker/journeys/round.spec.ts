@@ -1,7 +1,7 @@
 import { card, createRoom, expect, join, test } from '../../../../web/e2e/fixtures';
 import { recordFrames, saveFrames, shot, snapshots } from './evidence';
 
-test('round: estimate privately, reveal, vote again, discuss', async ({ page, newParticipant }) => {
+test('round: estimate privately, reveal, reset, discuss', async ({ page, newParticipant }) => {
   const url = await createRoom(page, 'Verify round');
   await join(page, url, 'Alice');
   const bob = await newParticipant();
@@ -39,7 +39,7 @@ test('round: estimate privately, reveal, vote again, discuss', async ({ page, ne
   );
 
   await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
-  await page.getByRole('button', { name: 'Vote again' }).click();
+  await page.getByRole('button', { name: 'Reset round' }).click();
   for (const viewer of [page, bob]) {
     await expect(card(viewer, 'Alice')).toHaveAccessibleName('Alice: not selected');
     await expect(viewer.getByRole('list', { name: 'Results' })).toBeHidden();

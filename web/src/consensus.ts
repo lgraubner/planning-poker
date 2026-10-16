@@ -2,7 +2,7 @@ export function consensus(estimates: string[], deck: string[]) {
   const numbers = deck.filter((value) => value !== '?' && value !== '☕');
   const positions = estimates
     .filter((estimate) => estimate !== '☕')
-    .map((vote) => numbers.indexOf(vote));
+    .map((estimate) => numbers.indexOf(estimate));
   if (positions.length === 0) {
     return null;
   }
@@ -11,6 +11,7 @@ export function consensus(estimates: string[], deck: string[]) {
   const median = sorted[Math.floor(sorted.length / 2)];
   const value = median === undefined ? null : (numbers[median] ?? null);
   const discuss = sorted.length < positions.length || Math.max(...sorted) - Math.min(...sorted) > 1;
+
   if (positions.length < 2) {
     return { value, agreement: null, discuss };
   }

@@ -6,7 +6,7 @@ function clientIP() {
 }
 
 export const test = base.extend<{ newParticipant: () => Promise<Page> }>({
-  // Playwright requires the object pattern even when a fixture uses no others.
+  // Playwright requires the object pattern even when a fixture uses no others
   // oxlint-disable-next-line no-empty-pattern
   extraHTTPHeaders: async ({}, use) => use({ 'X-Forwarded-For': clientIP() }),
   newParticipant: async (

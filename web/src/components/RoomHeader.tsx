@@ -1,14 +1,15 @@
 import { AlertDialog } from '@base-ui/react/alert-dialog';
-import { Menu } from '@base-ui/react/menu';
 import { useBlocker } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
-import clsx from 'clsx';
+import { useCopyLink } from '../hooks/useCopyLink';
+import { maxTitleLength } from '../labels';
 import { legalLinks } from '../legal-links';
 import { Button } from './Button';
 import { HomeLink } from './HomeLink';
 import { Icon } from './Icon';
-import { CopyLinkButton, useCopyLink } from './CopyLinkButton';
+import { CopyLinkButton } from './CopyLinkButton';
 import { InlineEdit } from './InlineEdit';
+import { Menu } from './Menu';
 
 interface Props {
   title: string;
@@ -26,7 +27,7 @@ export function RoomHeader({ title, connected, onRename, spectators }: Props) {
         <InlineEdit
           value={title}
           label="Room title"
-          maxLength={100}
+          maxLength={maxTitleLength}
           disabled={!connected}
           onCommit={onRename}
           className="inline-block max-w-full border border-transparent px-[7px] py-1"
@@ -46,9 +47,6 @@ export function RoomHeader({ title, connected, onRename, spectators }: Props) {
   );
 }
 
-const popupClassName =
-  'min-w-44 origin-(--transform-origin) rounded-lg border border-border bg-surface p-1 shadow-lg shadow-black/40 outline-none transition-[opacity,scale] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] data-ending-style:opacity-0 data-starting-style:opacity-0 motion-safe:data-ending-style:scale-95 motion-safe:data-starting-style:scale-95';
-
 const repository = 'https://github.com/lgraubner/planning-poker';
 
 const menuLinks = [
@@ -57,11 +55,9 @@ const menuLinks = [
   ...legalLinks,
 ];
 
-const menuItemClassName =
-  'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm outline-none data-highlighted:bg-surface-raised [&>svg]:text-zinc-400';
-
 function RoomMenu() {
   const [result, copy] = useCopyLink();
+
   return (
     <Menu.Root>
       <Menu.Trigger
@@ -72,11 +68,11 @@ function RoomMenu() {
       </Menu.Trigger>
       <Menu.Portal>
         <Menu.Positioner align="end" sideOffset={4} className="z-30">
-          <Menu.Popup className={popupClassName}>
+          <Menu.Popup>
             <Menu.Item
               closeOnClick={false}
               onClick={copy}
-              className={clsx(menuItemClassName, 'font-semibold text-indigo-400 sm:hidden')}
+              className="font-semibold text-indigo-400 sm:hidden"
             >
               {result === 'copied'
                 ? 'Link copied'
@@ -88,14 +84,7 @@ function RoomMenu() {
               {result === 'copied' && 'Link copied'}
             </span>
             {menuLinks.map(({ href, label }) => (
-              <Menu.LinkItem
-                key={label}
-                href={href}
-                target="_blank"
-                rel="noreferrer"
-                closeOnClick
-                className={clsx(menuItemClassName, 'no-underline')}
-              >
+              <Menu.LinkItem key={label} href={href} target="_blank" rel="noreferrer" closeOnClick>
                 {label}
               </Menu.LinkItem>
             ))}

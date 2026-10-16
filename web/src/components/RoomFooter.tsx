@@ -1,5 +1,5 @@
-import clsx from 'clsx';
-import type { Participant, useRoom } from '../hooks/useRoom';
+import { clsx } from 'clsx';
+import type { Participant } from '../hooks/useRoom';
 import { Button } from './Button';
 import { EstimateCard } from './EstimateCard';
 import { Icon } from './Icon';
@@ -11,7 +11,8 @@ interface Props {
   spectating: boolean;
   estimate?: string;
   connected: boolean;
-  send: ReturnType<typeof useRoom>['send'];
+  onReset: () => void;
+  onSelect: (estimate: string) => void;
 }
 
 export function RoomFooter({
@@ -21,7 +22,8 @@ export function RoomFooter({
   spectating,
   estimate,
   connected,
-  send,
+  onReset,
+  onSelect,
 }: Props) {
   return (
     <div className="sticky bottom-0 z-10 grid w-full max-w-7xl grid-cols-1 self-center bg-background text-center">
@@ -36,9 +38,9 @@ export function RoomFooter({
           {results.length > 0 && <Results participants={results} deck={deck} />}
         </div>
         <div className="w-full border-t border-zinc-700 py-4">
-          <Button disabled={!connected} onClick={() => send('reset')}>
+          <Button disabled={!connected} onClick={onReset}>
             <Icon name="rotate-ccw" />
-            Vote again
+            Reset round
           </Button>
         </div>
       </section>
@@ -47,7 +49,7 @@ export function RoomFooter({
         connected={connected}
         estimate={estimate}
         hidden={revealed || spectating}
-        send={send}
+        onSelect={onSelect}
       />
     </div>
   );
@@ -76,7 +78,7 @@ function Results({ participants, deck }: ResultsProps) {
       {counts.map(({ value, count }) => (
         <li
           key={value}
-          aria-label={`${value}: ${count} ${count === 1 ? 'vote' : 'votes'}${count === lead ? ', most votes' : ''}`}
+          aria-label={`${value}: ${count} ${count === 1 ? 'estimate' : 'estimates'}${count === lead ? ', most estimates' : ''}`}
           className="flex w-8 flex-none flex-col items-center"
         >
           <span className="text-xs text-zinc-400 tabular-nums">{count}</span>
@@ -99,10 +101,10 @@ interface EstimateControlsProps {
   connected: boolean;
   estimate?: string;
   hidden: boolean;
-  send: ReturnType<typeof useRoom>['send'];
+  onSelect: (estimate: string) => void;
 }
 
-function EstimateControls({ deck, connected, estimate, hidden, send }: EstimateControlsProps) {
+function EstimateControls({ deck, connected, estimate, hidden, onSelect }: EstimateControlsProps) {
   return (
     <section
       aria-label="Estimate controls"
@@ -122,7 +124,7 @@ function EstimateControls({ deck, connected, estimate, hidden, send }: EstimateC
             value={value}
             selected={estimate === value}
             disabled={!connected}
-            onClick={() => send('select', value)}
+            onClick={() => onSelect(value)}
           />
         ))}
       </div>

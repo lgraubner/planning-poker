@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import clsx from 'clsx';
+import { clsx } from 'clsx';
+import { validLabel } from '../labels';
 import { Icon } from './Icon';
 
 interface Props {
@@ -26,8 +27,8 @@ export function InlineEdit({
   const shown = pending?.from === value ? pending.to : value;
 
   function commit() {
-    const next = draft?.trim();
-    if (next && next !== shown && !/\p{Cc}/u.test(next)) {
+    if (draft !== null && validLabel(draft, maxLength) && draft.trim() !== shown) {
+      const next = draft.trim();
       onCommit(next);
       setPending({ from: value, to: next });
     }

@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import clsx from 'clsx';
+import { clsx } from 'clsx';
 import type { Participant } from '../hooks/useRoom';
 import { useDelayed } from '../hooks/useDelayed';
+import { maxNameLength } from '../labels';
 import { InlineEdit } from './InlineEdit';
 
 interface Props {
@@ -83,11 +84,11 @@ export function ParticipantCard({
           <InlineEdit
             value={participant.name}
             label="Your name"
-            maxLength={40}
+            maxLength={maxNameLength}
             disabled={!connected}
             onCommit={onRename}
             className="mx-auto block max-w-full font-bold text-indigo-300"
-            // Touch screens get 16px, or phones zoom in on focus.
+            // Touch screens get 16px, or phones zoom in on focus
             inputClassName="absolute top-1/2 left-1/2 z-10 field-sizing-content max-w-72 min-w-16 -translate-1/2 px-2 py-0.5 text-center font-bold text-indigo-300 pointer-coarse:text-base"
           />
         </div>

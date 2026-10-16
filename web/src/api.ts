@@ -5,6 +5,8 @@ export const RoomStatusSchema = z.discriminatedUnion('available', [
   z.object({ available: z.literal(false), reason: z.string() }),
 ]);
 
+export type RoomStatus = z.infer<typeof RoomStatusSchema>;
+
 export const CreatedRoomSchema = z.object({ code: z.string() });
 
 const FailureSchema = z.object({ error: z.string() });

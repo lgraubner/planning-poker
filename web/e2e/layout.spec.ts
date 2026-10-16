@@ -82,7 +82,7 @@ async function lines(locator: Locator) {
 }
 
 async function expectSound(page: Page) {
-  // Against the device width: a phone zooms out to fit, which would widen innerWidth too.
+  // Against the device width: a phone zooms out to fit, which would widen innerWidth too
   const width = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(width).toBeLessThanOrEqual(page.viewportSize()!.width);
   expect(await lines(page.getByRole('heading', { level: 1 }).getByRole('button'))).toBe(1);

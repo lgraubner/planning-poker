@@ -35,21 +35,25 @@ type Command =
 
 export function useRoom(code: string, participant: Identity) {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
-  const [connected, setConnected] = useState(false);
+  const [status, setStatus] = useState<'connecting' | 'connected' | 'failed'>('connecting');
   const [error, setError] = useState('');
-  const [fatal, setFatal] = useState(false);
   const socket = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    let disposed = false;
-    let terminal = false;
+    let stopped = false;
     let delay = 500;
     let timer: ReturnType<typeof setTimeout>;
     let self: Identity = participant;
     const abort = new AbortController();
 
+    function fail(message: string) {
+      stopped = true;
+      setStatus('failed');
+      setError(message);
+    }
+
     function scheduleReconnect() {
-      if (disposed || terminal) {
+      if (stopped) {
         return;
       }
 
@@ -58,7 +62,7 @@ export function useRoom(code: string, participant: Identity) {
     }
 
     async function reconnect() {
-      if (disposed || terminal) {
+      if (stopped) {
         return;
       }
 
@@ -68,9 +72,7 @@ export function useRoom(code: string, participant: Identity) {
           headers: { 'X-Participant-ID': participant.id },
         });
         if (response.status === 404) {
-          terminal = true;
-          setFatal(true);
-          setError('Room not found. It may have expired or the server restarted');
+          fail('Room not found. It may have expired or the server restarted');
           return;
         }
 
@@ -84,7 +86,7 @@ export function useRoom(code: string, participant: Identity) {
         }
       } catch {}
 
-      if (disposed) {
+      if (stopped) {
         return;
       }
 
@@ -98,7 +100,7 @@ export function useRoom(code: string, participant: Identity) {
       socket.current = ws;
       ws.onopen = () => ws.send(JSON.stringify({ type: 'join', ...self }));
       ws.onmessage = (event) => {
-        if (disposed) {
+        if (stopped) {
           return;
         }
 
@@ -111,33 +113,26 @@ export function useRoom(code: string, participant: Identity) {
             }
 
             setSnapshot(message);
-            setConnected(true);
+            setStatus('connected');
             setError('');
             delay = 500;
+          } else if (message.fatal) {
+            fail(message.message);
+            ws.close();
           } else {
             setError(message.message);
-
-            if (message.fatal) {
-              terminal = true;
-              setFatal(true);
-              setConnected(false);
-              ws.close();
-            }
           }
         } catch {
-          terminal = true;
-          setFatal(true);
-          setConnected(false);
-          setError('Invalid server response. Reload to rejoin');
+          fail('Invalid server response. Reload to rejoin');
           ws.close();
         }
       };
       ws.onclose = () => {
-        if (disposed) {
+        if (stopped) {
           return;
         }
 
-        setConnected(false);
+        setStatus('connecting');
         scheduleReconnect();
       };
     }
@@ -152,7 +147,7 @@ export function useRoom(code: string, participant: Identity) {
     connect();
 
     return () => {
-      disposed = true;
+      stopped = true;
       window.removeEventListener('pagehide', leave);
       clearTimeout(timer);
       abort.abort();
@@ -163,7 +158,7 @@ export function useRoom(code: string, participant: Identity) {
   }, [code, participant]);
 
   function send(...[type, value]: Command) {
-    if (!connected || !snapshot || socket.current?.readyState !== WebSocket.OPEN) {
+    if (status !== 'connected' || !snapshot || socket.current?.readyState !== WebSocket.OPEN) {
       return;
     }
 
@@ -171,5 +166,5 @@ export function useRoom(code: string, participant: Identity) {
     socket.current.send(JSON.stringify({ type, value, round: snapshot.round }));
   }
 
-  return { snapshot, connected, error, fatal, send };
+  return { snapshot, status, error, send };
 }

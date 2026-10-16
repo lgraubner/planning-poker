@@ -20,7 +20,7 @@ Preconditions:
 
 - `verify.sh doctor` all `OK`; Alice joined as a voter with `recordFrames(page)` before her join.
 
-- **Join as spectator.** Bob opens the URL, fills `Name` with `Bob`, clicks `Watch as spectator`. His `Choose your card` group is hidden and a `status` shows `Waiting for votes`; `card(page, 'Bob')` is hidden. Alice's latest snapshot has Bob with `spectator: true`.
+- **Join as spectator.** Bob opens the URL, fills `Name` with `Bob`, clicks `Watch as spectator`. His `Choose your card` group is hidden and a `status` shows `Waiting for estimates`; `card(page, 'Bob')` is hidden. Alice's latest snapshot has Bob with `spectator: true`.
 - **List.** Alice clicks `1 spectator` (exact); `getByRole('dialog', { name: 'Spectators' }).getByRole('listitem')` reads `Bob`. Bob's button is `1 spectator, including you`. `Escape` closes it.
 - **Control.** Alice picks `8`, Bob clicks `Reveal cards`. `card(bob, 'Alice')` is `Alice: 8`.
 - **Take a seat.** Bob opens his list and clicks `Take a seat`. His `Choose your card` group shows; `card(page, 'Bob')` is `Bob: not selected`; Alice's snapshot has `spectator: false`; Alice's `Spectators` dialog says `No spectators yet`.

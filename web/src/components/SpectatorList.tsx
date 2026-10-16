@@ -1,8 +1,9 @@
-import { Popover } from '@base-ui/react/popover';
-import clsx from 'clsx';
+import { clsx } from 'clsx';
 import type { Participant } from '../hooks/useRoom';
+import { maxNameLength } from '../labels';
 import { Icon } from './Icon';
 import { InlineEdit } from './InlineEdit';
+import { Popover } from './Popover';
 
 interface Props {
   spectators: Participant[];
@@ -37,7 +38,7 @@ export function SpectatorList({ spectators, self, connected, onRenameSelf, onSpe
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner align="end" sideOffset={4} className="z-30">
-          <Popover.Popup className="min-w-44 origin-(--transform-origin) rounded-lg border border-border bg-surface p-1 shadow-lg shadow-black/40 outline-none transition-[opacity,scale] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] data-ending-style:opacity-0 data-starting-style:opacity-0 motion-safe:data-ending-style:scale-95 motion-safe:data-starting-style:scale-95 w-48">
+          <Popover.Popup className="w-48">
             <Popover.Title className="px-3 pt-2 pb-1 text-xs font-semibold text-zinc-400">
               Spectators
             </Popover.Title>
@@ -59,11 +60,11 @@ export function SpectatorList({ spectators, self, connected, onRenameSelf, onSpe
                       <InlineEdit
                         value={spectator.name}
                         label="Your name"
-                        maxLength={40}
+                        maxLength={maxNameLength}
                         disabled={!connected}
                         onCommit={onRenameSelf}
                         className="block min-w-0 pr-4 text-left font-bold text-indigo-300"
-                        // Touch screens get 16px, or phones zoom in on focus.
+                        // Touch screens get 16px, or phones zoom in on focus
                         inputClassName="-ml-[7px] h-5 field-sizing-content max-w-full min-w-16 px-1.5 leading-none font-bold text-indigo-300 pointer-coarse:text-base"
                       />
                     ) : (
@@ -77,10 +78,7 @@ export function SpectatorList({ spectators, self, connected, onRenameSelf, onSpe
             <Popover.Close
               disabled={!connected}
               onClick={() => onSpectate(!watching)}
-              className={clsx(
-                'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm outline-none data-highlighted:bg-surface-raised [&>svg]:text-zinc-400',
-                'w-full hover:bg-surface-raised focus-visible:bg-surface-raised disabled:opacity-50',
-              )}
+              className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm outline-none hover:bg-surface-raised focus-visible:bg-surface-raised disabled:opacity-50 data-highlighted:bg-surface-raised [&>svg]:text-zinc-400"
             >
               <Icon name={watching ? 'armchair' : 'eye'} />
               {watching ? 'Take a seat' : 'Watch as spectator'}

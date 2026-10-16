@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useRef, useState, type ReactNode } from 'react';
-import { failure, RoomStatusSchema } from '../api';
+import { failure, RoomStatusSchema, type RoomStatus } from '../api';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { ErrorPage } from '../components/ErrorPage';
 import { JoinRoom } from '../components/JoinRoom';
@@ -10,12 +10,13 @@ import { RoomFooter } from '../components/RoomFooter';
 import { RoomHeader } from '../components/RoomHeader';
 import { SpectatorList } from '../components/SpectatorList';
 import { useDelayed } from '../hooks/useDelayed';
-import { identity, remember, remembered, type Identity } from '../identity';
 import { useRoom, type Participant } from '../hooks/useRoom';
+import { identity, remember, remembered, rememberedSpectator, type Identity } from '../identity';
+import { maxNameLength, validLabel } from '../labels';
 
 type RoomInfo =
-  | { available: true; title: string }
-  | { available: false; reason: string; missing: boolean };
+  | Extract<RoomStatus, { available: true }>
+  | (Extract<RoomStatus, { available: false }> & { missing: boolean });
 
 export const Route = createFileRoute('/$code')({
   loader: ({ params, abortController }) => lookup(params.code, abortController.signal),
@@ -54,12 +55,13 @@ async function lookup(code: string, signal: AbortSignal): Promise<RoomInfo> {
 
 function RoomPage() {
   const { code } = Route.useParams();
+
   return <RoomEntry key={code} code={code} />;
 }
 
 function enter(name: string, spectator: boolean): Identity | string {
-  if (!name.trim() || Array.from(name.trim()).length > 40 || /\p{Cc}/u.test(name)) {
-    return 'Use 1–40 characters without control characters';
+  if (!validLabel(name, maxNameLength)) {
+    return `Use 1–${maxNameLength} characters without control characters`;
   }
 
   try {
@@ -77,7 +79,7 @@ function RoomEntry({ code }: RoomEntryProps) {
   const info = Route.useLoaderData();
   const [entry, setEntry] = useState(() => {
     const savedName = remembered('name').trim();
-    return info.available && savedName ? enter(savedName, remembered('spectator') === 'true') : '';
+    return info.available && savedName ? enter(savedName, rememberedSpectator()) : '';
   });
 
   if (typeof entry === 'object') {
@@ -104,6 +106,7 @@ interface UnavailableRoomProps {
 
 function UnavailableRoom({ message, missing }: UnavailableRoomProps) {
   const [headline = message, ...rest] = message.split(/\.\s+/);
+
   return (
     <ErrorPage
       title={headline}
@@ -120,6 +123,7 @@ interface RoomLoadingProps {
 
 function RoomLoading({ children }: RoomLoadingProps) {
   const shown = useDelayed(true);
+
   return (
     <p role="status" className="leading-relaxed text-zinc-400">
       {shown && children}
@@ -133,10 +137,10 @@ interface RoomProps {
 }
 
 function Room({ code, participant }: RoomProps) {
-  const { snapshot, connected, error, fatal, send } = useRoom(code, participant);
+  const { snapshot, status, error, send } = useRoom(code, participant);
   const results = useRef<Participant[]>([]);
 
-  if (fatal) {
+  if (status === 'failed') {
     return <ErrorPage title="Unable to join" description={error} failed />;
   }
 
@@ -144,6 +148,7 @@ function Room({ code, participant }: RoomProps) {
     return <RoomLoading>Connecting to room…{error}</RoomLoading>;
   }
 
+  const connected = status === 'connected';
   const own = snapshot.participants.find((participant) => participant.id === snapshot.self);
   const spectating = !!own?.spectator;
   const spectators = snapshot.participants.filter((participant) => participant.spectator);
@@ -199,7 +204,8 @@ function Room({ code, participant }: RoomProps) {
         spectating={spectating}
         estimate={own?.estimate}
         connected={connected}
-        send={send}
+        onReset={() => send('reset')}
+        onSelect={(estimate) => send('select', estimate)}
       />
     </section>
   );

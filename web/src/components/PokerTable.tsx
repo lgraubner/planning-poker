@@ -1,11 +1,17 @@
-import { useState, type CSSProperties } from 'react';
+import { useState } from 'react';
 import confetti from 'canvas-confetti';
-import clsx from 'clsx';
+import { clsx } from 'clsx';
 import { consensus } from '../consensus';
 import type { Participant } from '../hooks/useRoom';
 import { Button } from './Button';
 import { CopyLinkButton } from './CopyLinkButton';
 import { ParticipantCard } from './ParticipantCard';
+
+declare module 'react' {
+  interface CSSProperties {
+    '--table'?: string;
+  }
+}
 
 interface Props {
   participants: Participant[];
@@ -30,8 +36,8 @@ export function PokerTable({
   onReveal,
   onRenameSelf,
 }: Props) {
-  const hasVotes = participants.some((participant) => participant.selected);
-  const allVoted =
+  const hasEstimates = participants.some((participant) => participant.selected);
+  const allSelected =
     participants.length > 0 && participants.every((participant) => participant.selected);
 
   const current = participants.find((participant) => participant.id === self);
@@ -55,11 +61,7 @@ export function PokerTable({
 
   return (
     <div
-      style={
-        {
-          '--table': `${Math.max(320, Math.max(top.length, bottom.length) * 90 - 180)}px`,
-        } as CSSProperties
-      }
+      style={{ '--table': `${Math.max(320, Math.max(top.length, bottom.length) * 90 - 180)}px` }}
       className="grid min-h-96 w-full max-w-7xl grow grid-cols-[56px_minmax(0,1fr)_56px] grid-rows-[minmax(96px,auto)_132px_minmax(96px,auto)] content-center items-center justify-center gap-x-1.5 gap-y-6 self-center pt-4 sm:grid-cols-[84px_minmax(200px,var(--table))_84px] sm:grid-rows-[minmax(96px,auto)_140px_minmax(96px,auto)] sm:gap-x-4"
     >
       {others.length === 0 ? (
@@ -78,10 +80,10 @@ export function PokerTable({
       <div
         className={clsx(
           'col-2 row-2 flex w-full flex-col items-center justify-center gap-3 self-stretch rounded-3xl bg-surface p-3 inset-ring transition-shadow duration-200 motion-reduce:transition-none sm:p-5',
-          !revealed && allVoted ? 'inset-ring-indigo-400/50' : 'inset-ring-surface-raised',
+          !revealed && allSelected ? 'inset-ring-indigo-400/50' : 'inset-ring-surface-raised',
         )}
       >
-        {!revealed && hasVotes ? (
+        {!revealed && hasEstimates ? (
           <Button disabled={!connected} onClick={onReveal}>
             Reveal cards
           </Button>
@@ -122,7 +124,7 @@ export function PokerTable({
           </p>
         ) : (
           <p role="status" className="text-center text-base font-bold text-zinc-200">
-            {revealed ? 'Cards revealed' : spectating ? 'Waiting for votes' : 'Pick your card'}
+            {revealed ? 'Cards revealed' : spectating ? 'Waiting for estimates' : 'Pick your card'}
           </p>
         )}
       </div>

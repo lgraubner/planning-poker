@@ -17,7 +17,7 @@ Keep tests that catch the first edit and survive the second. Rewrite or delete t
 
 ## In this repo
 
-- E2E: `web/e2e/room.spec.ts` with helpers from `web/e2e/fixtures.ts`. Use one browser context per participant (`newParticipant()`), and assert on the other participant's frames or cards.
+- E2E: one spec per feature in `web/e2e/` (`round`, `presence`, `rename`, `spectators`, `app`, `layout`) with helpers from `web/e2e/fixtures.ts`. Use one browser context per participant (`newParticipant()`), and assert on the other participant's frames or cards.
 - Go: `internal/room/store_test.go` and `internal/httpserver/server_test.go` for limits, validation, and timing; run with `-race`.
 - Vitest: `web/src/consensus.test.ts` for pure logic such as the agreement score.
 

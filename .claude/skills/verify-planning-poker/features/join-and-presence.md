@@ -29,7 +29,7 @@ Preconditions:
 - **Invite (desktop).** `context.grantPermissions(['clipboard-read', 'clipboard-write'])`, click `Copy room link` in `header`. The button becomes `Link copied`; `navigator.clipboard.readText()` equals the room URL.
 - **Invite (mobile).** Click `Menu`, then `getByRole('menuitem', { name: 'Copy room link' })`. It becomes `Link copied`.
 - **Leave.** Click `getByRole('link', { name: 'Planning Poker' })`. `alertdialog` `Leave the room?` appears; `Stay` keeps the URL; `Leave room` goes to `/`. Bob's last snapshot no longer lists Alice and `card(bob, 'Alice')` is hidden.
-- **Reconnect.** Proxy the socket with `page.routeWebSocket(/\/ws$/, …)` and close it after picking `3`. `Reconnecting…` shows, then hides; the `3` button is still pressed. See `a dropped connection reconnects and keeps the estimate` in `web/e2e/room.spec.ts` for the hold-and-release pattern.
+- **Reconnect.** Proxy the socket with `page.routeWebSocket(/\/ws$/, …)` and close it after picking `3`. `Reconnecting…` shows, then hides; the `3` button is still pressed. See `a dropped connection reconnects and keeps the estimate` in `web/e2e/presence.spec.ts` for the hold-and-release pattern.
 - **Proof.** `shot` per step; Bob's frames before and after Alice leaves.
 
 ## Gotchas

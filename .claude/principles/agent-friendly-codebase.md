@@ -19,5 +19,5 @@ Agents extend the patterns they see in the files they open. Shape the code so th
 
 ## In this repo
 
-- `CLAUDE.md` names the home of each kind of code. `web/e2e/room.spec.ts` (about 1,000 lines) and `internal/room/store.go` are the files agents append to; split by concern before adding to them.
-- Base UI popups repeat the same class string in several components. A new popup goes through a wrapper (`.claude/rules/react.md`), not another copy.
+- `CLAUDE.md` names the home of each kind of code. `internal/room/store.go` is the file agents append to; split it by concern before adding to it. E2E specs are split per feature in `web/e2e/`: add a test to the matching file or start a new one.
+- Base UI popups go through the wrappers in `web/src/components/Popover.tsx` and `Menu.tsx` (`.claude/rules/react.md`), not another copy of their class string.

@@ -25,14 +25,14 @@ One home per kind of code, and the file to copy when adding one:
 
 Untrusted data is parsed where it enters:
 
-| Boundary                         | Parser                                                                          |
-| -------------------------------- | ------------------------------------------------------------------------------- |
-| Environment                      | `cmd/server/main.go`, which exits on an invalid value                           |
-| HTTP request bodies              | `json.Decoder` with `DisallowUnknownFields` and `MaxBytesReader` in `server.go` |
-| WebSocket commands               | `wsjson.Read` into `command` in `server.go`, then `room.Store.Command`          |
-| Labels (names, titles, estimate) | `room.ValidateLabel`                                                            |
-| Server data in the SPA           | zod schemas in `web/src/api.ts` and `web/src/hooks/useRoom.ts`                  |
-| `localStorage`                   | `web/src/identity.ts`                                                           |
+| Boundary               | Parser                                                                          |
+| ---------------------- | ------------------------------------------------------------------------------- |
+| Environment            | `cmd/server/main.go`, which exits on an invalid value                           |
+| HTTP request bodies    | `json.Decoder` with `DisallowUnknownFields` and `MaxBytesReader` in `server.go` |
+| WebSocket commands     | `wsjson.Read` into `command` in `server.go`, then `room.Store.Command`          |
+| Labels (names, titles) | `room.ValidateLabel`; an estimate must be in its deck (`room.Decks`)            |
+| Server data in the SPA | zod schemas in `web/src/api.ts` and `web/src/hooks/useRoom.ts`                  |
+| `localStorage`         | `web/src/identity.ts`                                                           |
 
 Public contracts with callers outside the repo stay compatible: the WebSocket protocol of already open tabs (they reconnect to a new deploy), the JSON API under `/api/rooms`, room links `/{code}`, `/healthz`, the environment variables in `README.md`, existing SQLite files (migrated on open in `sqlite.go`), and the `poker.*` keys in `localStorage`.
 
