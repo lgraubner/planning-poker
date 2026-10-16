@@ -1,4 +1,4 @@
-import { card, createRoom, expect, join, test } from './fixtures';
+import { card, createRoom, expect, join, snapshotFrames, test } from './fixtures';
 
 test('participants estimate privately, reveal together, and reset', async ({
   page,
@@ -7,21 +7,7 @@ test('participants estimate privately, reveal together, and reset', async ({
   const url = await createRoom(page, 'Friday sprint planning');
   await join(page, url, 'Alice');
   const bob = await newParticipant();
-  const leaked: string[] = [];
-  bob.on('websocket', (socket) =>
-    socket.on('framereceived', ({ payload }) => {
-      const message = JSON.parse(String(payload));
-      if (message.type !== 'snapshot' || message.revealed) {
-        return;
-      }
-
-      for (const other of message.participants) {
-        if (other.id !== message.self && other.estimate) {
-          leaked.push(other.name);
-        }
-      }
-    }),
-  );
+  const frames = snapshotFrames(bob);
   await join(bob, url, 'Bob');
   await expect(bob.getByRole('heading', { name: 'Friday sprint planning' })).toBeVisible();
 
@@ -33,6 +19,11 @@ test('participants estimate privately, reveal together, and reset', async ({
 
   await expect(card(bob, 'Alice')).toHaveAccessibleName('Alice: selected');
   await expect(card(bob, 'Alice')).not.toContainText('8');
+  const leaked = frames
+    .filter((frame) => !frame.revealed)
+    .flatMap((frame) =>
+      frame.participants.filter((other) => other.id !== frame.self && other.estimate),
+    );
   expect(leaked).toEqual([]);
 
   const tableBefore = await card(bob, 'Alice').boundingBox();
@@ -65,19 +56,7 @@ test('a room estimates with the deck it was created with', async ({ page, newPar
   const url = await createRoom(page, 'Roadmap sizing', 'T-shirt sizes');
   await join(page, url, 'Alice');
   const bob = await newParticipant();
-  const snapshots: {
-    deck: string[];
-    revealed: boolean;
-    participants: { estimate?: string }[];
-  }[] = [];
-  bob.on('websocket', (socket) =>
-    socket.on('framereceived', ({ payload }) => {
-      const message = JSON.parse(String(payload));
-      if (message.type === 'snapshot') {
-        snapshots.push(message);
-      }
-    }),
-  );
+  const frames = snapshotFrames(bob);
   await join(bob, url, 'Bob');
   await expect(bob.getByRole('group', { name: 'Choose your card' }).getByRole('button')).toHaveText(
     ['XS', 'S', 'M', 'L', 'XL', 'XXL', '?', '☕'],
@@ -90,7 +69,7 @@ test('a room estimates with the deck it was created with', async ({ page, newPar
     'Proposed estimate M',
   );
 
-  const revealed = snapshots.filter((snapshot) => snapshot.revealed).at(-1);
+  const revealed = frames.filter((frame) => frame.revealed).at(-1);
   expect(revealed?.deck).toEqual(['XS', 'S', 'M', 'L', 'XL', 'XXL', '?', '☕']);
   expect(revealed?.participants[0]?.estimate).toBe('M');
 });
@@ -103,21 +82,13 @@ test('a room estimates with modified Fibonacci unless told otherwise', async ({
   const url = await createRoom(page);
   await join(page, url, 'Alice');
   const bob = await newParticipant();
-  const decks: string[][] = [];
-  bob.on('websocket', (socket) =>
-    socket.on('framereceived', ({ payload }) => {
-      const message = JSON.parse(String(payload));
-      if (message.type === 'snapshot') {
-        decks.push(message.deck);
-      }
-    }),
-  );
+  const frames = snapshotFrames(bob);
   await join(bob, url, 'Bob');
   await expect(bob.getByRole('group', { name: 'Choose your card' }).getByRole('button')).toHaveText(
     fibonacci,
   );
 
-  expect(decks.at(-1)).toEqual(fibonacci);
+  expect(frames.at(-1)?.deck).toEqual(fibonacci);
 });
 
 test('joining a revealed room shows the cards without replaying the flip', async ({

@@ -1,4 +1,4 @@
-import { card, createRoom, expect, join, test } from './fixtures';
+import { card, createRoom, expect, join, snapshotFrames, test } from './fixtures';
 
 test('a rename shows at once, before the server confirms it', async ({ page }) => {
   const url = await createRoom(page, 'Sprint planning');
@@ -37,10 +37,7 @@ test('anyone can rename the room for everyone', async ({ page, newParticipant })
   const url = await createRoom(page, 'Sprint planning');
   await join(page, url, 'Alice');
   const bob = await newParticipant();
-  const titles: string[] = [];
-  bob.on('websocket', (socket) =>
-    socket.on('framereceived', ({ payload }) => titles.push(JSON.parse(String(payload)).title)),
-  );
+  const frames = snapshotFrames(bob);
   await join(bob, url, 'Bob');
 
   const rename = async (viewer: typeof page, from: string, to: string) => {
@@ -52,7 +49,7 @@ test('anyone can rename the room for everyone', async ({ page, newParticipant })
   await page.getByRole('textbox', { name: 'Room title' }).press('Enter');
   await expect(bob.getByRole('heading', { name: 'Retro' })).toBeVisible();
   await expect(bob).toHaveTitle('Retro | Planning Poker');
-  expect(titles).toContain('Retro');
+  expect(frames.map((frame) => frame.title)).toContain('Retro');
 
   await rename(bob, 'Retro', '  ');
   await bob.getByRole('textbox', { name: 'Room title' }).blur();
@@ -133,12 +130,7 @@ test('you can change your name for everyone and keep it', async ({ page, newPart
   const url = await createRoom(page);
   await join(page, url, 'Alice');
   const bob = await newParticipant();
-  const names: string[][] = [];
-  bob.on('websocket', (socket) =>
-    socket.on('framereceived', ({ payload }) =>
-      names.push(JSON.parse(String(payload)).participants?.map((p: { name: string }) => p.name)),
-    ),
-  );
+  const frames = snapshotFrames(bob);
   await join(bob, url, 'Bob');
 
   await page.getByRole('button', { name: 'Alice', exact: true }).click();
@@ -148,7 +140,10 @@ test('you can change your name for everyone and keep it', async ({ page, newPart
   await page.getByRole('textbox', { name: 'Your name' }).fill('Alicia');
   await page.getByRole('textbox', { name: 'Your name' }).press('Enter');
   await expect(card(bob, 'Alicia')).toBeVisible();
-  expect(names).toContainEqual(['Alicia', 'Bob']);
+  expect(frames.map((frame) => frame.participants.map((p) => p.name))).toContainEqual([
+    'Alicia',
+    'Bob',
+  ]);
   await expect(bob.getByRole('button', { name: 'Alicia', exact: true })).toHaveCount(0);
 
   await createRoom(page, 'Retro');

@@ -9,12 +9,64 @@
     "eslint/no-console": "error",
     "typescript/no-explicit-any": "error",
     "typescript/no-non-null-assertion": "error",
-    "typescript/switch-exhaustiveness-check": "error"
+    "typescript/switch-exhaustiveness-check": "error",
+    "eslint/no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "zod",
+            "message": "Parse server data in src/api.ts (HTTP) or src/hooks/useRoom.ts (room snapshot)."
+          },
+          {
+            "name": "@base-ui/react/popover",
+            "message": "Use the wrapper in src/components/Popover.tsx."
+          },
+          {
+            "name": "@base-ui/react/menu",
+            "message": "Use the wrapper in src/components/Menu.tsx."
+          }
+        ]
+      }
+    ],
+    "eslint/no-restricted-globals": [
+      "error",
+      {
+        "name": "localStorage",
+        "message": "Read and write browser storage through src/identity.ts."
+      },
+      {
+        "name": "WebSocket",
+        "message": "Open the room's WebSocket only in src/hooks/useRoom.ts."
+      }
+    ]
   },
   "overrides": [
     {
       "files": ["e2e/**"],
-      "rules": { "typescript/no-non-null-assertion": "off" }
+      "rules": {
+        "typescript/no-non-null-assertion": "off",
+        "eslint/no-restricted-globals": "off"
+      }
+    },
+    {
+      "files": ["src/api.ts", "src/components/Popover.tsx", "src/components/Menu.tsx"],
+      "rules": {
+        "eslint/no-restricted-imports": "off"
+      }
+    },
+    {
+      "files": ["src/identity.ts"],
+      "rules": {
+        "eslint/no-restricted-globals": "off"
+      }
+    },
+    {
+      "files": ["src/hooks/useRoom.ts"],
+      "rules": {
+        "eslint/no-restricted-imports": "off",
+        "eslint/no-restricted-globals": "off"
+      }
     }
   ]
 }

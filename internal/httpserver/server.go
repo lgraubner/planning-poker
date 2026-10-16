@@ -151,6 +151,7 @@ func (s *server) create(w http.ResponseWriter, r *http.Request) {
 		Title string `json:"title"`
 		Deck  string `json:"deck"`
 	}
+
 	if err := decoder.Decode(&body); err != nil {
 		fail(w, http.StatusBadRequest, "Invalid room title or request body")
 		return
@@ -351,7 +352,7 @@ func (s *server) spa(w http.ResponseWriter, r *http.Request) {
 	}
 
 	status := http.StatusOK
-	if path != "" && (len(path) != 8 || strings.Contains(path, "/")) {
+	if path != "" && (len(path) != room.CodeLength || strings.Contains(path, "/")) {
 		status = http.StatusNotFound
 	}
 

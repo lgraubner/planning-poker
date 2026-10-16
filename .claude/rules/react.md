@@ -58,6 +58,8 @@ export const Popover = {
 
 A dialog-like component with a single trigger (Popover, Dialog, AlertDialog) takes the trigger as `children` and owns its open state. Put its form in a child component that mounts with the dialog content: closing the dialog unmounts the child and resets it, so nothing resets it by hand. Name the child `<ActionName>Form`, even for an action without a form.
 
+A popup whose trigger shows the component's own state, such as the spectator count in `SpectatorList`, renders that trigger itself instead of taking it as `children`.
+
 ```tsx
 <RenameRoomDialog>
   <Button>Rename</Button>

@@ -57,5 +57,35 @@ export async function join(page: Page, url: string, name: string) {
   await expect(page.getByRole('group', { name: 'Choose your card' })).toBeVisible();
 }
 
+export interface SnapshotFrame {
+  title: string;
+  round: number;
+  deck: string[];
+  revealed: boolean;
+  self: string;
+  participants: {
+    id: string;
+    name: string;
+    connected: boolean;
+    selected: boolean;
+    spectator: boolean;
+    estimate?: string;
+  }[];
+}
+
+export function snapshotFrames(page: Page) {
+  const frames: SnapshotFrame[] = [];
+  page.on('websocket', (socket) =>
+    socket.on('framereceived', ({ payload }) => {
+      const message = JSON.parse(String(payload));
+      if (message.type === 'snapshot') {
+        frames.push(message);
+      }
+    }),
+  );
+
+  return frames;
+}
+
 export const card = (page: Page, name: string) =>
   page.getByRole('article', { name: new RegExp(`^${name}:`) });

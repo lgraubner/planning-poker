@@ -24,7 +24,7 @@ Boundaries: environment, network input (HTTP, WebSocket), queue payloads, extern
 
 - `RoomStatusSchema` in `web/src/api.ts` is the model: a zod discriminated union on `available`, its type derived with `z.infer`.
 - The room snapshot from `useRoom` is the one parse of WebSocket data in the SPA; components take its `Participant` type.
-- Go has no sum types: the server rejects an unknown command `type` or deck in `internal/room/store.go`, and the deck values live in one map there.
+- Go has no sum types: the server rejects an unknown command `type` in `internal/room/command.go` and an unknown deck in `store.go`; the deck values live in one map in `validation.go`.
 - Name length counts code points on both sides (`utf8.RuneCountInString` in Go, `Array.from(...)` in TypeScript), so client and server agree on the 40-character limit.
 
 Adapted from pstack (MIT), see `.claude/LICENSE-pstack`.

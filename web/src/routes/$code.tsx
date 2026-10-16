@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useRef, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { failure, RoomStatusSchema, type RoomStatus } from '../api';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { ErrorPage } from '../components/ErrorPage';
@@ -145,7 +145,10 @@ interface RoomProps {
 
 function Room({ code, participant }: RoomProps) {
   const { snapshot, status, error, send } = useRoom(code, participant);
-  const results = useRef<Participant[]>([]);
+  const [results, setResults] = useState<Participant[]>([]);
+  if (snapshot?.revealed && snapshot.participants !== results) {
+    setResults(snapshot.participants);
+  }
 
   if (status === 'failed') {
     return <ErrorPage title="Unable to join" description={error} failed />;
@@ -159,10 +162,6 @@ function Room({ code, participant }: RoomProps) {
   const own = snapshot.participants.find((participant) => participant.id === snapshot.self);
   const spectating = !!own?.spectator;
   const spectators = snapshot.participants.filter((participant) => participant.spectator);
-
-  if (snapshot.revealed) {
-    results.current = snapshot.participants;
-  }
 
   function renameSelf(name: string) {
     send('name', name);
@@ -206,7 +205,7 @@ function Room({ code, participant }: RoomProps) {
       />
       <RoomFooter
         deck={snapshot.deck}
-        results={results.current}
+        results={results}
         revealed={snapshot.revealed}
         spectating={spectating}
         estimate={own?.estimate}

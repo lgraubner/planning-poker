@@ -3,15 +3,11 @@ package room
 import (
 	"crypto/rand"
 	"database/sql"
-	"encoding/hex"
 	"errors"
 	"math/big"
 	"slices"
-	"strings"
 	"sync"
 	"time"
-	"unicode"
-	"unicode/utf8"
 )
 
 const (
@@ -20,12 +16,10 @@ const (
 	maxTabsPerParticipant = 5
 )
 
-const alphabet = "23456789abcdefghjkmnpqrstuvwxyz"
-
-var Decks = map[string][]string{
-	"fibonacci": {"0", "1", "2", "3", "5", "8", "13", "20", "40", "100", "?", "☕"},
-	"tshirt":    {"XS", "S", "M", "L", "XL", "XXL", "?", "☕"},
-}
+const (
+	CodeLength = 8
+	alphabet   = "23456789abcdefghjkmnpqrstuvwxyz"
+)
 
 var (
 	ErrNotFound    = errors.New("Room not found")
@@ -90,30 +84,8 @@ func New() *Store {
 	return &Store{rooms: make(map[string]*room), now: time.Now, idleTTL: time.Hour, maxRooms: 1000}
 }
 
-func ValidateLabel(value string, max int) (string, error) {
-	if !utf8.ValidString(value) || strings.ContainsFunc(value, unicode.IsControl) {
-		return "", errors.New("Use text without control characters")
-	}
-
-	value = strings.TrimSpace(value)
-	if n := utf8.RuneCountInString(value); n == 0 || n > max {
-		return "", errors.New("Text is empty or too long")
-	}
-
-	return value, nil
-}
-
-func validSecret(secret string) bool {
-	if len(secret) != 36 || secret[8] != '-' || secret[13] != '-' || secret[18] != '-' || secret[23] != '-' {
-		return false
-	}
-
-	_, err := hex.DecodeString(strings.ReplaceAll(secret, "-", ""))
-	return err == nil
-}
-
 func (s *Store) Create(title, deck string) (string, error) {
-	title, err := ValidateLabel(title, 100)
+	title, err := ValidateLabel(title, maxTitleLength)
 	if err != nil {
 		return "", err
 	}
@@ -130,7 +102,7 @@ func (s *Store) Create(title, deck string) (string, error) {
 	}
 
 	for {
-		code := make([]byte, 8)
+		code := make([]byte, CodeLength)
 		for i := range code {
 			n, err := rand.Int(rand.Reader, big.NewInt(int64(len(alphabet))))
 			if err != nil {
@@ -235,7 +207,7 @@ func (s *Store) ReleaseSocket(code string) {
 }
 
 func (s *Store) Join(code, secret, name string, spectator bool) (*Subscription, error) {
-	name, err := ValidateLabel(name, 40)
+	name, err := ValidateLabel(name, maxNameLength)
 	if err != nil {
 		return nil, err
 	}
@@ -325,118 +297,6 @@ func hasConnections(r *room) bool {
 	return false
 }
 
-func (s *Store) Command(sub *Subscription, command, value string, round uint64) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	r := s.rooms[sub.code]
-	if r == nil || !sub.participant.connections[sub] {
-		return ErrNotFound
-	}
-
-	if round != r.round && (command == "select" || command == "reveal" || command == "reset") {
-		return errors.New("The round changed. Try again")
-	}
-
-	switch command {
-	case "rename":
-		title, err := ValidateLabel(value, 100)
-		if err != nil {
-			return err
-		}
-
-		r.title = title
-	case "name":
-		name, err := ValidateLabel(value, 40)
-		if err != nil {
-			return err
-		}
-
-		sub.participant.name = name
-	case "role":
-		if value != "spectator" && value != "voter" {
-			return errors.New("Unknown role")
-		}
-
-		sub.participant.spectator = value == "spectator"
-		if !r.revealed {
-			sub.participant.estimate = ""
-		}
-	case "select":
-		if sub.participant.spectator {
-			return errors.New("Spectators do not estimate")
-		}
-
-		if r.revealed {
-			return errors.New("Wait for reset before selecting")
-		}
-
-		if !slices.Contains(Decks[r.deck], value) {
-			return errors.New("Invalid estimate")
-		}
-
-		if sub.participant.estimate == value {
-			sub.participant.estimate = ""
-		} else {
-			sub.participant.estimate = value
-		}
-	case "reveal":
-		r.revealed = true
-	case "reset":
-		if !r.revealed {
-			return errors.New("Reveal before resetting")
-		}
-
-		r.revealed = false
-		r.round++
-		for _, p := range r.participants {
-			p.estimate = ""
-		}
-	default:
-		return errors.New("Unknown command")
-	}
-
-	if command == "rename" || command == "reveal" || command == "reset" {
-		s.save(sub.code, r)
-	}
-
-	s.publish(r)
-
-	return nil
-}
-
-func (s *Store) publish(r *room) {
-	for _, viewer := range r.participants {
-		if len(viewer.connections) == 0 {
-			continue
-		}
-
-		snapshot := Snapshot{Type: "snapshot", Title: r.title, Round: r.round, Deck: Decks[r.deck], Revealed: r.revealed, Self: viewer.id, Participants: make([]Card, 0, len(r.participants))}
-
-		for _, p := range r.participants {
-			if p.departed {
-				continue
-			}
-
-			card := Card{ID: p.id, Name: p.name, Connected: len(p.connections) > 0, Selected: p.estimate != "", Spectator: p.spectator}
-			if r.revealed || p == viewer {
-				card.Estimate = p.estimate
-			}
-
-			snapshot.Participants = append(snapshot.Participants, card)
-		}
-
-		for sub := range viewer.connections {
-			select {
-			case <-sub.Updates:
-			default:
-			}
-
-			sub.Updates <- snapshot
-		}
-	}
-}
-
 func (s *Store) Sweep(expireRooms bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -459,6 +319,7 @@ func (s *Store) Sweep(expireRooms bool) {
 		r.participants = slices.DeleteFunc(r.participants, func(p *participant) bool {
 			return len(p.connections) == 0 && now.Sub(p.disconnected) >= 30*time.Second
 		})
+
 		if before != len(r.participants) {
 			s.publish(r)
 		}

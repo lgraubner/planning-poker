@@ -343,7 +343,7 @@ func TestSpectatorsHoldNoEstimate(t *testing.T) {
 	}
 }
 
-func TestWatchingAfterTheRevealKeepsTheVote(t *testing.T) {
+func TestWatchingAfterTheRevealKeepsTheEstimate(t *testing.T) {
 	s := New()
 	code, _ := s.Create("Test", "fibonacci")
 	alice, _ := s.Join(code, aliceID, "Alice", false)
@@ -358,7 +358,7 @@ func TestWatchingAfterTheRevealKeepsTheVote(t *testing.T) {
 	}
 
 	if snapshot := <-alice.Updates; snapshot.Participants[1].Estimate != "8" || !snapshot.Participants[1].Spectator {
-		t.Fatalf("revealed vote changed: %+v", snapshot.Participants[1])
+		t.Fatalf("revealed estimate changed: %+v", snapshot.Participants[1])
 	}
 
 	if err := s.Command(alice, "reset", "", 1); err != nil {
@@ -366,7 +366,7 @@ func TestWatchingAfterTheRevealKeepsTheVote(t *testing.T) {
 	}
 
 	if snapshot := <-alice.Updates; snapshot.Participants[1].Selected {
-		t.Fatal("a spectator kept a vote into the next round")
+		t.Fatal("a spectator kept an estimate into the next round")
 	}
 }
 
@@ -498,14 +498,25 @@ func TestSQLiteAddsDecksToOlderDatabases(t *testing.T) {
 
 func TestRoomLimitDependsOnPersistence(t *testing.T) {
 	memory := New()
-	for range 1000 {
-		if _, err := memory.Create("Room", "fibonacci"); err != nil {
+	codes := make([]string, 1001)
+	for i := range codes {
+		code, err := memory.Create("Room", "fibonacci")
+		if err != nil {
 			t.Fatal(err)
+		}
+
+		codes[i] = code
+	}
+
+	open := 0
+	for _, code := range codes {
+		if _, err := memory.Info(code, ""); err == nil {
+			open++
 		}
 	}
 
-	if _, err := memory.Create("Room", "fibonacci"); err != nil || len(memory.rooms) != 1000 {
-		t.Fatalf("in-memory store did not stay at 1,000 rooms: %d, %v", len(memory.rooms), err)
+	if open != 1000 {
+		t.Fatalf("in-memory store did not stay at 1,000 rooms: %d", open)
 	}
 
 	s, err := Open(t.TempDir() + "/rooms.db")
@@ -535,7 +546,8 @@ func TestFullStoreMakesRoomFromTheLongestEmpty(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := s.Create("New", "fibonacci"); err != nil {
+	created, err := s.Create("New", "fibonacci")
+	if err != nil {
 		t.Fatal("full store refused a room while some stood empty:", err)
 	}
 
@@ -547,7 +559,7 @@ func TestFullStoreMakesRoomFromTheLongestEmpty(t *testing.T) {
 		t.Fatal("removed a room someone was joining")
 	}
 
-	for code := range s.rooms {
+	for _, code := range []string{codes[0], codes[2], created} {
 		if _, err := s.Join(code, aliceID, "Alice", false); err != nil {
 			t.Fatal(err)
 		}

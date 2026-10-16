@@ -3,9 +3,15 @@ package httpserver
 import (
 	"context"
 	"encoding/json"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -280,5 +286,53 @@ func TestLegalLinksReachThePage(t *testing.T) {
 	got = page(Links{LegalNotice: `https://example.com/"><script>x</script>`, PrivacyPolicy: "https://example.com/privacy"})
 	if strings.Contains(got, "<script>") || !strings.Contains(got, `content="https://example.com/&#34;&gt;&lt;script&gt;x&lt;/script&gt;"`) {
 		t.Fatalf("link not escaped: %s", got)
+	}
+}
+
+func TestMessagesReadAsHeadlineAndDetail(t *testing.T) {
+	format := regexp.MustCompile(`^[A-Z][^.]*(\. [A-Z][^.]*)*$`)
+	found := map[string]int{}
+
+	files, _ := filepath.Glob("../*/*.go")
+	for _, path := range files {
+		if strings.HasSuffix(path, "_test.go") {
+			continue
+		}
+
+		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		ast.Inspect(file, func(node ast.Node) bool {
+			var kind string
+			var message ast.Expr
+			switch node := node.(type) {
+			case *ast.CallExpr:
+				if fun, ok := node.Fun.(*ast.SelectorExpr); ok && fun.Sel.Name == "New" && len(node.Args) == 1 {
+					kind, message = "errors.New", node.Args[0]
+				} else if fun, ok := node.Fun.(*ast.Ident); ok && fun.Name == "fail" && len(node.Args) == 3 {
+					kind, message = "fail", node.Args[2]
+				}
+			case *ast.CompositeLit:
+				if typ, ok := node.Type.(*ast.Ident); ok && typ.Name == "socketError" && len(node.Elts) == 3 {
+					kind, message = "socketError", node.Elts[1]
+				}
+			}
+
+			if literal, ok := message.(*ast.BasicLit); ok && literal.Kind == token.STRING {
+				found[kind]++
+				text, _ := strconv.Unquote(literal.Value)
+				if !format.MatchString(text) {
+					t.Errorf("%s: %q must read \"Headline. Detail\" without a closing full stop", path, text)
+				}
+			}
+
+			return true
+		})
+	}
+
+	if found["errors.New"] == 0 || found["fail"] == 0 || found["socketError"] == 0 {
+		t.Fatalf("scan missed a kind of message: %v", found)
 	}
 }

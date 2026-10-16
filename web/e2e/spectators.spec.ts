@@ -1,4 +1,4 @@
-import { card, createRoom, expect, join, test } from './fixtures';
+import { card, createRoom, expect, join, snapshotFrames, test } from './fixtures';
 
 test('spectators watch from beside the table and can switch to voting', async ({
   page,
@@ -6,15 +6,8 @@ test('spectators watch from beside the table and can switch to voting', async ({
 }) => {
   const url = await createRoom(page);
   await join(page, url, 'Alice');
-  let bobFrame: { name: string; spectator: boolean } | undefined;
-  page.on('websocket', (socket) =>
-    socket.on('framereceived', ({ payload }) => {
-      const message = JSON.parse(String(payload));
-      if (message.type === 'snapshot') {
-        bobFrame = message.participants.find((p: { name: string }) => p.name !== 'Alice');
-      }
-    }),
-  );
+  const frames = snapshotFrames(page);
+  const bobFrame = () => frames.at(-1)?.participants.find((p) => p.name !== 'Alice');
   await page.reload();
   await expect(page.getByRole('group', { name: 'Choose your card' })).toBeVisible();
   // A cancelled animation, like a menu closing early, rejects; it has settled all the same
@@ -41,7 +34,7 @@ test('spectators watch from beside the table and can switch to voting', async ({
     await expect(card(viewer, 'Bob')).toBeHidden();
   }
 
-  await expect.poll(() => bobFrame).toEqual(expect.objectContaining({ spectator: true }));
+  await expect.poll(bobFrame).toEqual(expect.objectContaining({ spectator: true }));
   await expect(bob.getByRole('button', { name: '1 spectator, including you' })).toBeVisible();
   await expect(page.getByRole('button', { name: '1 spectator', exact: true })).toBeVisible();
   expect(await card(page, 'Alice').boundingBox()).toEqual(aliceBefore);
@@ -67,7 +60,7 @@ test('spectators watch from beside the table and can switch to voting', async ({
   );
 
   await page.keyboard.press('Escape');
-  await expect.poll(() => bobFrame?.name).toBe('Robert');
+  await expect.poll(() => bobFrame()?.name).toBe('Robert');
 
   await page.getByRole('button', { name: '1 spectator' }).click();
   await expect(page.getByRole('button', { name: 'Take a seat' })).toHaveCount(0);
@@ -82,7 +75,7 @@ test('spectators watch from beside the table and can switch to voting', async ({
   await page.getByRole('button', { name: 'Spectators', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Spectators' })).toContainText('No spectators yet');
   await page.keyboard.press('Escape');
-  await expect.poll(() => bobFrame).toEqual(expect.objectContaining({ spectator: false }));
+  await expect.poll(bobFrame).toEqual(expect.objectContaining({ spectator: false }));
   await settled(bob);
   expect(await card(bob, 'Alice').boundingBox()).toEqual(aliceSeat);
 });
@@ -93,15 +86,8 @@ test('watching after the reveal keeps your estimate in the results', async ({
 }) => {
   const url = await createRoom(page);
   await join(page, url, 'Alice');
-  let bobFrame: { estimate?: string; spectator: boolean } | undefined;
-  page.on('websocket', (socket) =>
-    socket.on('framereceived', ({ payload }) => {
-      const message = JSON.parse(String(payload));
-      if (message.type === 'snapshot') {
-        bobFrame = message.participants.find((p: { name: string }) => p.name === 'Bob');
-      }
-    }),
-  );
+  const frames = snapshotFrames(page);
+  const bobFrame = () => frames.at(-1)?.participants.find((p) => p.name === 'Bob');
   await page.reload();
   const bob = await newParticipant();
   await join(bob, url, 'Bob');
@@ -113,9 +99,7 @@ test('watching after the reveal keeps your estimate in the results', async ({
 
   await bob.getByRole('button', { name: 'Spectators', exact: true }).click();
   await bob.getByRole('button', { name: 'Watch as spectator' }).click();
-  await expect
-    .poll(() => bobFrame)
-    .toEqual(expect.objectContaining({ spectator: true, estimate: '5' }));
+  await expect.poll(bobFrame).toEqual(expect.objectContaining({ spectator: true, estimate: '5' }));
 
   await expect(card(page, 'Bob')).toBeHidden();
   await expect(
@@ -125,5 +109,5 @@ test('watching after the reveal keeps your estimate in the results', async ({
   await expect(proposal).toHaveText('Proposed estimate 5 Agreement 50%');
 
   await page.getByRole('button', { name: 'Reset round' }).click();
-  await expect.poll(() => bobFrame?.estimate).toBeUndefined();
+  await expect.poll(() => bobFrame()?.estimate).toBeUndefined();
 });

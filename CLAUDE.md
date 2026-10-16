@@ -14,12 +14,13 @@ Self-hosted planning poker: one Go binary (Chi, coder/websocket, optional SQLite
 
 One home per kind of code, and the file to copy when adding one:
 
-- Room state and its rules: `internal/room/store.go`; SQLite only in `internal/room/sqlite.go`.
+- Room state: lifecycle in `internal/room/store.go`, commands and snapshots in `command.go`, decks and label limits in `validation.go`; SQLite only in `sqlite.go`.
 - HTTP and WebSocket handlers: `internal/httpserver/server.go`.
 - Pages: TanStack Router file routes in `web/src/routes/`, follow `$code.tsx` (data through the route's `loader`).
 - The room's WebSocket: only `web/src/hooks/useRoom.ts`.
 - UI components: `web/src/components/`, one per file, follow `SelectField.tsx`.
 - Wire schemas: zod in `web/src/api.ts` (HTTP) and `web/src/hooks/useRoom.ts` (room snapshot).
+- E2E WebSocket frames: `snapshotFrames(page)` from `web/e2e/fixtures.ts`.
 
 ## Boundaries
 

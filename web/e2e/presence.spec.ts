@@ -1,4 +1,4 @@
-import { card, createRoom, expect, join, test } from './fixtures';
+import { card, createRoom, expect, join, snapshotFrames, test } from './fixtures';
 
 test('a saved name rejoins automatically and tabs share one card', async ({
   page,
@@ -191,15 +191,8 @@ test('leaving a room by link or back button asks first', async ({ page, newParti
   const url = await createRoom(page);
   await join(page, url, 'Alice');
   const bob = await newParticipant();
-  const seen: string[][] = [];
-  bob.on('websocket', (socket) =>
-    socket.on('framereceived', ({ payload }) => {
-      const message = JSON.parse(String(payload));
-      if (message.type === 'snapshot') {
-        seen.push(message.participants.map((p: { name: string }) => p.name));
-      }
-    }),
-  );
+  const frames = snapshotFrames(bob);
+  const seen = () => frames.at(-1)?.participants.map((p) => p.name);
   await join(bob, url, 'Bob');
 
   await page.getByRole('link', { name: 'Planning Poker' }).click();
@@ -210,7 +203,7 @@ test('leaving a room by link or back button asks first', async ({ page, newParti
   await expect(page).toHaveURL(url);
   await page.getByRole('button', { name: '5', exact: true }).click();
   await expect(card(bob, 'Alice')).toHaveAccessibleName('Alice: selected');
-  expect(seen.at(-1)).toContain('Alice');
+  expect(seen()).toContain('Alice');
 
   await page.goBack();
   await expect(dialog).toBeVisible();
@@ -221,5 +214,5 @@ test('leaving a room by link or back button asks first', async ({ page, newParti
   await dialog.getByRole('button', { name: 'Leave room' }).click();
   await expect(page).toHaveURL('/');
   await expect(card(bob, 'Alice')).toBeHidden();
-  expect(seen.at(-1)).not.toContain('Alice');
+  expect(seen()).not.toContain('Alice');
 });

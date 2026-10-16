@@ -20,6 +20,10 @@ _Avoid_: User, player, member
 A participant who watches a room without holding an estimate. Spectators have no card, do not count toward a round, and may still reveal and reset. Any participant can switch between spectator and voter at any time.
 _Avoid_: Observer, viewer, guest
 
+**Voter**:
+A participant who holds a card and may select an estimate in each round. Every participant is a voter unless they choose to be a spectator.
+_Avoid_: Player, estimator
+
 **Round**:
 One cycle in which participants select estimates, reveal them, and reset before estimating again.
 _Avoid_: Vote, game, turn
