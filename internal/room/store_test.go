@@ -561,7 +561,7 @@ func TestFullStoreMakesRoomFromTheLongestEmpty(t *testing.T) {
 func BenchmarkSweepAtDatabaseRoomLimit(b *testing.B) {
 	s := New()
 	for i := range 100_000 {
-		s.rooms[fmt.Sprint(i)] = &session{title: "Room", round: 1, emptySince: time.Now()}
+		s.rooms[fmt.Sprint(i)] = &room{title: "Room", round: 1, emptySince: time.Now()}
 	}
 
 	for b.Loop() {

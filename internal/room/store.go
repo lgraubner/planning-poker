@@ -34,7 +34,7 @@ var (
 	ErrBusy        = errors.New("This room has too many connections right now. Try again shortly")
 )
 
-type Participant struct {
+type Card struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
 	Connected bool   `json:"connected"`
@@ -44,42 +44,42 @@ type Participant struct {
 }
 
 type Snapshot struct {
-	Type         string        `json:"type"`
-	Title        string        `json:"title"`
-	Round        uint64        `json:"round"`
-	Deck         []string      `json:"deck"`
-	Revealed     bool          `json:"revealed"`
-	Self         string        `json:"self"`
-	Participants []Participant `json:"participants"`
+	Type         string   `json:"type"`
+	Title        string   `json:"title"`
+	Round        uint64   `json:"round"`
+	Deck         []string `json:"deck"`
+	Revealed     bool     `json:"revealed"`
+	Self         string   `json:"self"`
+	Participants []Card   `json:"participants"`
 }
 
-type member struct {
+type participant struct {
 	id, secret, name, estimate string
 	connections                map[*Subscription]bool
 	disconnected               time.Time
 	departed, spectator        bool
 }
 
-type session struct {
+type room struct {
 	title        string
 	deck         string
 	round        uint64
 	revealed     bool
-	participants []*member
+	participants []*participant
 	emptySince   time.Time
 	sockets      int
 	joined       bool
 }
 
 type Subscription struct {
-	Updates chan Snapshot
-	code    string
-	member  *member
+	Updates     chan Snapshot
+	code        string
+	participant *participant
 }
 
 type Store struct {
 	mu       sync.Mutex
-	rooms    map[string]*session
+	rooms    map[string]*room
 	now      func() time.Time
 	db       *sql.DB
 	idleTTL  time.Duration
@@ -87,7 +87,7 @@ type Store struct {
 }
 
 func New() *Store {
-	return &Store{rooms: make(map[string]*session), now: time.Now, idleTTL: time.Hour, maxRooms: 1000}
+	return &Store{rooms: make(map[string]*room), now: time.Now, idleTTL: time.Hour, maxRooms: 1000}
 }
 
 func ValidateLabel(value string, max int) (string, error) {
@@ -144,7 +144,7 @@ func (s *Store) Create(title, deck string) (string, error) {
 			continue
 		}
 
-		r := &session{title: title, deck: deck, round: 1, emptySince: s.now()}
+		r := &room{title: title, deck: deck, round: 1, emptySince: s.now()}
 		if s.save(string(code), r) != nil {
 			return "", errors.New("Could not create room")
 		}
@@ -221,6 +221,7 @@ func (s *Store) ReserveSocket(code string) error {
 	}
 
 	r.sockets++
+
 	return nil
 }
 
@@ -251,7 +252,7 @@ func (s *Store) Join(code, secret, name string, spectator bool) (*Subscription, 
 		return nil, ErrNotFound
 	}
 
-	var p *member
+	var p *participant
 	for _, existing := range r.participants {
 		if existing.secret == secret {
 			p = existing
@@ -264,7 +265,7 @@ func (s *Store) Join(code, secret, name string, spectator bool) (*Subscription, 
 			return nil, ErrFull
 		}
 
-		p = &member{id: rand.Text(), secret: secret, name: name, spectator: spectator, connections: make(map[*Subscription]bool)}
+		p = &participant{id: rand.Text(), secret: secret, name: name, spectator: spectator, connections: make(map[*Subscription]bool)}
 		r.participants = append(r.participants, p)
 	}
 
@@ -272,7 +273,7 @@ func (s *Store) Join(code, secret, name string, spectator bool) (*Subscription, 
 		return nil, ErrTooManyTabs
 	}
 
-	sub := &Subscription{Updates: make(chan Snapshot, 1), code: code, member: p}
+	sub := &Subscription{Updates: make(chan Snapshot, 1), code: code, participant: p}
 	p.connections[sub] = true
 	p.disconnected = time.Time{}
 	p.departed = false
@@ -284,6 +285,7 @@ func (s *Store) Join(code, secret, name string, spectator bool) (*Subscription, 
 	}
 
 	s.publish(r)
+
 	return sub, nil
 }
 
@@ -295,14 +297,14 @@ func (s *Store) disconnect(sub *Subscription, departed bool) {
 	defer s.mu.Unlock()
 
 	r := s.rooms[sub.code]
-	if r == nil || !sub.member.connections[sub] {
+	if r == nil || !sub.participant.connections[sub] {
 		return
 	}
 
-	delete(sub.member.connections, sub)
-	if len(sub.member.connections) == 0 {
-		sub.member.disconnected = s.now()
-		sub.member.departed = departed
+	delete(sub.participant.connections, sub)
+	if len(sub.participant.connections) == 0 {
+		sub.participant.disconnected = s.now()
+		sub.participant.departed = departed
 	}
 
 	if !hasConnections(r) {
@@ -313,7 +315,7 @@ func (s *Store) disconnect(sub *Subscription, departed bool) {
 	s.publish(r)
 }
 
-func hasConnections(r *session) bool {
+func hasConnections(r *room) bool {
 	for _, p := range r.participants {
 		if len(p.connections) > 0 {
 			return true
@@ -328,7 +330,7 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 	defer s.mu.Unlock()
 
 	r := s.rooms[sub.code]
-	if r == nil || !sub.member.connections[sub] {
+	if r == nil || !sub.participant.connections[sub] {
 		return ErrNotFound
 	}
 
@@ -350,18 +352,18 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 			return err
 		}
 
-		sub.member.name = name
+		sub.participant.name = name
 	case "role":
 		if value != "spectator" && value != "voter" {
 			return errors.New("Unknown role")
 		}
 
-		sub.member.spectator = value == "spectator"
+		sub.participant.spectator = value == "spectator"
 		if !r.revealed {
-			sub.member.estimate = ""
+			sub.participant.estimate = ""
 		}
 	case "select":
-		if sub.member.spectator {
+		if sub.participant.spectator {
 			return errors.New("Spectators do not estimate")
 		}
 
@@ -373,10 +375,10 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 			return errors.New("Invalid estimate")
 		}
 
-		if sub.member.estimate == value {
-			sub.member.estimate = ""
+		if sub.participant.estimate == value {
+			sub.participant.estimate = ""
 		} else {
-			sub.member.estimate = value
+			sub.participant.estimate = value
 		}
 	case "reveal":
 		r.revealed = true
@@ -399,23 +401,24 @@ func (s *Store) Command(sub *Subscription, command, value string, round uint64) 
 	}
 
 	s.publish(r)
+
 	return nil
 }
 
-func (s *Store) publish(r *session) {
+func (s *Store) publish(r *room) {
 	for _, viewer := range r.participants {
 		if len(viewer.connections) == 0 {
 			continue
 		}
 
-		snapshot := Snapshot{Type: "snapshot", Title: r.title, Round: r.round, Deck: Decks[r.deck], Revealed: r.revealed, Self: viewer.id, Participants: make([]Participant, 0, len(r.participants))}
+		snapshot := Snapshot{Type: "snapshot", Title: r.title, Round: r.round, Deck: Decks[r.deck], Revealed: r.revealed, Self: viewer.id, Participants: make([]Card, 0, len(r.participants))}
 
 		for _, p := range r.participants {
 			if p.departed {
 				continue
 			}
 
-			card := Participant{ID: p.id, Name: p.name, Connected: len(p.connections) > 0, Selected: p.estimate != "", Spectator: p.spectator}
+			card := Card{ID: p.id, Name: p.name, Connected: len(p.connections) > 0, Selected: p.estimate != "", Spectator: p.spectator}
 			if r.revealed || p == viewer {
 				card.Estimate = p.estimate
 			}
@@ -453,7 +456,7 @@ func (s *Store) Sweep(expireRooms bool) {
 		}
 
 		before := len(r.participants)
-		r.participants = slices.DeleteFunc(r.participants, func(p *member) bool {
+		r.participants = slices.DeleteFunc(r.participants, func(p *participant) bool {
 			return len(p.connections) == 0 && now.Sub(p.disconnected) >= 30*time.Second
 		})
 		if before != len(r.participants) {

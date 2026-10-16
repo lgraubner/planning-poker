@@ -19,6 +19,7 @@ import (
 
 func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -50,6 +51,7 @@ func main() {
 	}
 
 	server := &http.Server{Addr: ":" + port, Handler: httpserver.New(ctx, store, webui.Files(), os.Getenv("CLIENT_IP_HEADER"), links), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 8192}
+
 	go func() {
 		tick := time.NewTicker(time.Second)
 		defer tick.Stop()
@@ -80,6 +82,7 @@ func main() {
 	}()
 
 	slog.Info("server started", "port", n)
+
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		slog.Error("server failed to listen")
 		os.Exit(1)

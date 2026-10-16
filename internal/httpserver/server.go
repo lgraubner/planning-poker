@@ -39,6 +39,7 @@ type Links struct{ LegalNotice, PrivacyPolicy string }
 
 func New(ctx context.Context, store *room.Store, files fs.FS, clientIPHeader string, links Links) http.Handler {
 	s := &server{store: store, files: files, ctx: ctx, clientIPHeader: clientIPHeader, creators: newLimiter(1.0/60, 5), guesses: newLimiter(5, 60)}
+
 	for _, link := range [][2]string{{"legal-notice", links.LegalNotice}, {"privacy-policy", links.PrivacyPolicy}} {
 		if link[1] != "" {
 			s.meta = fmt.Appendf(s.meta, `<meta name="%s" content="%s">`, link[0], html.EscapeString(link[1]))
@@ -97,6 +98,7 @@ func reply(w http.ResponseWriter, status int, value any) {
 		slog.Debug("response write failed", "status", status)
 	}
 }
+
 func fail(w http.ResponseWriter, status int, message string) {
 	reply(w, status, map[string]string{"error": message})
 }
@@ -254,6 +256,7 @@ func (s *server) socket(w http.ResponseWriter, r *http.Request) {
 	defer conn.CloseNow()
 
 	conn.SetReadLimit(1024)
+
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
 

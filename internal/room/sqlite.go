@@ -15,6 +15,7 @@ func Open(path string) (*Store, error) {
 	}
 
 	db.SetMaxOpenConns(1)
+
 	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS rooms (
 		code TEXT PRIMARY KEY,
 		title TEXT NOT NULL,
@@ -38,6 +39,7 @@ func Open(path string) (*Store, error) {
 
 	s := New()
 	s.db, s.idleTTL, s.maxRooms = db, 30*24*time.Hour, 100_000
+
 	rows, err := db.Query(`SELECT code, title, deck, round, revealed, joined, empty_since FROM rooms`)
 	if err != nil {
 		db.Close()
@@ -48,7 +50,7 @@ func Open(path string) (*Store, error) {
 	for rows.Next() {
 		var code string
 		var emptySince int64
-		r := &session{}
+		r := &room{}
 		if err := rows.Scan(&code, &r.title, &r.deck, &r.round, &r.revealed, &r.joined, &emptySince); err != nil {
 			db.Close()
 			return nil, err
@@ -75,7 +77,7 @@ func Open(path string) (*Store, error) {
 	return s, nil
 }
 
-func (s *Store) save(code string, r *session) error {
+func (s *Store) save(code string, r *room) error {
 	if s.db == nil {
 		return nil
 	}
