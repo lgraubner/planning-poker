@@ -68,13 +68,13 @@ Playwright E2E tests in `web/e2e/` drive the real Go server (`npm --prefix web r
 Write a comment only for one of these; `/no-comments` removes the rest:
 
 - A legal or license header.
-- Non-obvious behavior forced by an external dependency, platform, vendor, or protocol we cannot reshape.
-- A doc comment that defines a public API contract.
+- An outside rule the code works around: a dependency, platform, vendor, spec, or protocol we cannot reshape. The comment names the rule, even when the workaround is our own code.
+- A doc comment on one of the public contracts under Boundaries. Exported symbols in Go `internal/` packages are not public.
 - An issue or RFC link that explains a constraint code cannot express.
 - `// prettier-ignore`, or a lint suppression whose rule is faulty, pedantic, or style-only.
 - A lint or type exception from `/correct`: it names its reason, an expiry date, and the approving human.
 
-Write them in short, full sentences. Record a deliberate shortcut's limit in the PR description, or enforce it with a type, lint, or test. This overrides the ponytail plugin's `ponytail:` comment markers.
+Write them in short, full sentences. `.claude/rules/typescript.md` sets their punctuation in TypeScript. Record a deliberate shortcut's limit in the PR description, or enforce it with a type, lint, or test. This overrides the ponytail plugin's `ponytail:` comment markers.
 
 ## Commits
 
