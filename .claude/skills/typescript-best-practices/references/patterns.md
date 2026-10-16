@@ -19,7 +19,7 @@ function focusAgent(id: AgentId): void {
 }
 ```
 
-Match the `readonly __brand: "X"` shape. Don't invent a new convention. Brand only where two values of the same primitive type can be swapped.
+Match the `readonly __brand: "X"` shape. Brand only where two values of the same primitive type can be swapped.
 
 ## Discriminated unions
 
@@ -83,7 +83,7 @@ Keep `durationMs` a plain number. Brand it (per Branded types) only if a raw num
 
 ## Simplest total type
 
-Don't strengthen everything. Keep `T[]` when every operation on it is total:
+Keep `T[]` when every operation on it is total:
 
 ```ts
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0); // [] is 0, fine
@@ -236,11 +236,10 @@ const config = { theme: 'dark', cols: 3 } satisfies Config;
 
 ## Boundary validation
 
-Validate once where data crosses in. Trust types inside. See `.claude/principles/types-and-boundaries.md`.
+The rules live in `.claude/principles/types-and-boundaries.md`. Format specifics:
 
 - **Wire formats** (the room snapshot over the WebSocket, the JSON API): accept unknown fields so a newer server doesn't break an open tab. Zod objects strip unknown keys by default; keep them `z.object`, never `z.strictObject`.
 - **`localStorage`** (`web/src/identity.ts`): treat a stored value as untrusted; it may come from an older build.
-- **Don't re-validate** deep in call chains.
 
 ## Schema-derived types
 

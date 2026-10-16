@@ -1,6 +1,6 @@
 ---
 name: no-comments
-description: 'Strip comments that restate code from a diff or files, fix the code smells they hid, and turn claimed constraints into types, tests, or lints. Use for /no-comments before a commit or PR.'
+description: Strip comments that restate code, fix the smells they hid, and encode claimed constraints. Run before a commit or PR.
 disable-model-invocation: true
 license: MIT, adapted from pstack by Lauren Tan; see .claude/LICENSE-pstack
 ---

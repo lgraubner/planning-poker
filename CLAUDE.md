@@ -59,9 +59,9 @@ Read the matching file in `.claude/principles/` before the work:
 
 Playwright E2E tests in `web/e2e/` drive the real Go server (`npm --prefix web run e2e`). Unit tests: Go `*_test.go` (`go test -race ./...`) and Vitest `web/src/**/*.test.{ts,tsx}` (`npm --prefix web test`).
 
-- Prefer end-to-end tests through the real app as proof that a feature works. Assert what reaches the other participant (WebSocket frames), because the UI can hide a server bug.
+- An end-to-end test asserts what reaches the other participant (WebSocket frames), because the UI can hide a server bug.
 - Finish E2E work with the HTML report as the artifact: `npx --prefix web playwright test -c web/playwright.config.ts --reporter=html` writes `web/playwright-report/`. CI uploads the same report.
-- Do not write tests for code you just wrote. Hand the spec and the entry points, not the diff, to the `test-writer` agent. A test written first, before the code, stays with you.
+- Hand tests for code you just wrote to the `test-writer` agent, with the spec and the entry points instead of the diff. A test written first, before the code, stays with you.
 
 ## Comments
 

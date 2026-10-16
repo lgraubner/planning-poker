@@ -27,7 +27,7 @@ Do not open the files under test with Read, `cat`, or `sed` until every test is 
 
 1. List every way the feature could fail its users, from the spec: wrong result, missing or doubled effect, rejected valid input, accepted invalid input, the error a caller branches on, limits, and timing.
 2. For each failure mode, look for an existing test that already catches it. Covered modes get no new test.
-3. For each uncovered mode, pick the seam. Prefer an end-to-end test through the real app. Test a unit in isolation only where end-to-end reaches poorly: limits, validation edge cases, timing.
+3. For each uncovered mode, pick the seam as `tests.md` describes.
 4. Write the tests, following the existing test setup.
 5. Run them against the unchanged code.
    - A test that fails there has found a bug or misread the spec. Report it with the spec line it rests on; do not change application code to make it pass.

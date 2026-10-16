@@ -1,6 +1,6 @@
 ---
 name: correct
-description: 'Find the mistakes agents keep repeating in this repo and make each one impossible. Try architecture first, then types, then a lint whose error names the fix, then a test, and write docs last. Prove each check fails on a real past mistake. Use for /correct.'
+description: Make the mistakes agents keep repeating impossible, with architecture, types, lint, or tests before prose.
 disable-model-invocation: true
 license: MIT, adapted from pstack by Lauren Tan; see .claude/LICENSE-pstack
 ---

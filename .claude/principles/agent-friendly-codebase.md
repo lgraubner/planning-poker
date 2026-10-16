@@ -14,7 +14,7 @@ Agents extend the patterns they see in the files they open. Shape the code so th
 
 - A workaround, or a comment explaining one, is a pattern too: the next agent copies it. Fix the cause instead.
 - When a bad pattern already exists, add a lint rule that fails only on new instances first, then clean up the existing ones.
-- Fix a mistake at the highest level that works: architecture, then types and lint, then tests, then rules, then skills. Use `/correct` for repeated mistakes.
+- Fix a mistake at the highest level that works: architecture, then types and lint, then tests, then rules, then skills.
 - Leave the code you touched in a state you would want copied.
 
 ## In this repo

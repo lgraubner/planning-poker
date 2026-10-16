@@ -21,7 +21,7 @@ Fix the fault where it starts, and leave the design simpler than you found it.
 
 ## Repeated mistakes
 
-When the same correction comes up twice, make the mistake impossible (a type, lint rule, test, or hook) instead of writing another instruction: use the `/correct` skill.
+When the same correction comes up twice, make the mistake impossible (a type, lint rule, test, or hook) instead of writing another instruction. Suggest `/correct` to the user; only they can run it.
 
 ## In this repo
 
