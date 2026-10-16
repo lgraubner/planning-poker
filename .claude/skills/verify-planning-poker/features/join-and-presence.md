@@ -7,7 +7,7 @@ Anyone with the room link joins under a display name and appears as a card at th
 - `join-name` joins with a name and shows a card to others.
 - `join-validation` refuses an empty name and one over 40 characters.
 - `join-rejoin` rejoins automatically with the saved identity; a second tab shares one card.
-- `join-invite` copies the room link (header on desktop, `Menu` on phones).
+- `join-invite` copies the room link (header on desktop, `Menu` on phones, and `Invite your team` on the table while you sit alone).
 - `join-leave` asks before leaving via the home link or back button; leaving or closing the tab removes the card.
 - `join-reconnect` shows `Reconnecting…` after a dropped socket and keeps the estimate.
 
@@ -35,7 +35,9 @@ Preconditions:
 ## Gotchas
 
 - `join()` waits for the card picker, which a revealed room or a spectator does not show. Join those by filling `Name` and clicking `Join` yourself.
-- The header `Copy room link` is hidden on phones; the menu item is the only path there. Clipboard reads need permissions and are unreliable in WebKit; Chromium is what the config runs.
+- The header `Copy room link` is hidden on phones; the menu item is the only path there. While you sit alone, the table shows `Invite your team` with a second `Copy room link`, so scope the desktop locator to `header`. `Link copied` turns back after 3 seconds. Clipboard reads need permissions and are unreliable in WebKit; Chromium is what the config runs.
 - A room holds 30 people; the thirty-first gets a full-room message. Proving that needs 31 contexts and is slow.
-- The server forgets a disconnected participant after 30 seconds and seats them again from their last name and role. Do not wait it out in a journey; assert the `join` frame the reconnect sends instead.
+- The server forgets a disconnected participant after 30 seconds. The reconnect's `join` frame carries the last confirmed name and role, so the server seats them again as a new participant with a new `id`. Do not wait it out in a journey; assert the `join` frame the reconnect sends instead.
+- One participant can have 5 tabs open; the sixth gets the heading `You have this room open in too many tabs` with `Close one and try again`.
+- `Leave the room?` asks only on in-app navigation (home link, back button). A reload or a closed tab leaves without asking. The card disappears right away only once the participant's last tab has left; a bare socket drop keeps it as `connected: false` until the 30-second sweep.
 - Rooms nobody joined expire after ten minutes; a journey that pauses longer gets `Room not found`.

@@ -38,5 +38,6 @@ Run the whole recipe with `verify.sh drive .claude/skills/verify-planning-poker/
 - Clicking your selected card again unpicks it.
 - After the reveal, a voter who picked nothing is `<name>: no estimate`. A tie for most estimates gets no `, most estimates` suffix in `Results`.
 - `?` is the button named `Unsure` and `☕` is `Coffee break`; select them by those names.
-- `☕` is left out of the result; `?` forces `Discuss!`.
+- `☕` is left out of the proposed estimate and agreement but gets its own `Results` bar (`☕: 1 estimate`); `?` forces `Discuss!`.
+- `Agreement` and confetti need at least two estimates other than `☕`. A lone `5` reads `Proposed estimate 5` with no confetti.
 - Confetti only fires for those present at the reveal. Someone who joins a revealed room sees the cards face up without the flip or confetti.

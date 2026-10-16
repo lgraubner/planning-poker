@@ -30,6 +30,6 @@ Each feature file starts with an H1 and one paragraph, then four H2s in order: `
 
 - [Create a room](./create-room.md) covers the home form, deck choice, title validation, and the rate limit.
 - [Join and presence](./join-and-presence.md) covers joining, name validation, saved-identity rejoin, invite link, leaving, and reconnect.
-- [Estimation round](./round.md) covers private estimates, reveal, results and agreement, confetti, vote again, and Discuss! (journey: `journeys/round.spec.ts`).
+- [Estimation round](./round.md) covers private estimates, reveal, results and agreement, confetti, reset, and Discuss! (journey: `journeys/round.spec.ts`).
 - [Spectators](./spectators.md) covers joining as a spectator, the spectator list, and switching roles.
 - [Rename](./rename.md) covers renaming the room and your own name for everyone.
