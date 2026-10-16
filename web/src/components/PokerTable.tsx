@@ -155,7 +155,11 @@ function Confetti() {
 function burst(canvas: HTMLCanvasElement) {
   const fire = confetti.create(canvas, { resize: true, disableForReducedMotion: true });
   const timer = setTimeout(() => {
-    const number = canvas.parentElement!.getBoundingClientRect();
+    const number = canvas.parentElement?.getBoundingClientRect();
+    if (!number) {
+      return;
+    }
+
     void fire({
       particleCount: 60,
       spread: 360,

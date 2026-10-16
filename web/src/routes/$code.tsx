@@ -58,7 +58,7 @@ function RoomPage() {
 }
 
 function enter(name: string, spectator: boolean): Identity | string {
-  if (!name.trim() || [...name.trim()].length > 40 || /\p{Cc}/u.test(name)) {
+  if (!name.trim() || Array.from(name.trim()).length > 40 || /\p{Cc}/u.test(name)) {
     return 'Use 1–40 characters without control characters';
   }
 

@@ -5,6 +5,16 @@
   },
   "ignorePatterns": ["src/routeTree.gen.ts", ".tanstack/**"],
   "rules": {
-    "curly": ["error", "all"]
-  }
+    "curly": ["error", "all"],
+    "eslint/no-console": "error",
+    "typescript/no-explicit-any": "error",
+    "typescript/no-non-null-assertion": "error",
+    "typescript/switch-exhaustiveness-check": "error"
+  },
+  "overrides": [
+    {
+      "files": ["e2e/**"],
+      "rules": { "typescript/no-non-null-assertion": "off" }
+    }
+  ]
 }
