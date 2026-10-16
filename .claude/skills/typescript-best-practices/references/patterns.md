@@ -1,6 +1,6 @@
 # TypeScript patterns
 
-Code examples for each rule in `SKILL.md`. The underlying principles are language-agnostic. See the **type-system-discipline** and **boundary-discipline** principle skills.
+Code examples for the rules in `SKILL.md` and `.claude/principles/types-and-boundaries.md`.
 
 ## Branded types
 
@@ -19,7 +19,7 @@ function focusAgent(id: AgentId): void {
 }
 ```
 
-Match the `readonly __brand: 'X'` shape. Don't invent a new convention.
+Match the `readonly __brand: "X"` shape. Don't invent a new convention. Brand only where two values of the same primitive type can be swapped.
 
 ## Discriminated unions
 
@@ -175,7 +175,10 @@ When the type comes first, annotate the validator with the type it proves. The c
 ```ts
 type User = { id: string; name: string };
 
-const userSchema: z.ZodType<User> = z.object({ id: z.string(), name: z.string() });
+const userSchema: z.ZodType<User> = z.object({
+  id: z.string(),
+  name: z.string(),
+});
 ```
 
 When refactoring an `as` out of existing code, identify why TypeScript can't infer:
@@ -195,10 +198,14 @@ From best to last-resort:
 4. **User-defined type guard.** When the above aren't enough.
 5. **`as` cast.** Only after validation.
 
+A union without a discriminant narrows with `in`. Add a discriminant when you own the type.
+
 ```ts
-function area(s: Shape): number {
-  if ('radius' in s) return Math.PI * s.radius ** 2; // narrowed to circle
-  return s.width * s.height; // narrowed to rect
+type LegacyShape = { radius: number } | { width: number; height: number };
+
+function area(s: LegacyShape): number {
+  if ('radius' in s) return Math.PI * s.radius ** 2; // narrowed to the circle variant
+  return s.width * s.height; // narrowed to the rectangle variant
 }
 ```
 
@@ -213,44 +220,6 @@ function isCircle(s: Shape): s is Shape & { kind: 'circle' } {
 ```
 
 Prefer discriminant narrowing when possible.
-
-## Exhaustiveness
-
-In default arms, assign the discriminant to a `never`-typed local.
-
-```ts
-// Value-returning switch
-function area(s: Shape): number {
-  switch (s.kind) {
-    case 'circle':
-      return Math.PI * s.radius ** 2;
-    case 'rect':
-      return s.width * s.height;
-    default: {
-      const _exhaustive: never = s;
-      return _exhaustive;
-    }
-  }
-}
-
-// Void switch
-function handle(s: Shape): void {
-  switch (s.kind) {
-    case 'circle':
-      drawCircle(s);
-      break;
-    case 'rect':
-      drawRect(s);
-      break;
-    default: {
-      const _exhaustive: never = s;
-      void _exhaustive;
-    }
-  }
-}
-```
-
-Return-style in value-returning switches, void-style in statement switches.
 
 ## `satisfies` over `as`
 
@@ -267,10 +236,10 @@ const config = { theme: 'dark', cols: 3 } satisfies Config;
 
 ## Boundary validation
 
-Validate once where data crosses in. Trust types inside. See the **boundary-discipline** principle skill.
+Validate once where data crosses in. Trust types inside. See `.claude/principles/types-and-boundaries.md`.
 
-- **Wire formats** (proto, JSON-RPC): parse with `ignoreUnknownFields` so forward-compatible changes don't break old clients.
-- **Persisted JSON:** versioned blob with a try/catch around the parse.
+- **Wire formats** (the room snapshot over the WebSocket, the JSON API): accept unknown fields so a newer server doesn't break an open tab. Zod objects strip unknown keys by default; keep them `z.object`, never `z.strictObject`.
+- **`localStorage`** (`web/src/identity.ts`): treat a stored value as untrusted; it may come from an older build.
 - **Don't re-validate** deep in call chains.
 
 ## Schema-derived types
@@ -299,24 +268,11 @@ Reach for `Pick`, `Omit`, `Parameters`, `ReturnType`, `Awaited`, `typeof` before
 ## Object args
 
 ```ts
-// Don't. Swap two args, still compiles.
-openFile(uri, {
-  startLineNumber: 10,
-  startColumn: 1,
-  endLineNumber: 10,
-  endColumn: 1,
-});
+// Don't. Swap the two numbers, still compiles.
+resizeWindow(windowId, 600, 800);
 
 // Do. Order-independent, self-documenting.
-openFile({
-  uri,
-  selection: {
-    startLineNumber: 10,
-    startColumn: 1,
-    endLineNumber: 10,
-    endColumn: 1,
-  },
-});
+resizeWindow({ windowId, width: 800, height: 600 });
 ```
 
 Skip on hot paths: per-frame render, tokenizers, parsers, anything in a tight loop where the allocation cost matters.

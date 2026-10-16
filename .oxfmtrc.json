@@ -1,5 +1,19 @@
 {
   "$schema": "./web/node_modules/oxfmt/configuration_schema.json",
   "singleQuote": true,
-  "ignorePatterns": ["web/package-lock.json"]
+  "ignorePatterns": [
+    "web/package-lock.json",
+    "skills-lock.json",
+    ".claude/skills/code-review-and-quality/**",
+    ".claude/skills/codebase-design/**",
+    ".claude/skills/domain-modeling/**",
+    ".claude/skills/emil-design-eng/**",
+    ".claude/skills/grill-with-docs/**",
+    ".claude/skills/grilling/**",
+    ".claude/skills/handoff/**",
+    ".claude/skills/tdd/**",
+    ".claude/skills/unslop/**",
+    ".claude/skills/wait-what/**",
+    ".claude/skills/writing-for-agents/**"
+  ]
 }

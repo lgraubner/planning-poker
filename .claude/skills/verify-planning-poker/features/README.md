@@ -1,6 +1,6 @@
 # Planning Poker verification map
 
-This directory is the maintained source for verifying Planning Poker's user-facing behavior. Read this index, then use the matching feature file as the recipe. Domain terms (room, participant, spectator, round, reveal, reset, estimate) are defined in the repo's `CONTEXT.md`.
+This directory is the maintained source for verifying Planning Poker's user-facing behavior. Read this index, then use the matching feature file as the recipe. Domain terms (room, participant, spectator, round, reveal, reset, estimate) are defined in the repo's `GLOSSARY.md`.
 
 ## Baseline preconditions
 

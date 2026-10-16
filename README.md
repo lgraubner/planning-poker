@@ -96,7 +96,7 @@ Both set `X-Forwarded-For`, so use `CLIENT_IP_HEADER=X-Forwarded-For`. The room 
 
 A single Go server ([Chi](https://github.com/go-chi/chi) routes, [Coder WebSockets](https://github.com/coder/websocket)) serves a React SPA built with Vite, [TanStack Router](https://tanstack.com/router), and Tailwind CSS. The SPA is embedded into the binary with `go:embed`, so a release is one static executable. Browsers talk to the server over one WebSocket per tab; the server holds room state in memory and optionally persists rooms with pure-Go SQLite ([modernc.org/sqlite](https://gitlab.com/cznic/sqlite)).
 
-`cmd/server` starts the process, `internal/room` owns room state and persistence, `internal/httpserver` exposes HTTP and WebSocket routes, `internal/webui` embeds the build, and `web` contains the SPA. The glossary is in [CONTEXT.md](CONTEXT.md); design decisions are in [docs/adr](docs/adr).
+`cmd/server` starts the process, `internal/room` owns room state and persistence, `internal/httpserver` exposes HTTP and WebSocket routes, `internal/webui` embeds the build, and `web` contains the SPA. The glossary is in [GLOSSARY.md](GLOSSARY.md); design decisions are in [docs/adr](docs/adr).
 
 ## Development
 
