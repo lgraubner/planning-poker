@@ -32,3 +32,5 @@ Preconditions:
 - The renamer's own view updates before the server confirms. Prove the rename from the other participant's view and frames, not the renamer's.
 - The title persists in SQLite with the room; names live only in memory.
 - Blur commits like Enter. Clicking elsewhere to "cancel" saves the edit.
+- Only your own name is a button; other people's names are plain text. A spectator opens the list with `<n> spectator(s), including you`, then clicks their own name.
+- A blank title keeps the old title, like a blank name. A blank or unchanged edit sends no frame at all.

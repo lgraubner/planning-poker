@@ -5,7 +5,7 @@ description: 'Drive the real Planning Poker app (Go server + embedded React SPA,
 
 # Verify Planning Poker
 
-Planning Poker is one Go binary that serves a React SPA and one WebSocket per tab (`/api/rooms/{code}/ws`). The user surface is the browser: the home page creates a room, the room page (`/{8-char code}`) is where people join, estimate, reveal, and vote again. There is no CLI and no auth; the room link is the only key. The JSON API (`POST /api/rooms`, `GET /api/rooms/{code}`, `/healthz`) is secondary and only worth driving directly for server checks.
+Planning Poker is one Go binary that serves a React SPA and one WebSocket per tab (`/api/rooms/{code}/ws`). The user surface is the browser: the home page creates a room, the room page (`/{8-char code}`) is where people join, estimate, reveal, and reset the round. There is no CLI and no auth; the room link is the only key. The JSON API (`POST /api/rooms`, `GET /api/rooms/{code}`, `/healthz`) is secondary and only worth driving directly for server checks.
 
 Everything goes through one helper, run from the repo root:
 

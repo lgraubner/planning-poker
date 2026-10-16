@@ -6,13 +6,13 @@ The home page creates a room with a title and an estimation deck and takes the c
 
 - `create-default` creates a room with Modified Fibonacci when no deck is chosen.
 - `create-deck` creates a room with T-shirt sizes.
-- `create-validation` refuses an empty title.
+- `create-validation` refuses an empty title and one over 100 characters.
 - `create-rate-limit` refuses a sixth room in a burst from one client.
 
 ## How to get to it (user POV)
 
 - Open `/` and use the form.
-- From a room, follow the `Planning Poker` link home (asks `Leave the room?` first).
+- From a room, follow the `Planning Poker` link home. It asks `Leave the room?` only after joining; from the join form it goes straight home.
 
 ## Driving it with verify.sh
 
@@ -21,7 +21,7 @@ Preconditions:
 - `verify.sh doctor` all `OK`.
 
 - **Open the form.** `page.goto('/')`. A `Room title` textbox, an `Estimation deck` combobox, and a `Create room` button are visible.
-- **Empty title.** Click `Create room` with no title. `getByRole('alert')` reads `Enter a room title` and `Room title` has `aria-invalid="true"`; typing clears the alert.
+- **Empty title.** Click `Create room` with no title. `getByRole('alert')` reads `Enter a room title` and `Room title` has `aria-invalid="true"`; typing clears the alert. A title of 101 characters reads `Use 1–100 characters without control characters`.
 - **Default deck.** `createRoom(page, 'Sizing')` then `join(page, url, 'Alice')`. URL matches `/[a-z0-9]{8}$`; `getByRole('group', { name: 'Choose your card' }).getByRole('button')` has text `0 1 2 3 5 8 13 20 40 100 ? ☕`. A second participant's `snapshots(frames).at(-1).deck` is the same list.
 - **T-shirt deck.** `createRoom(page, 'Roadmap', 'T-shirt sizes')`, join. The group shows `XS S M L XL XXL ? ☕`, and the frames' `deck` matches.
 - **Rate limit.** Create six rooms from one context in quick succession. The sixth shows alert `Too many rooms created. Try again shortly`.

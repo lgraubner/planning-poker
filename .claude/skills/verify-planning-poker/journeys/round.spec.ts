@@ -10,7 +10,12 @@ test('round: estimate privately, reveal, reset, discuss', async ({ page, newPart
   await shot(bob, '01-joined');
 
   await page.getByRole('button', { name: '5', exact: true }).click();
+  await expect(page.getByRole('button', { name: '5', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
   await expect(card(bob, 'Alice')).toHaveAccessibleName('Alice: selected');
+  await expect(card(bob, 'Alice')).not.toContainText('5');
   await bob.getByRole('button', { name: '5', exact: true }).click();
   await expect(card(page, 'Bob')).toHaveAccessibleName('Bob: selected');
   await shot(bob, '02-both-selected-hidden');
@@ -27,11 +32,16 @@ test('round: estimate privately, reveal, reset, discuss', async ({ page, newPart
   await bob.getByRole('button', { name: 'Reveal cards' }).click();
   for (const viewer of [page, bob]) {
     await expect(card(viewer, 'Alice')).toHaveAccessibleName('Alice: 5');
+    await expect(viewer.getByRole('group', { name: 'Choose your card' })).toBeHidden();
     await expect(viewer.getByRole('status').filter({ hasText: 'Proposed estimate' })).toHaveText(
       'Proposed estimate 5 Agreement 100%',
     );
   }
 
+  const results = bob.getByRole('list', { name: 'Results' }).getByRole('listitem');
+  await expect(results).toHaveCount(1);
+  await expect(results).toHaveAccessibleName('5: 2 estimates, most estimates');
+  await expect(bob.getByTestId('confetti')).toBeAttached();
   await shot(bob, '03-revealed-agreement');
   const revealed = snapshots(bobFrames).findLast((s) => s.revealed);
   expect(revealed?.participants).toEqual(
