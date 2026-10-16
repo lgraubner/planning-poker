@@ -11,7 +11,14 @@ import { RoomHeader } from '../components/RoomHeader';
 import { SpectatorList } from '../components/SpectatorList';
 import { useDelayed } from '../hooks/useDelayed';
 import { useRoom, type Participant } from '../hooks/useRoom';
-import { identity, remember, remembered, rememberedSpectator, type Identity } from '../identity';
+import {
+  identity,
+  remember,
+  remembered,
+  rememberedId,
+  rememberedSpectator,
+  type Identity,
+} from '../identity';
 import { maxNameLength, validLabel } from '../labels';
 
 type RoomInfo =
@@ -28,7 +35,7 @@ export const Route = createFileRoute('/$code')({
 });
 
 async function lookup(code: string, signal: AbortSignal): Promise<RoomInfo> {
-  const id = remembered('id');
+  const id = rememberedId();
 
   for (let attempt = 0; ; attempt++) {
     const response = await fetch(`/api/rooms/${encodeURIComponent(code)}`, {

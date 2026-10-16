@@ -26,6 +26,21 @@ test('a saved name rejoins automatically and tabs share one card', async ({
   await expect(visitor.getByLabel('Name', { exact: true })).toBeVisible();
 });
 
+test('a corrupted saved identity is replaced instead of locking you out', async ({ page }) => {
+  const url = await createRoom(page);
+  await page.evaluate(() => {
+    localStorage.setItem('poker.id', 'not-a-participant-id');
+    localStorage.setItem('poker.name', 'Alice');
+  });
+
+  await page.goto(url);
+  await expect(page.getByRole('group', { name: 'Choose your card' })).toBeVisible();
+  await expect(card(page, 'Alice')).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('poker.id'))).toMatch(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+  );
+});
+
 test('invalid names are rejected before joining', async ({ page }) => {
   const url = await createRoom(page);
   await page.goto(url);
