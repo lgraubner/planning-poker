@@ -22,7 +22,6 @@ export function InlineEdit({
   inputClassName,
 }: Props) {
   const [draft, setDraft] = useState<string | null>(null);
-  // ponytail: a change lost to a dropped socket shows until the value next changes.
   const [pending, setPending] = useState<{ from: string; to: string } | null>(null);
   const shown = pending?.from === value ? pending.to : value;
 

@@ -62,7 +62,6 @@ func (l *limiter) ready(ip netip.Addr) bool {
 
 func (l *limiter) bucket(ip netip.Addr) *bucket {
 	if len(l.buckets) >= 10000 {
-		// ponytail: O(n) prune, and a reset when a wide flood keeps it full; use an LRU if that shows up.
 		for key, b := range l.buckets {
 			if time.Since(b.last) > time.Minute {
 				delete(l.buckets, key)

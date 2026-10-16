@@ -77,7 +77,6 @@ func Open(path string) (*Store, error) {
 	return s, nil
 }
 
-// ponytail: synchronous write under the store lock, fine for a handful of writes per round; batch if it shows in latency.
 func (s *Store) save(code string, r *session) error {
 	if s.db == nil {
 		return nil

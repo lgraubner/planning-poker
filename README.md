@@ -98,6 +98,13 @@ A single Go server ([Chi](https://github.com/go-chi/chi) routes, [Coder WebSocke
 
 `cmd/server` starts the process, `internal/room` owns room state and persistence, `internal/httpserver` exposes HTTP and WebSocket routes, `internal/webui` embeds the build, and `web` contains the SPA. The glossary is in [GLOSSARY.md](GLOSSARY.md); design decisions are in [docs/adr](docs/adr).
 
+Known limits, each with its upgrade path if it starts to matter:
+
+- One mutex guards all rooms, and SQLite writes run synchronously under it. Per-room locks or batched writes would lift that.
+- At the room limit, creating a room scans every room for the one that has been empty longest. Keeping rooms ordered by idle time would avoid the scan.
+- The rate limiter tracks up to 10,000 client addresses. When full, it prunes those idle for a minute, and if that frees nothing it forgets all of them, so a flood from that many addresses resets everyone's limit. An LRU would keep the busiest.
+- An inline rename sent while the WebSocket drops keeps showing locally until the value next changes on the server.
+
 ## Development
 
 Requires Go 1.27+, Node.js 24+, npm, and Make.

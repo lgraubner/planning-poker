@@ -80,7 +80,6 @@ type Subscription struct {
 }
 
 type Store struct {
-	// ponytail: one lock for up to 100,000 rooms; use per-room locks if contention becomes measurable.
 	mu       sync.Mutex
 	rooms    map[string]*session
 	now      func() time.Time
@@ -157,7 +156,6 @@ func (s *Store) Create(title, deck string) (string, error) {
 	}
 }
 
-// ponytail: O(rooms) scan, only while full; keep rooms ordered by idle time if creation then slows.
 func (s *Store) removeLongestEmpty() bool {
 	var oldest string
 
