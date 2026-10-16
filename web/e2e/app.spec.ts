@@ -128,6 +128,38 @@ test('a room needs a title before it is created', async ({ page }) => {
   await expect(page.getByRole('alert')).toBeHidden();
 });
 
+test('a room title is checked for length and control characters before it is sent', async ({
+  page,
+}) => {
+  const posts: string[] = [];
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/rooms') {
+      posts.push(request.url());
+    }
+  });
+
+  await page.goto('/');
+  const title = page.getByLabel('Room title');
+  const create = page.getByRole('button', { name: 'Create room' });
+
+  for (const invalid of ['界'.repeat(101), `  ${'😀'.repeat(101)}  `, 'Retro\u0007']) {
+    await title.fill(invalid);
+    await create.click();
+    await expect(page.getByRole('alert')).toHaveText(
+      'Use 1–100 characters without control characters',
+    );
+    await expect(title).toHaveAttribute('aria-invalid', 'true');
+    await expect(page).toHaveURL('/');
+  }
+
+  expect(posts).toHaveLength(0);
+
+  await title.fill(`  ${'界'.repeat(100)}  `);
+  await create.click();
+  await expect(page).toHaveURL(/\/[a-z0-9]{8}$/);
+  expect(posts).toHaveLength(1);
+});
+
 test('only prose, what someone types and errors can be selected', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Create room' }).click();

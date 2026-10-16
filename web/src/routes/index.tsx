@@ -9,6 +9,7 @@ import { SelectField } from '../components/SelectField';
 import { TextField } from '../components/TextField';
 import { CreatedRoomSchema, failure } from '../api';
 import { decks } from '../decks';
+import { maxTitleLength, validLabel } from '../labels';
 
 export const Route = createFileRoute('/')({ component: Home });
 
@@ -61,7 +62,15 @@ function CreateRoomForm() {
       <form.Field
         name="title"
         validators={{
-          onSubmit: ({ value }) => (value.trim() ? undefined : 'Enter a room title'),
+          onSubmit: ({ value }) => {
+            if (!value.trim()) {
+              return 'Enter a room title';
+            }
+
+            return validLabel(value, maxTitleLength)
+              ? undefined
+              : `Use 1–${maxTitleLength} characters without control characters`;
+          },
         }}
       >
         {(field) => (
