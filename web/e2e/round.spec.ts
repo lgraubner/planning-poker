@@ -138,7 +138,10 @@ test('joining a revealed room shows the cards without replaying the flip', async
     () =>
       document
         .getAnimations()
-        .filter((animation) => (animation as CSSAnimation).animationName === 'card-flip').length,
+        .filter(
+          (animation) =>
+            animation instanceof CSSAnimation && animation.animationName === 'card-flip',
+        ).length,
   );
   expect(flips).toBe(0);
 });
@@ -252,7 +255,8 @@ test('the result lands as the cards finish turning', async ({ page, newParticipa
           .getAnimations()
           .some(
             (animation) =>
-              (animation as CSSAnimation).animationName === 'card-flip' &&
+              animation instanceof CSSAnimation &&
+              animation.animationName === 'card-flip' &&
               animation.playState === 'running',
           ),
         result: result ? +getComputedStyle(result).opacity : 0,

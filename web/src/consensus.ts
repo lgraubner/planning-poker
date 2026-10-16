@@ -1,4 +1,4 @@
-export function consensus(estimates: string[], deck: string[]) {
+export function consensus({ estimates, deck }: { estimates: string[]; deck: string[] }) {
   const numbers = deck.filter((value) => value !== '?' && value !== '☕');
   const positions = estimates
     .filter((estimate) => estimate !== '☕')

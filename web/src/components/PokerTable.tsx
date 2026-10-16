@@ -41,7 +41,7 @@ export function PokerTable({
     participants.length > 0 && participants.every((participant) => participant.selected);
 
   const current = participants.find((participant) => participant.id === self);
-  const result = revealed ? consensus(estimates, deck) : null;
+  const result = revealed ? consensus({ estimates, deck }) : null;
   const [arrivedRevealed, setArrivedRevealed] = useState(revealed);
   if (arrivedRevealed && !revealed) {
     setArrivedRevealed(false);
